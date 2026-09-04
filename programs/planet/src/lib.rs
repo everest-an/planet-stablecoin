@@ -33,7 +33,7 @@ use errors::PlanetError;
 use risk::*;
 use state::*;
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("CvC6bETKBjrGFjSg3smuagAom1oMvCc4Gks2mK1VftVp");
 
 #[program]
 pub mod planet {

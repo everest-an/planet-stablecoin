@@ -13,6 +13,7 @@
 // holdings.json 示例见 docs/custodian.md 第 2 节。
 
 import * as anchor from "@coral-xyz/anchor";
+import { Program } from "@coral-xyz/anchor";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";

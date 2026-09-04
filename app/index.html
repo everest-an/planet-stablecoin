@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Planet — 全球大宗商品购买力指数</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://unpkg.com/@solana/web3.js@1.95.0/lib/index.iife.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="logo">🌍 Planet</div>
+      <div class="subtitle">全球大宗商品购买力指数协议 · Solana</div>
+      <div class="network" id="network">连接中…</div>
+    </header>
+
+    <main class="grid">
+      <section class="card ppi-card">
+        <h2>购买力指数 PPI</h2>
+        <div class="ppi-value" id="ppi-value">—</div>
+        <div class="ppi-hint" id="ppi-hint">指数 = Σ 权重 × (现价/基准价)</div>
+      </section>
+
+      <section class="card">
+        <h2>储备概览</h2>
+        <div class="stat-row"><span>PLT 总供应</span><span id="total-supply">—</span></div>
+        <div class="stat-row"><span>总储备 (USD)</span><span id="total-reserve">—</span></div>
+        <div class="stat-row"><span>抵押率</span><span id="collateral">—</span></div>
+        <div class="stat-row"><span>迁移状态</span><span id="migration-state">—</span></div>
+      </section>
+
+      <section class="card">
+        <h2>风控限额</h2>
+        <div class="stat-row"><span>单笔上限</span><span id="max-per-tx">—</span></div>
+        <div class="stat-row"><span>窗口上限</span><span id="max-per-window">—</span></div>
+        <div class="stat-row"><span>全局暂停</span><span id="paused">—</span></div>
+      </section>
+
+      <section class="card full-width">
+        <h2>商品篮子</h2>
+        <table class="assets-table">
+          <thead>
+            <tr><th>商品</th><th>权重</th><th>基准价</th><th>现价</th><th>持仓价值</th></tr>
+          </thead>
+          <tbody id="assets-body"></tbody>
+        </table>
+      </section>
+
+      <section class="card full-width">
+        <h2>储备证明(托管方映射)</h2>
+        <div class="stat-row"><span>已验证 ETF 市值</span><span id="attest-value">—</span></div>
+        <div class="stat-row"><span>最近证明时间</span><span id="attest-time">—</span></div>
+        <div class="stat-row"><span>托管方</span><span id="custodian" class="mono">—</span></div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      早期版本为指数交易代币，非足额抵押稳定币 · 数据来自链上，实时读取
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

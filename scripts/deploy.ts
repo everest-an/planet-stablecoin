@@ -15,6 +15,7 @@
 // 在 devnet 需先用 mock USDC。此脚本默认 devnet 用 mock USDC。
 
 import * as anchor from "@coral-xyz/anchor";
+import { Program } from "@coral-xyz/anchor";
 import {
   TOKEN_PROGRAM_ID,
   TOKEN_2022_PROGRAM_ID,
