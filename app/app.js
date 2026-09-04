@@ -88,14 +88,13 @@ async function refresh() {
 
     const reserveInfo = await connection.getAccountInfo(reservePda);
     if (!reserveInfo) {
-      setText("network", "程序未部署");
+      setText("network", "not deployed");
       return;
     }
     const reserve = decodeReserve(reserveInfo.data);
 
-    setText("network", "Localnet · 已连接");
+    setText("network", "localnet · live");
     setText("ppi-value", fmtPpi(reserve.ppi));
-    setText("ppi-hint", `指数 = Σ 权重 × (现价/基准价)，当前 ${reserve.assetCount} 种商品`);
     setText("total-supply", fmtUsd(reserve.totalSupply));
     setText("total-reserve", fmtUsd(reserve.totalReserve));
     setText("migration-state", MIGRATION_STATES[reserve.migrationState] ?? reserve.migrationState);
@@ -119,7 +118,7 @@ async function refresh() {
       const risk = decodeRisk(riskInfo.data);
       setText("max-per-tx", fmtUsd(risk.maxPerTx));
       setText("max-per-window", fmtUsd(risk.maxPerWindow));
-      setText("paused", risk.globallyPaused ? "⚠️ 已暂停" : "正常");
+      setText("paused", risk.globallyPaused ? "paused" : "live");
     }
 
     // 储备证明
@@ -131,7 +130,7 @@ async function refresh() {
       setText("custodian", att.custodian.slice(0, 16) + "…");
     }
   } catch (err) {
-    setText("network", "连接失败");
+    setText("network", "error");
     console.error(err);
   }
 }
