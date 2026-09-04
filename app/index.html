@@ -4,61 +4,92 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Planet — 全球大宗商品购买力指数</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <script src="https://unpkg.com/@solana/web3.js@1.95.0/lib/index.iife.js"></script>
 </head>
 <body>
-  <div class="app">
-    <header class="header">
-      <div class="logo">🌍 Planet</div>
-      <div class="subtitle">全球大宗商品购买力指数协议 · Solana</div>
-      <div class="network" id="network">连接中…</div>
-    </header>
+  <header class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="#">
+        <span class="brand-mark">◍</span>
+        <span class="brand-name">Planet</span>
+      </a>
+      <nav class="nav-links">
+        <a href="#overview">总览</a>
+        <a href="#basket">商品篮子</a>
+        <a href="#reserve">储备证明</a>
+        <a href="https://github.com/everest-an/planet-stablecoin" target="_blank">GitHub</a>
+      </nav>
+      <span class="network-badge" id="network">连接中…</span>
+    </div>
+  </header>
 
-    <main class="grid">
-      <section class="card ppi-card">
-        <h2>购买力指数 PPI</h2>
+  <main class="container">
+    <section class="hero">
+      <span class="eyebrow">全球大宗商品购买力指数 · Solana</span>
+      <h1 class="hero-title">一篮子大宗商品，<br /><span class="grad">一种全球价值尺度</span></h1>
+      <p class="hero-sub">
+        Planet 将能源、金属、农产品等 20+ 种真实大宗商品的价格，聚合为链上购买力指数 PPI，
+        用算法弹性供应让价值随全球实物资产购买力同步波动。
+      </p>
+      <div class="hero-actions">
+        <a class="btn-primary" href="#basket">查看组合</a>
+        <a class="btn-ghost" href="#reserve">储备证明</a>
+      </div>
+    </section>
+
+    <section class="ppi-hero" id="overview">
+      <div class="ppi-ring">
         <div class="ppi-value" id="ppi-value">—</div>
-        <div class="ppi-hint" id="ppi-hint">指数 = Σ 权重 × (现价/基准价)</div>
-      </section>
+        <div class="ppi-label">购买力指数 PPI</div>
+      </div>
+      <div class="ppi-meta">
+        <div class="stat-block"><span class="stat-num" id="total-supply">—</span><span class="stat-label">PLT 总供应</span></div>
+        <div class="stat-block"><span class="stat-num" id="total-reserve">—</span><span class="stat-label">总储备 (USD)</span></div>
+        <div class="stat-block"><span class="stat-num" id="collateral">—</span><span class="stat-label">抵押率</span></div>
+        <div class="stat-block"><span class="stat-num" id="migration-state">—</span><span class="stat-label">迁移状态</span></div>
+      </div>
+    </section>
 
-      <section class="card">
-        <h2>储备概览</h2>
-        <div class="stat-row"><span>PLT 总供应</span><span id="total-supply">—</span></div>
-        <div class="stat-row"><span>总储备 (USD)</span><span id="total-reserve">—</span></div>
-        <div class="stat-row"><span>抵押率</span><span id="collateral">—</span></div>
-        <div class="stat-row"><span>迁移状态</span><span id="migration-state">—</span></div>
-      </section>
-
-      <section class="card">
-        <h2>风控限额</h2>
-        <div class="stat-row"><span>单笔上限</span><span id="max-per-tx">—</span></div>
-        <div class="stat-row"><span>窗口上限</span><span id="max-per-window">—</span></div>
-        <div class="stat-row"><span>全局暂停</span><span id="paused">—</span></div>
-      </section>
-
-      <section class="card full-width">
+    <section class="section" id="basket">
+      <div class="section-head">
         <h2>商品篮子</h2>
+        <p class="section-sub">权重按全球贸易量分配，现价由预言机实时更新</p>
+      </div>
+      <div class="table-wrap card">
         <table class="assets-table">
           <thead>
             <tr><th>商品</th><th>权重</th><th>基准价</th><th>现价</th><th>持仓价值</th></tr>
           </thead>
           <tbody id="assets-body"></tbody>
         </table>
-      </section>
+      </div>
+    </section>
 
-      <section class="card full-width">
-        <h2>储备证明(托管方映射)</h2>
-        <div class="stat-row"><span>已验证 ETF 市值</span><span id="attest-value">—</span></div>
-        <div class="stat-row"><span>最近证明时间</span><span id="attest-time">—</span></div>
-        <div class="stat-row"><span>托管方</span><span id="custodian" class="mono">—</span></div>
-      </section>
-    </main>
+    <section class="section grid-2">
+      <div class="card">
+        <h3>风控限额</h3>
+        <div class="kv"><span>单笔上限</span><b id="max-per-tx">—</b></div>
+        <div class="kv"><span>窗口上限</span><b id="max-per-window">—</b></div>
+        <div class="kv"><span>全局状态</span><b id="paused">—</b></div>
+      </div>
 
-    <footer class="footer">
-      早期版本为指数交易代币，非足额抵押稳定币 · 数据来自链上，实时读取
-    </footer>
-  </div>
+      <div class="card" id="reserve">
+        <h3>储备证明 · 预言机映射</h3>
+        <div class="kv"><span>已验证 ETF 市值</span><b id="attest-value">—</b></div>
+        <div class="kv"><span>最近证明时间</span><b id="attest-time">—</b></div>
+        <div class="kv"><span>托管方</span><b id="custodian" class="mono">—</b></div>
+        <p class="hint">储备由托管方签名映射，链上可审计，实现资产可信任</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>Planet 早期版本为指数交易代币，非足额抵押稳定币。</span>
+    <span>数据实时读取自 Solana 链上。</span>
+  </footer>
 
   <script src="app.js"></script>
 </body>
