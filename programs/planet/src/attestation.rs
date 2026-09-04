@@ -47,7 +47,7 @@ pub fn collateral_ratio(total_supply: u64, total_value: u64) -> u64 {
     if total_supply == 0 {
         return 0;
     }
-    ((total_value as u128 * 1_000_000 / total_supply as u128) as u64)
+    (total_value as u128 * 1_000_000 / total_supply as u128) as u64
 }
 
 #[cfg(test)]

@@ -310,7 +310,7 @@ pub mod planet {
 
         invoke(
             &spl_transfer_ix(
-                &ctx.accounts.token_program.key(),
+                &ctx.accounts.usdc_token_program.key(),
                 &ctx.accounts.usdc_from.key(),
                 &ctx.accounts.usdc_vault.key(),
                 &ctx.accounts.user.key(),
@@ -327,7 +327,7 @@ pub mod planet {
         let seeds: &[&[u8]] = &[b"reserve", &[reserve_bump]];
         invoke_signed(
             &spl_mint_to_ix(
-                &ctx.accounts.token_program.key(),
+                &ctx.accounts.plt_token_program.key(),
                 &ctx.accounts.plt_mint.key(),
                 &ctx.accounts.plt_to.key(),
                 &ctx.accounts.reserve.key(),
@@ -387,7 +387,7 @@ pub mod planet {
 
         invoke(
             &spl_burn_ix(
-                &ctx.accounts.token_program.key(),
+                &ctx.accounts.plt_token_program.key(),
                 &ctx.accounts.plt_from.key(),
                 &ctx.accounts.plt_mint.key(),
                 &ctx.accounts.user.key(),
@@ -404,7 +404,7 @@ pub mod planet {
         let seeds: &[&[u8]] = &[b"reserve", &[reserve_bump]];
         invoke_signed(
             &spl_transfer_ix(
-                &ctx.accounts.token_program.key(),
+                &ctx.accounts.usdc_token_program.key(),
                 &ctx.accounts.usdc_vault.key(),
                 &ctx.accounts.usdc_to.key(),
                 &ctx.accounts.reserve.key(),
@@ -599,14 +599,17 @@ pub struct MintAccounts<'info> {
     /// CHECK: 协议 USDC 金库（owner = reserve PDA）
     #[account(mut)]
     pub usdc_vault: AccountInfo<'info>,
-    /// CHECK: PLT mint（authority = reserve PDA）
+    /// CHECK: PLT mint（authority = reserve PDA，铸/烧需可写）
+    #[account(mut)]
     pub plt_mint: AccountInfo<'info>,
     /// CHECK: 用户 PLT 账户
     #[account(mut)]
     pub plt_to: AccountInfo<'info>,
     pub user: Signer<'info>,
-    /// CHECK: Token-2022 程序
-    pub token_program: AccountInfo<'info>,
+    /// CHECK: USDC 的 token 程序（Token 或 Token-2022）
+    pub usdc_token_program: AccountInfo<'info>,
+    /// CHECK: PLT 的 token 程序（Token-2022）
+    pub plt_token_program: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -621,14 +624,17 @@ pub struct BurnAccounts<'info> {
     /// CHECK: 用户 USDC 收款账户
     #[account(mut)]
     pub usdc_to: AccountInfo<'info>,
-    /// CHECK: PLT mint
+    /// CHECK: PLT mint（铸/烧需可写）
+    #[account(mut)]
     pub plt_mint: AccountInfo<'info>,
     /// CHECK: 用户 PLT 账户
     #[account(mut)]
     pub plt_from: AccountInfo<'info>,
     pub user: Signer<'info>,
-    /// CHECK: Token-2022 程序
-    pub token_program: AccountInfo<'info>,
+    /// CHECK: USDC 的 token 程序（Token 或 Token-2022）
+    pub usdc_token_program: AccountInfo<'info>,
+    /// CHECK: PLT 的 token 程序（Token-2022）
+    pub plt_token_program: AccountInfo<'info>,
 }
 
 /// 指令入参：单商品初始化配置（`set_assets` 使用）。
