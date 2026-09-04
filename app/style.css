@@ -7,18 +7,18 @@
 @font-face { font-family: "Aeonik"; src: url("fonts/Aeonik-Black.otf") format("opentype"); font-weight: 900; font-style: normal; font-display: swap; }
 
 :root {
-  --bg: #08090d;
-  --surface: #0e1117;
-  --surface-2: #12161e;
-  --border: rgba(255, 255, 255, 0.07);
-  --text: #eceef3;
-  --muted: #6f7a88;
-  --accent: #7c5cff;
-  --accent-2: #22d3ee;
-  --green: #4ade80;
+  --bg: #121212;
+  --surface: #181818;
+  --surface-2: #1e1e1e;
+  --border: rgba(255, 255, 255, 0.08);
+  --text: #f0f0f0;
+  --muted: #8a8a8a;
+  --accent: #9945ff;
+  --accent-2: #14f195;
+  --green: #14f195;
   --sans: "Aeonik", -apple-system, "Segoe UI", sans-serif;
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace;
-  --grad: linear-gradient(100deg, #7c5cff 0%, #5b8cff 50%, #22d3ee 100%);
+  --grad: linear-gradient(90deg, #9945ff, #14f195);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -27,8 +27,8 @@ html { scroll-behavior: smooth; }
 
 body {
   background:
-    radial-gradient(900px 520px at 82% -8%, rgba(124, 92, 255, 0.14), transparent 60%),
-    radial-gradient(700px 480px at 8% 4%, rgba(34, 211, 238, 0.07), transparent 55%),
+    radial-gradient(1000px 560px at 82% -10%, rgba(153, 69, 255, 0.18), transparent 60%),
+    radial-gradient(800px 520px at 6% 6%, rgba(20, 241, 149, 0.08), transparent 55%),
     var(--bg);
   color: var(--text);
   font-family: var(--sans);
@@ -84,7 +84,7 @@ code, .mono, .equation code, .cell-num, .readout-value, .kv b, .brand-name, .eye
   font-size: 11px; letter-spacing: 0.22em; color: var(--accent); margin-bottom: 28px;
 }
 .hero-title {
-  font-size: 76px; font-weight: 300; letter-spacing: -0.03em; line-height: 1.02;
+  font-size: 80px; font-weight: 500; letter-spacing: -0.03em; line-height: 1.02;
 }
 .hero-title .dim { color: var(--muted); }
 .hero-sub {
@@ -98,7 +98,7 @@ code, .mono, .equation code, .cell-num, .readout-value, .kv b, .brand-name, .eye
   border: 1px solid var(--border); border-radius: 18px;
   background: linear-gradient(180deg, var(--surface-2), var(--surface));
   padding: 44px 48px;
-  box-shadow: 0 30px 80px -40px rgba(124, 92, 255, 0.35);
+  box-shadow: 0 30px 80px -40px rgba(153, 69, 255, 0.4);
   margin-bottom: 72px;
 }
 .equation {

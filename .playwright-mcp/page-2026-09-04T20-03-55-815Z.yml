@@ -1,0 +1,151 @@
+- generic [active] [ref=f1e1]:
+  - banner [ref=f1e2]:
+    - generic [ref=f1e3]:
+      - link "PLANET" [ref=f1e4] [cursor=pointer]:
+        - /url: "#"
+      - navigation [ref=f1e5]:
+        - link "overview" [ref=f1e6] [cursor=pointer]:
+          - /url: "#overview"
+        - link "basket" [ref=f1e7] [cursor=pointer]:
+          - /url: "#basket"
+        - link "mechanism" [ref=f1e8] [cursor=pointer]:
+          - /url: "#mechanism"
+        - link "proof" [ref=f1e9] [cursor=pointer]:
+          - /url: "#proof"
+      - generic [ref=f1e10]: localnet · live
+  - main [ref=f1e11]:
+    - generic [ref=f1e12]:
+      - paragraph [ref=f1e13]: GLOBAL COMMODITY PURCHASING POWER INDEX · SOLANA
+      - heading "Planet (PLT)" [level=1] [ref=f1e14]
+      - paragraph [ref=f1e15]: An algorithmic index mapping 20+ global commodities — energy, metals, agriculture, industrial — to a single on-chain purchasing power index. Elastic supply keeps value aligned with real-world purchasing power, not with any single fiat currency.
+    - generic [ref=f1e16]:
+      - generic [ref=f1e17]:
+        - generic [ref=f1e18]: (1)
+        - code [ref=f1e19]:
+          - text: PPI
+          - subscript [ref=f1e20]: t
+          - text: = Σ
+          - subscript [ref=f1e21]: i
+          - text: w
+          - subscript [ref=f1e22]: i
+          - text: · P
+          - subscript [ref=f1e23]: i,t
+          - text: / P
+          - subscript [ref=f1e24]: i,0
+      - generic [ref=f1e25]:
+        - generic [ref=f1e26]:
+          - generic [ref=f1e27]: "1.0000"
+          - generic [ref=f1e28]: PPI
+        - generic [ref=f1e29]:
+          - generic [ref=f1e30]:
+            - generic [ref=f1e31]: $1,000,000
+            - generic [ref=f1e32]: total supply
+          - generic [ref=f1e33]:
+            - generic [ref=f1e34]: $1,000,000
+            - generic [ref=f1e35]: reserve (USD)
+          - generic [ref=f1e36]:
+            - generic [ref=f1e37]: 100.00%
+            - generic [ref=f1e38]: collateral
+          - generic [ref=f1e39]:
+            - generic [ref=f1e40]: Normal
+            - generic [ref=f1e41]: state
+    - generic [ref=f1e42]:
+      - generic [ref=f1e43]:
+        - heading "// Basket" [level=2] [ref=f1e44]
+        - paragraph [ref=f1e45]: Weights by global trade volume; prices via oracle.
+      - table [ref=f1e47]:
+        - rowgroup [ref=f1e48]:
+          - row [ref=f1e49]:
+            - columnheader "asset" [ref=f1e50]
+            - columnheader [ref=f1e51]:
+              - text: w
+              - subscript [ref=f1e52]: i
+            - columnheader [ref=f1e53]:
+              - text: P
+              - subscript [ref=f1e54]: i,0
+            - columnheader [ref=f1e55]:
+              - text: P
+              - subscript [ref=f1e56]: i,t
+            - columnheader [ref=f1e57]:
+              - text: V
+              - subscript [ref=f1e58]: i
+        - rowgroup [ref=f1e59]:
+          - row [ref=f1e60]:
+            - cell "WTI" [ref=f1e61]
+            - cell "50.00%" [ref=f1e62]
+            - cell "$100.00" [ref=f1e63]
+            - cell "$100.00" [ref=f1e64]
+            - cell "$500,000" [ref=f1e65]
+          - row [ref=f1e66]:
+            - cell "XAU" [ref=f1e67]
+            - cell "50.00%" [ref=f1e68]
+            - cell "$2000.00" [ref=f1e69]
+            - cell "$2000.00" [ref=f1e70]
+            - cell "$500,000" [ref=f1e71]
+    - generic [ref=f1e72]:
+      - heading "// Mechanism" [level=2] [ref=f1e74]
+      - generic [ref=f1e75]:
+        - generic [ref=f1e76]:
+          - generic [ref=f1e77]:
+            - generic [ref=f1e78]: (2)
+            - code [ref=f1e79]:
+              - text: ΔA
+              - subscript [ref=f1e80]: i
+              - text: = (w
+              - subscript [ref=f1e81]: i
+              - text: − V
+              - subscript [ref=f1e82]: i
+              - text: /ΣV) · T
+          - paragraph [ref=f1e83]: Rebalance — per-asset adjustment, triggered when deviation > 0.5%.
+        - generic [ref=f1e84]:
+          - generic [ref=f1e85]:
+            - generic [ref=f1e86]: (3)
+            - code [ref=f1e87]:
+              - text: M
+              - subscript [ref=f1e88]: new
+              - text: = D · (1 − f) / PPI
+              - subscript [ref=f1e89]: t
+          - paragraph [ref=f1e90]: Mint — deposit USDC, receive PLT at current PPI.
+        - generic [ref=f1e91]:
+          - generic [ref=f1e92]:
+            - generic [ref=f1e93]: (4)
+            - code [ref=f1e94]:
+              - text: R = B · PPI
+              - subscript [ref=f1e95]: t
+              - text: · (1 − f)
+          - paragraph [ref=f1e96]: Redeem — burn PLT, receive USDC at current PPI.
+        - generic [ref=f1e97]:
+          - generic [ref=f1e98]:
+            - generic [ref=f1e99]: (5)
+            - code [ref=f1e100]: f = 0.5% → 45% burn · 30% reserve · 25% staking
+          - paragraph [ref=f1e101]: Fee — the protocol's sole revenue; thin, fixed.
+    - generic [ref=f1e102]:
+      - generic [ref=f1e103]:
+        - heading "Risk" [level=3] [ref=f1e104]
+        - generic [ref=f1e105]:
+          - generic [ref=f1e106]: per-tx cap
+          - generic [ref=f1e107]: $100,000
+        - generic [ref=f1e108]:
+          - generic [ref=f1e109]: per-window cap
+          - generic [ref=f1e110]: $1,000,000
+        - generic [ref=f1e111]:
+          - generic [ref=f1e112]: status
+          - generic [ref=f1e113]: live
+      - generic [ref=f1e114]:
+        - heading "Reserve Proof" [level=3] [ref=f1e115]
+        - generic [ref=f1e116]:
+          - generic [ref=f1e117]: attested ETF value
+          - generic [ref=f1e118]: —
+        - generic [ref=f1e119]:
+          - generic [ref=f1e120]: last attestation
+          - generic [ref=f1e121]: —
+        - generic [ref=f1e122]:
+          - generic [ref=f1e123]: custodian
+          - generic [ref=f1e124]: —
+        - paragraph [ref=f1e125]:
+          - text: "Invariant:"
+          - code [ref=f1e126]: supply ≤ Σ ETF value
+          - text: ", verified on-chain."
+  - contentinfo [ref=f1e127]:
+    - generic [ref=f1e128]: Planet is a synthetic index token in early stage, not a fully-reserved stablecoin.
+    - generic [ref=f1e129]: Data read live from the Solana chain.
