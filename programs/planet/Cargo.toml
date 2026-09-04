@@ -1,0 +1,31 @@
+[package]
+name = "planet"
+version = "0.1.0"
+description = "Planet - global commodities purchasing power index protocol (Phase 1 PoC)"
+edition = "2021"
+# Solana 1.18 的 platform-tools 是 Rust 1.75：声明 MSRV 让 cargo 用
+# MSRV-aware 解析，自动把依赖树钉到兼容 1.75 的版本（避开 edition2024 / 高 MSRV crate）。
+rust-version = "1.75"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "planet"
+
+[features]
+idl-build = ["anchor-lang/idl-build"]
+
+[dependencies]
+anchor-lang = "0.30.1"
+solana-program = "1.18.26"
+# 手动钉住：MSRV-aware 解析对未声明 rust-version 的 edition2024 crate 不兜底。
+blake3 = "=1.5.0"
+proc-macro-crate = "=3.1.0"
+zeroize_derive = "=1.4.1"
+indexmap = "=2.5.0"
+getrandom = "=0.2.17"
+jobserver = "=0.1.28"
+proc-macro2 = "=1.0.79"
+unicode-segmentation = "=1.10.1"
+
+[profile.release]
+overflow-checks = true

@@ -1,0 +1,26 @@
+# Rust
+/target
+**/*.rs.bk
+
+# Node
+node_modules/
+app/node_modules/
+
+# Anchor
+.anchor/
+
+# Env / keys（切勿提交私钥）
+.env
+*.json.key
+id.json
+**/target/deploy/*-keypair.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# OpenCode 内部运行状态（非项目代码）
+.omo/
+
+# 其他项目误落文件（非 Planet 代码）
+awareness-growth/
