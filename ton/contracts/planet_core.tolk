@@ -16,9 +16,9 @@ const ERR_SUPPLY = 102;
 
 struct Storage {
     owner: address
-    totalReserve: int
-    totalSupply: int
-    currentPpi: int
+    totalReserve: int64
+    totalSupply: int64
+    currentPpi: int64
     paused: bool
 }
 
@@ -33,22 +33,22 @@ fun Storage.save(self) {
 // ---------------- Messages ----------------
 
 struct (0x10000001) Mint {
-    queryId: int
-    amount: int      // USDC (6 decimals)
+    queryId: int64
+    amount: int64    // USDC (6 decimals)
 }
 
 struct (0x10000002) Burn {
-    queryId: int
-    amount: int      // PLT (6 decimals)
+    queryId: int64
+    amount: int64    // PLT (6 decimals)
 }
 
 struct (0x10000003) UpdatePrice {
-    queryId: int
-    price: int       // 1e6 fixed point (Phase 0 placeholder; oracle TBD)
+    queryId: int64
+    price: int64     // 1e6 fixed point (Phase 0 placeholder; oracle TBD)
 }
 
 struct (0x10000004) SetPaused {
-    queryId: int
+    queryId: int64
     paused: bool
 }
 
@@ -64,13 +64,15 @@ contract PlanetCore {
 // ---------------- Pure math ----------------
 
 // Minted = D * (1 - f) / PPI
-fun mintAmount(deposit: int, ppi: int): int {
+// NOTE: Phase 0 skeleton; 64-bit intermediates can overflow for very large inputs
+// (real implementation needs u128 / reordered math — tracked in docs/TON-MAPPING.md).
+fun mintAmount(deposit: int64, ppi: int64): int64 {
     val net = deposit * (BPS_DENOM - FEE_BPS) / BPS_DENOM;
     return net * PPI_SCALE / ppi;
 }
 
 // Received = B * PPI * (1 - f)
-fun burnAmount(plt: int, ppi: int): int {
+fun burnAmount(plt: int64, ppi: int64): int64 {
     val gross = plt * ppi / PPI_SCALE;
     return gross * (BPS_DENOM - FEE_BPS) / BPS_DENOM;
 }
@@ -123,17 +125,17 @@ fun handleSetPaused(sender: address, msg: SetPaused) {
 
 // ---------------- Getters ----------------
 
-get fun reserve(): int {
+get fun reserve(): int64 {
     val storage = lazy Storage.load();
     return storage.totalReserve;
 }
 
-get fun supply(): int {
+get fun supply(): int64 {
     val storage = lazy Storage.load();
     return storage.totalSupply;
 }
 
-get fun ppi(): int {
+get fun ppi(): int64 {
     val storage = lazy Storage.load();
     return storage.currentPpi;
 }
