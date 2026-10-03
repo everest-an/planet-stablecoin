@@ -56,7 +56,7 @@ ton/
   scripts/deploy.tolk       部署整套（core+minter+basket）；emulation 可跑，--net 上测试网
   README.md                 构建说明（WSL/Acton + Tact PoC）
 app-tg/                     Telegram Mini App（Vite+React+TON Connect）
-  src/App.tsx               读 PlanetCore + 篮子表 + mint UI + burn UI
+  src/App.tsx               读 PPI/储备/供应 + 篮子（权重条/涨跌/隐含 PPI）+ mint/burn UI
 .github/workflows/ton-build.yml   3 job：Tolk(Acton) / TG Mini App / Tact PoC
 legacy-solana/              Solana/Anchor 遗留实现 + 原 README（算法参考，非主线）
 ```
@@ -101,7 +101,7 @@ cd app-tg && npm install && npm run build
 - **赎回链路打通**：钱包 `AskToBurn` → minter 减供应 → minter 镜像 `BurnMirror`(0x10000008) → Core 同步减 `totalSupply`/`totalReserve`（净额）；移除会双算的旧 `core.Burn`。
 - `PlanetBasket`：链上组合注册表 + getter。
 - **PLT TEP-74 Jetton**（minter + wallet，vendored）。
-- TG 小程序：读 PPI/储备/供应 + **链上篮子表** + **mint UI** + **burn UI**（TEP-74 AskToBurn）。
+- TG 小程序：读 PPI/储备/供应 + **链上篮子**（权重条 + vs base 涨跌 + **篮子隐含 PPI 与链上 PPI 对照**）+ **mint UI** + **burn UI**（TEP-74 AskToBurn）。
 - 46 测试 + 覆盖率（90.0% score，门禁 89）+ CI 门禁（棘轮，只升不降）。
 - 文档：GTM / PLAN-TON / TON-MAPPING / AUDIT。
 
