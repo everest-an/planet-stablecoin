@@ -107,3 +107,30 @@ get fun `test wallet transfer moves PLT to recipient`() {
     expect(aliceWallet.getWalletData().jettonBalance).toEqual(795000);
     expect(minter.getJettonData().totalSupply).toEqual(995000);
 }
+
+get fun `test non-owner cannot transfer PLT`() {
+    val (core, minter, _, alice) = deployPlanetMintSetup();
+    val mallory = testing.treasury("mallory");
+
+    core.sendMint(alice.address, 0, 1000000, { value: ton("1") });
+    val wallet = JettonWallet.fromAddress(minter.getWalletAddress(alice.address));
+
+    val payload = beginCell().storeUint(1, 1).endCell().beginParse();
+    val res = wallet.sendAskToTransfer(
+        mallory.address, 0, 1, mallory.address, null, null, 0, payload, { value: ton("0.2") },
+    );
+    expect(res).toHaveFailedTx({ from: mallory.address, to: wallet.address, exitCode: 705 });
+}
+
+get fun `test transfer above balance fails`() {
+    val (core, minter, _, alice) = deployPlanetMintSetup();
+
+    core.sendMint(alice.address, 0, 1000000, { value: ton("1") });
+    val wallet = JettonWallet.fromAddress(minter.getWalletAddress(alice.address));
+
+    val payload = beginCell().storeUint(1, 1).endCell().beginParse();
+    val res = wallet.sendAskToTransfer(
+        alice.address, 0, 2000000, alice.address, null, null, 0, payload, { value: ton("0.2") },
+    );
+    expect(res).toHaveFailedTx({ from: alice.address, to: wallet.address, exitCode: 706 });
+}
