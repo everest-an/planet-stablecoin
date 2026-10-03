@@ -22,8 +22,7 @@ fun deployCoreForOracle(): (PlanetCore, Treasury, Treasury, Treasury) {
         feesToReserve: 0,
         feesToStaking: 0,
         paused: false,
-        oracle: deployer.address,
-        lastOracleUpdate: 0,
+        oracleState: OracleState { oracle: deployer.address, lastOracleUpdate: 0 }.toCell(),
     });
     expect(core.deploy(deployer.address, { value: ton("0.3") }))
         .toHaveSuccessfulDeploy({ to: core.address });

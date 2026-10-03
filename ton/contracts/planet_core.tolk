@@ -31,6 +31,13 @@ const MINT_FORWARD_TON = ton("0.05");
 
 // ---------------- Storage ----------------
 
+// Oracle state lives in a ref cell so the main storage stays within TON's
+// 1023-bit cell limit (two addresses + six int64 already use ~919 bits).
+struct OracleState {
+    oracle: address
+    lastOracleUpdate: int64
+}
+
 struct Storage {
     owner: address
     jettonMinter: address   // PLT Jetton minter (0 = unset)
@@ -41,8 +48,7 @@ struct Storage {
     feesToReserve: int64    // accrued 30% bucket
     feesToStaking: int64    // accrued 25% bucket
     paused: bool
-    oracle: address         // authorized price oracle (0 = unset; only owner may update)
-    lastOracleUpdate: int64 // timestamp of the last oracle push (replay protection)
+    oracleState: cell       // ref: OracleState { oracle, lastOracleUpdate }
 }
 
 fun Storage.load() {
@@ -233,7 +239,11 @@ fun handleSetJettonMinter(sender: address, msg: SetJettonMinter) {
 fun handleSetOracle(sender: address, msg: SetOracle) {
     var storage = lazy Storage.load();
     assert (sender == storage.owner) throw ERR_NOT_OWNER;
-    storage.oracle = msg.oracle;
+    val os = OracleState.fromCell(storage.oracleState);
+    storage.oracleState = OracleState {
+        oracle: msg.oracle,
+        lastOracleUpdate: os.lastOracleUpdate,
+    }.toCell();
     storage.save();
 }
 
@@ -241,9 +251,13 @@ fun handleSetOracle(sender: address, msg: SetOracle) {
 // (strictly increasing timestamp) to block replay of an old signed payload.
 fun handleOracleUpdatePrice(sender: address, msg: OracleUpdatePrice) {
     var storage = lazy Storage.load();
-    assert (sender == storage.oracle) throw ERR_NOT_ORACLE;
-    assert (msg.timestamp > storage.lastOracleUpdate) throw ERR_STALE_PRICE;
-    storage.lastOracleUpdate = msg.timestamp;
+    val os = OracleState.fromCell(storage.oracleState);
+    assert (sender == os.oracle) throw ERR_NOT_ORACLE;
+    assert (msg.timestamp > os.lastOracleUpdate) throw ERR_STALE_PRICE;
+    storage.oracleState = OracleState {
+        oracle: os.oracle,
+        lastOracleUpdate: msg.timestamp,
+    }.toCell();
     storage.currentPpi = msg.price;
     storage.save();
 }
@@ -272,12 +286,12 @@ get fun jettonMinter(): address {
 
 get fun oracle(): address {
     val storage = lazy Storage.load();
-    return storage.oracle;
+    return OracleState.fromCell(storage.oracleState).oracle;
 }
 
 get fun lastOracleUpdate(): int64 {
     val storage = lazy Storage.load();
-    return storage.lastOracleUpdate;
+    return OracleState.fromCell(storage.oracleState).lastOracleUpdate;
 }
 
 get fun feesBurn(): int64 {
