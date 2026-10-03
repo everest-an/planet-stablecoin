@@ -29,7 +29,7 @@
 | `mint_burn.rs`（mint_amount / burn_amount / fee_split） | 铸/赎算法 + 费率拆分 | Tolk `mintAmount`/`burnAmount`（已写）+ `feeSplit`（待加） | 部分 |
 | `risk.rs`（RiskState / consume_risk） | 单笔/窗口限额 + 暂停 | `Risk` 存储段 / 独立 `risk.tolk` | 待实现 |
 | `attestation.rs`（ReserveAttestation / verify_reserve / collateral_ratio） | 储备证明 | `Attestation` struct + `verifyReserve` | 待实现 |
-| SPL mint/burn CPI | 调用 token program | 向 PLT **Jetton Minter** 发 `Mint`/`Burn` 消息 | 待实现 |
+| SPL mint/burn CPI | 调用 token program | 向 PLT **Jetton Minter** 发 `MintNewJettons` / `BurnNotification` | Jetton 已就位；PlanetCore→Minter 接线待做 |
 | `Clock` + keeper.ts | 定时触发 | 链下 keeper 发 `Rebalance` 消息 | 待定 |
 
 ---
@@ -63,6 +63,10 @@ MigrationState          ->  enum / int 状态位
 ---
 
 ## 5. 未决 / 待办
+
+- [x] **PLT Jetton（TEP-74）已 vendor 并编译通过**：`contracts/jetton/JettonMinter.tolk` + `JettonWallet.tolk` + 支撑文件（源自 `ton-blockchain/tolk-bench` `01_jetton`）。CI Tolk 编译✅。
+- [ ] PlanetCore ↔ JettonMinter 接线：`handleMint` 发 `MintNewJettons`、`handleBurn` 由 `BurnNotificationForMinter` 回调扣减 totalSupply；Minter admin 设为 PlanetCore。
+- [ ] PLTG 治理代币（第二个 Jetton minter，固定 10 亿）。
 
 - [ ] 商品篮子多资产数据结构在 Tolk 中的表达（map / array / cell）
 - [ ] Jetton 合约（PLT + PLTG）实现方案（参考 `ton-blockchain/acton-contracts`）
