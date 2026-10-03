@@ -45,6 +45,25 @@ jobs:
           path: ton/build
           if-no-files-found: ignore
 
+  tg-app:
+    name: TG Mini App
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app-tg
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install deps
+        run: npm ci || npm install
+
+      - name: Build
+        run: npm run build
+
   tact-poc:
     name: Tact PoC (legacy)
     runs-on: ubuntu-latest
