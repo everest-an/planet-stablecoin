@@ -5,6 +5,7 @@
 // Fixed-point integers only (1e6). No floats.
 
 import "jetton/messages"
+import "oracle_state"
 
 const FEE_BPS = 50;          // 0.5% = 50 bps
 const BPS_DENOM = 10000;
@@ -31,12 +32,8 @@ const MINT_FORWARD_TON = ton("0.05");
 
 // ---------------- Storage ----------------
 
-// Oracle state lives in a ref cell so the main storage stays within TON's
-// 1023-bit cell limit (two addresses + six int64 already use ~919 bits).
-struct OracleState {
-    oracle: address
-    lastOracleUpdate: int64
-}
+// Oracle state (OracleState, see oracle_state.tolk) lives in a ref cell so the
+// main storage stays within TON's 1023-bit cell limit (~919 bits used already).
 
 struct Storage {
     owner: address

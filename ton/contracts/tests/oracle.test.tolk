@@ -2,7 +2,7 @@ import "@acton/testing/expect"
 import "@acton/emulation/testing"
 import "@acton/emulation/network"
 import "@wrappers/PlanetCore.gen"
-import "@contracts/types"
+import "@contracts/oracle_state"
 
 // Oracle seam tests: the owner designates a price oracle; only that oracle may push
 // a price, and pushes must move strictly forward in time (replay protection).

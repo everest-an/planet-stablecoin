@@ -2,7 +2,7 @@ import "@acton/testing/expect"
 import "@acton/emulation/testing"
 import "@acton/emulation/network"
 import "@wrappers/PlanetCore.gen"
-import "@contracts/types"
+import "@contracts/oracle_state"
 
 // PlanetCore flow tests: admin control, pausing, and fee/burn accounting that the
 // pure-math unit tests (planet_core.test.tolk) do not exercise.

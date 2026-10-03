@@ -5,7 +5,7 @@ import "@acton/build"
 import "@wrappers/PlanetCore.gen"
 import "@wrappers/JettonMinter.gen"
 import "@wrappers/JettonWallet.gen"
-import "@contracts/types"
+import "@contracts/oracle_state"
 
 // Full-link integration test:
 //   user Mint → PlanetCore (PPI accounting) → JettonMinter MintNewJettons
