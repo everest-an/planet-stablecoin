@@ -39,8 +39,8 @@ output-dir = "contracts/wrappers"
 "@wrappers" = "contracts/wrappers"
 "@gen" = "gen"
 
-# Coverage gate — baseline ratchet. Current blended score ≈ 29.8% (lint lines 25%).
+# Coverage gate — baseline ratchet. Current blended score = 47.6% (lines 45.9%).
 # Raise this floor as tests are added; never lower it.
 [test.coverage]
 enabled = true
-minimum-percent = 29
+minimum-percent = 47
