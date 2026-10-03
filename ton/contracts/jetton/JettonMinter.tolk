@@ -37,8 +37,8 @@ fun onInternalMessage(in: InMessage) {
                 dest: storage.adminAddress,
                 value: 0,
                 body: BurnMirror {
-                    queryId: msg.queryId,
-                    jettonAmount: msg.jettonAmount,
+                    queryId: msg.queryId as int64,
+                    jettonAmount: msg.jettonAmount as int64,
                 },
             });
             mirrorMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
