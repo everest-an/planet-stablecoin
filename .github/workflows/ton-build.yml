@@ -35,8 +35,6 @@ jobs:
         run: acton build
 
       - name: Test (Tolk)
-        # No unit tests exist yet (Phase 0 skeleton); the build is the gate.
-        continue-on-error: true
         run: acton test
 
       - name: Upload build artifacts
