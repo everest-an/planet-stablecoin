@@ -34,17 +34,17 @@ struct (0x20000001) SetAsset {
     positionValue: int64
 }
 
-type AllowedMessage = SetAsset
+type BasketMessage = SetAsset
 
 contract PlanetBasket {
     storage: BasketStorage
-    incomingMessages: AllowedMessage
+    incomingMessages: BasketMessage
 }
 
 // ---------------- Handling ----------------
 
 fun onInternalMessage(in: InMessage) {
-    val msg = lazy AllowedMessage.fromSlice(in.body);
+    val msg = lazy BasketMessage.fromSlice(in.body);
     match (msg) {
         SetAsset => { handleSetAsset(in.senderAddress, msg); }
         else => { assert (in.body.isEmpty()) throw 0xFFFF; }
