@@ -65,7 +65,8 @@ MigrationState          ->  enum / int 状态位
 ## 5. 未决 / 待办
 
 - [x] **PLT Jetton（TEP-74）已 vendor 并编译通过**：`contracts/jetton/JettonMinter.tolk` + `JettonWallet.tolk` + 支撑文件（源自 `ton-blockchain/tolk-bench` `01_jetton`）。CI Tolk 编译✅。
-- [ ] **PlanetCore ↔ JettonMinter 接线（下一步）**：`handleMint` 发 `MintNewJettons`（需构造空 `forwardPayload: RemainingBitsAndRefs`），`handleBurn` 走 `BurnNotificationForMinter` 回调。**建议先装 WSL+Acton 本地编译再迭代**（见 `ton/README.md`），盲改 CI 成本高。
+- [x] **PlanetCore → JettonMinter 铸造接线（完成，CI 编译✅）**：`handleMint(in.senderAddress, in.valueCoins, msg)` 构造 `InternalTransferStep`（空 `forwardPayload` = `beginCell().endCell().beginParse()`）+ 发 `MintNewJettons` 到 `storage.jettonMinter`。定标：`msg.queryId as uint64`、`minted as coins`。
+- [ ] **赎回方向（设计决策待定）**：标准 TEP-74 里 `BurnNotificationForMinter` 由 JettonWallet 发往 **Minter**（不是 PlanetCore），所以 PlanetCore 自记的 `totalSupply` 会与 Minter 不一致。方案：(a) 以 Minter 为唯一真相源（PlanetCore 不再自记 totalSupply）；或 (b) PlanetCore 复用 Minter。**需集成测试后再定。**
 - [x] **PLTG 治理代币（设计定，无需新合约代码）**：复用同一 `JettonMinter`，**部署第二个实例**——admin = 治理地址、genesis totalSupply = 10 亿、mintable 关闭。参数见 `PLAN-TON.md §1.5`。部署待 Phase 1。
 
 - [ ] 商品篮子多资产数据结构在 Tolk 中的表达（map / array / cell）
