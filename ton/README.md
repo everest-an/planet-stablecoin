@@ -6,7 +6,7 @@ TON implementation of Planet — commodity purchasing-power index protocol.
 
 | Language | Toolchain | Status |
 |---|---|---|
-| **Tolk** (official, recommended) | **Acton** | ⚠️ **source written, NOT compiled** — needs WSL/Linux/Docker |
+| **Tolk** (official, recommended) | **Acton** | ✅ **compiles in CI** (`.github/workflows/ton-build.yml`); local build needs WSL/Linux/Docker |
 | Tact (deprecated by TON) | `@tact-lang/compiler` (npm) | ✅ compiled (Phase 0 PoC reference) |
 
 > TON deprecated Tact in favour of **Tolk**; the official toolchain is **Acton**.
