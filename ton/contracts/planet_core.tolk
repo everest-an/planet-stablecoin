@@ -14,6 +14,10 @@ const ERR_PAUSED = 100;
 const ERR_NOT_OWNER = 101;
 const ERR_SUPPLY = 102;
 
+// Fee split (white paper §8.4): 45% buyback-burn / 30% reserve / 25% PLTG staking.
+const BURN_SHARE_BPS = 4500;
+const RESERVE_SHARE_BPS = 3000;
+
 // ---------------- Storage ----------------
 
 struct Storage {
@@ -22,6 +26,9 @@ struct Storage {
     totalReserve: int64
     totalSupply: int64
     currentPpi: int64
+    feesToBurn: int64       // accrued 45% bucket
+    feesToReserve: int64    // accrued 30% bucket
+    feesToStaking: int64    // accrued 25% bucket
     paused: bool
 }
 
@@ -85,6 +92,20 @@ fun burnAmount(plt: int64, ppi: int64): int64 {
     return gross * (BPS_DENOM - FEE_BPS) / BPS_DENOM;
 }
 
+// fee = amount * 0.5%
+fun feeAmount(amount: int64): int64 {
+    return amount * FEE_BPS / BPS_DENOM;
+}
+
+// Split a fee into (burn 45%, reserve 30%, staking 25%-remainder).
+// Remainder to staking avoids dust from integer division.
+fun feeSplit(fee: int64): (int64, int64, int64) {
+    val burn = fee * BURN_SHARE_BPS / BPS_DENOM;
+    val reserve = fee * RESERVE_SHARE_BPS / BPS_DENOM;
+    val staking = fee - burn - reserve;
+    return (burn, reserve, staking);
+}
+
 // ---------------- Message handling ----------------
 
 fun onInternalMessage(in: InMessage) {
@@ -102,6 +123,11 @@ fun onInternalMessage(in: InMessage) {
 fun handleMint(sender: address, msgValue: coins, msg: Mint) {
     var storage = lazy Storage.load();
     assert (!storage.paused) throw ERR_PAUSED;
+    val fee = feeAmount(msg.amount);
+    val (feeBurn, feeReserve, feeStaking) = feeSplit(fee);
+    storage.feesToBurn += feeBurn;
+    storage.feesToReserve += feeReserve;
+    storage.feesToStaking += feeStaking;
     val minted = mintAmount(msg.amount, storage.currentPpi);
     storage.totalReserve += msg.amount;
     storage.totalSupply += minted;
