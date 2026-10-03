@@ -66,7 +66,10 @@ MigrationState          ->  enum / int 状态位
 
 - [x] **PLT Jetton（TEP-74）已 vendor 并编译通过**：`contracts/jetton/JettonMinter.tolk` + `JettonWallet.tolk` + 支撑文件（源自 `ton-blockchain/tolk-bench` `01_jetton`）。CI Tolk 编译✅。
 - [x] **PlanetCore → JettonMinter 铸造接线（完成，CI 编译✅）**：`handleMint(in.senderAddress, in.valueCoins, msg)` 构造 `InternalTransferStep`（空 `forwardPayload` = `beginCell().endCell().beginParse()`）+ 发 `MintNewJettons` 到 `storage.jettonMinter`。定标：`msg.queryId as uint64`、`minted as coins`。
-- [ ] **赎回方向（设计决策待定）**：标准 TEP-74 里 `BurnNotificationForMinter` 由 JettonWallet 发往 **Minter**（不是 PlanetCore），所以 PlanetCore 自记的 `totalSupply` 会与 Minter 不一致。方案：(a) 以 Minter 为唯一真相源（PlanetCore 不再自记 totalSupply）；或 (b) PlanetCore 复用 Minter。**需集成测试后再定。**
+- [x] **赎回/销毁设计决策（已定）**：PLT 走标准 TEP-74 —— 用户用**自己的 JettonWallet** 销毁 PLT，`BurnNotificationForMinter` 由钱包发给 **JettonMinter**，由其扣减 `totalSupply`。
+  - **单一真相源**：PLT 供应量以 **`JettonMinter.totalSupply`** 为准；`PlanetCore.totalSupply` 降级为**展示用镜像**，不驱动赎回。
+  - **USDC 出金**：不与销毁强耦合在同一条消息链（TON 无同步跨合约调用，强耦合会产生难测失败模式）。改为 Phase 1 的**授权赎回流程**（owner/keeper 依据 Minter 供应快照放款）+ 集成测试。
+  - **待办（Phase 1）**：赎回集成测试 + 利率/费率 45/30/25 的链上落账。
 - [x] **PLTG 治理代币（设计定，无需新合约代码）**：复用同一 `JettonMinter`，**部署第二个实例**——admin = 治理地址、genesis totalSupply = 10 亿、mintable 关闭。参数见 `PLAN-TON.md §1.5`。部署待 Phase 1。
 
 - [ ] 商品篮子多资产数据结构在 Tolk 中的表达（map / array / cell）
