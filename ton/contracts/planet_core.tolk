@@ -208,3 +208,18 @@ get fun jettonMinter(): address {
     val storage = lazy Storage.load();
     return storage.jettonMinter;
 }
+
+get fun feesBurn(): int64 {
+    val storage = lazy Storage.load();
+    return storage.feesToBurn;
+}
+
+get fun feesReserve(): int64 {
+    val storage = lazy Storage.load();
+    return storage.feesToReserve;
+}
+
+get fun feesStaking(): int64 {
+    val storage = lazy Storage.load();
+    return storage.feesToStaking;
+}

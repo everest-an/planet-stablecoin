@@ -30,6 +30,11 @@ get fun `test mint decreases as PPI rises`() {
     expect(mintAmount(1000000, 1100000)).toEqual(904545);
 }
 
+get fun `test burn at PPI 1.05`() {
+    // gross = 1.0 * 1.05 = 1.05; net = 1.05 * 0.995 = 1.04475 -> 1044750
+    expect(burnAmount(1000000, 1050000)).toEqual(1044750);
+}
+
 get fun `test fee is 0.5%`() {
     expect(feeAmount(1000000)).toEqual(5000);
 }
