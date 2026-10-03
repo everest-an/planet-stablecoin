@@ -13,6 +13,8 @@ const PPI_SCALE = 1000000;   // 1.0 in 1e6 fixed point
 const ERR_PAUSED = 100;
 const ERR_NOT_OWNER = 101;
 const ERR_SUPPLY = 102;
+const ERR_NOT_ORACLE = 103;
+const ERR_STALE_PRICE = 104;
 
 // Fee split (white paper §8.4): 45% buyback-burn / 30% reserve / 25% PLTG staking.
 const BURN_SHARE_BPS = 4500;
@@ -39,6 +41,8 @@ struct Storage {
     feesToReserve: int64    // accrued 30% bucket
     feesToStaking: int64    // accrued 25% bucket
     paused: bool
+    oracle: address         // authorized price oracle (0 = unset; only owner may update)
+    lastOracleUpdate: int64 // timestamp of the last oracle push (replay protection)
 }
 
 fun Storage.load() {
@@ -76,7 +80,18 @@ struct (0x10000005) SetJettonMinter {
     minter: address
 }
 
-type AllowedMessage = Mint | Burn | UpdatePrice | SetPaused | SetJettonMinter
+struct (0x10000006) SetOracle {
+    queryId: int64
+    oracle: address
+}
+
+struct (0x10000007) OracleUpdatePrice {
+    queryId: int64
+    price: int64     // 1e6 fixed point
+    timestamp: int64 // must be strictly newer than the last oracle push
+}
+
+type AllowedMessage = Mint | Burn | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | OracleUpdatePrice
 
 // ---------------- Contract ABI ----------------
 
@@ -141,6 +156,8 @@ fun onInternalMessage(in: InMessage) {
         UpdatePrice => { handleUpdatePrice(in.senderAddress, msg); }
         SetPaused => { handleSetPaused(in.senderAddress, msg); }
         SetJettonMinter => { handleSetJettonMinter(in.senderAddress, msg); }
+        SetOracle => { handleSetOracle(in.senderAddress, msg); }
+        OracleUpdatePrice => { handleOracleUpdatePrice(in.senderAddress, msg); }
         else => { assert (in.body.isEmpty()) throw 0xFFFF; }
     }
 }
@@ -212,6 +229,25 @@ fun handleSetJettonMinter(sender: address, msg: SetJettonMinter) {
     storage.save();
 }
 
+// Owner designates the price oracle (e.g. the deployed RedStone adapter).
+fun handleSetOracle(sender: address, msg: SetOracle) {
+    var storage = lazy Storage.load();
+    assert (sender == storage.owner) throw ERR_NOT_OWNER;
+    storage.oracle = msg.oracle;
+    storage.save();
+}
+
+// Only the registered oracle may push a price, and only forward in time
+// (strictly increasing timestamp) to block replay of an old signed payload.
+fun handleOracleUpdatePrice(sender: address, msg: OracleUpdatePrice) {
+    var storage = lazy Storage.load();
+    assert (sender == storage.oracle) throw ERR_NOT_ORACLE;
+    assert (msg.timestamp > storage.lastOracleUpdate) throw ERR_STALE_PRICE;
+    storage.lastOracleUpdate = msg.timestamp;
+    storage.currentPpi = msg.price;
+    storage.save();
+}
+
 // ---------------- Getters ----------------
 
 get fun reserve(): int64 {
@@ -232,6 +268,16 @@ get fun ppi(): int64 {
 get fun jettonMinter(): address {
     val storage = lazy Storage.load();
     return storage.jettonMinter;
+}
+
+get fun oracle(): address {
+    val storage = lazy Storage.load();
+    return storage.oracle;
+}
+
+get fun lastOracleUpdate(): int64 {
+    val storage = lazy Storage.load();
+    return storage.lastOracleUpdate;
 }
 
 get fun feesBurn(): int64 {

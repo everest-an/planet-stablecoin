@@ -31,6 +31,8 @@ fun deployPlanetMintSetup(): (PlanetCore, JettonMinter, Treasury, Treasury) {
         feesToReserve: 0,
         feesToStaking: 0,
         paused: false,
+        oracle: deployer.address,
+        lastOracleUpdate: 0,
     });
     expect(core.deploy(deployer.address, { value: ton("0.2") }))
         .toHaveSuccessfulDeploy({ to: core.address });
