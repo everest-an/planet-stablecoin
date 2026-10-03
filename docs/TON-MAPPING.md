@@ -68,4 +68,4 @@ MigrationState          ->  enum / int 状态位
 - [ ] Jetton 合约（PLT + PLTG）实现方案（参考 `ton-blockchain/acton-contracts`）
 - [ ] RedStone 在 TON 的接入方式（Pull 需合约验签）
 - [ ] `feeSplit`（45/30/25）在 TON 上的落账方式（Jetton 转账 / 金库合约）
-- [ ] WSL + Acton 安装，跑通 `acton build`（当前唯一阻塞项）
+- [x] **Tolk 编译验证通过**：GitHub Actions (`ton-build.yml`) 用 Acton 1.2.0 编译 `planet_core.tolk` 成功（本地 WSL 可选）。已修：Acton.toml manifest、`in` 作用域、`Storage.load/save`、message opcode、`int64` 定宽字段。
