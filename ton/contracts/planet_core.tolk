@@ -106,29 +106,29 @@ contract PlanetCore {
 // ---------------- Pure math ----------------
 
 // Minted = D * (1 - f) / PPI
-// NOTE: Phase 0 skeleton; 64-bit intermediates can overflow for very large inputs
-// (real implementation needs u128 / reordered math — tracked in docs/TON-MAPPING.md).
+// Intermediates widen to `int` (257-bit TVM) so large deposits don't overflow int64.
 fun mintAmount(deposit: int64, ppi: int64): int64 {
-    val net = deposit * (BPS_DENOM - FEE_BPS) / BPS_DENOM;
-    return net * PPI_SCALE / ppi;
+    val net = (deposit as int) * (BPS_DENOM - FEE_BPS) / BPS_DENOM;
+    return (net * PPI_SCALE / (ppi as int)) as int64;
 }
 
 // Received = B * PPI * (1 - f)
 fun burnAmount(plt: int64, ppi: int64): int64 {
-    val gross = plt * ppi / PPI_SCALE;
-    return gross * (BPS_DENOM - FEE_BPS) / BPS_DENOM;
+    val gross = (plt as int) * (ppi as int) / PPI_SCALE;
+    return (gross * (BPS_DENOM - FEE_BPS) / BPS_DENOM) as int64;
 }
 
 // fee = amount * 0.5%
 fun feeAmount(amount: int64): int64 {
-    return amount * FEE_BPS / BPS_DENOM;
+    return ((amount as int) * FEE_BPS / BPS_DENOM) as int64;
 }
 
 // Split a fee into (burn 45%, reserve 30%, staking 25%-remainder).
 // Remainder to staking avoids dust from integer division.
 fun feeSplit(fee: int64): (int64, int64, int64) {
-    val burn = fee * BURN_SHARE_BPS / BPS_DENOM;
-    val reserve = fee * RESERVE_SHARE_BPS / BPS_DENOM;
+    val f = fee as int;
+    val burn = (f * BURN_SHARE_BPS / BPS_DENOM) as int64;
+    val reserve = (f * RESERVE_SHARE_BPS / BPS_DENOM) as int64;
     val staking = fee - burn - reserve;
     return (burn, reserve, staking);
 }
@@ -139,7 +139,7 @@ fun rebalanceDrift(weight: int64, positionValue: int64, totalReserve: int64): in
     if (totalReserve == 0) {
         return weight;
     }
-    val actual = positionValue * WEIGHT_SCALE / totalReserve;
+    val actual = ((positionValue as int) * WEIGHT_SCALE / (totalReserve as int)) as int64;
     return weight - actual;
 }
 
