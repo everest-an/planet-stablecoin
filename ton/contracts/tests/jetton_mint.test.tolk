@@ -71,3 +71,39 @@ get fun `test mint credits PLT through the jetton minter`() {
     expect(core.supply()).toEqual(expectedPlt);
     expect(core.reserve()).toEqual(deposit);
 }
+
+get fun `test wallet burn reduces minter supply`() {
+    val (core, minter, _, alice) = deployPlanetMintSetup();
+
+    core.sendMint(alice.address, 0, 1000000, { value: ton("1") });
+    val wallet = JettonWallet.fromAddress(minter.getWalletAddress(alice.address));
+    expect(wallet.getWalletData().jettonBalance).toEqual(995000);
+
+    // alice burns 100000 PLT through her own wallet (TEP-74 AskToBurn).
+    val res = wallet.sendAskToBurn(alice.address, 0, 100000, null, null, { value: ton("0.2") });
+    expect(res).toHaveAllSuccessfulTxs();
+
+    expect(wallet.getWalletData().jettonBalance).toEqual(895000);
+    expect(minter.getJettonData().totalSupply).toEqual(895000);
+}
+
+get fun `test wallet transfer moves PLT to recipient`() {
+    val (core, minter, _, alice) = deployPlanetMintSetup();
+    val bob = testing.treasury("bob");
+
+    core.sendMint(alice.address, 0, 1000000, { value: ton("1") });
+    val aliceWallet = JettonWallet.fromAddress(minter.getWalletAddress(alice.address));
+    expect(aliceWallet.getWalletData().jettonBalance).toEqual(995000);
+
+    // non-empty forward payload is required by the wallet's AskToTransfer handler.
+    val payload = beginCell().storeUint(1, 1).endCell().beginParse();
+    val res = aliceWallet.sendAskToTransfer(
+        alice.address, 0, 200000, bob.address, null, null, 0, payload, { value: ton("0.2") },
+    );
+    expect(res).toHaveAllSuccessfulTxs();
+
+    val bobWallet = JettonWallet.fromAddress(minter.getWalletAddress(bob.address));
+    expect(bobWallet.getWalletData().jettonBalance).toEqual(200000);
+    expect(aliceWallet.getWalletData().jettonBalance).toEqual(795000);
+    expect(minter.getJettonData().totalSupply).toEqual(995000);
+}
