@@ -136,3 +136,23 @@ get fun `test transfer above balance fails`() {
     );
     expect(res).toHaveFailedTx({ from: alice.address, to: wallet.address, exitCode: 706 });
 }
+
+get fun `test transfer with forward payload notifies recipient and returns excesses`() {
+    val (core, minter, _, alice) = deployPlanetMintSetup();
+    val bob = testing.treasury("bob");
+
+    core.sendMint(alice.address, 0, 1000000, { value: ton("1") });
+    val aliceWallet = JettonWallet.fromAddress(minter.getWalletAddress(alice.address));
+
+    // forwardTonAmount > 0 → recipient gets a TransferNotificationForRecipient;
+    // sendExcessesTo non-null → the receiving wallet returns leftover TON.
+    val payload = beginCell().storeUint(1, 1).endCell().beginParse();
+    val res = aliceWallet.sendAskToTransfer(
+        alice.address, 0, 100000, bob.address, alice.address, null, ton("0.05"), payload, { value: ton("0.5") },
+    );
+    expect(res).toHaveAllSuccessfulTxs();
+
+    val bobWallet = JettonWallet.fromAddress(minter.getWalletAddress(bob.address));
+    expect(bobWallet.getWalletData().jettonBalance).toEqual(100000);
+    expect(aliceWallet.getWalletData().jettonBalance).toEqual(895000);
+}
