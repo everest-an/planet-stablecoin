@@ -24,3 +24,11 @@ Thumbs.db
 
 # 其他项目误落文件（非 Planet 代码）
 awareness-growth/
+
+# Acton / Tolk 构建产物
+ton/build/
+ton/.acton/
+ton/contracts/wrappers/
+
+# Playwright MCP 会话记录（agent 工具产物，非项目代码）
+.playwright-mcp/
