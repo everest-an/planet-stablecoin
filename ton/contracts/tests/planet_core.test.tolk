@@ -57,3 +57,16 @@ get fun `test RTRA triggers when drift exceeds 0.5%`() {
     // at target -> no rebalance
     expect(shouldRebalance(500000, 500, 1000)).toEqual(false);
 }
+
+get fun `test fee split has no dust loss`() {
+    // non-divisible fee: remainder must go to staking, sum preserved
+    val (burn, reserve, staking) = feeSplit(999);
+    expect(burn + reserve + staking).toEqual(999);
+}
+
+get fun `test RTRA drift sign: underweight is positive`() {
+    // target 50%, actual 40% -> positive drift (buy)
+    expect(rebalanceDrift(500000, 400, 1000)).toEqual(100000);
+    // target 50%, actual 60% -> negative drift (sell)
+    expect(rebalanceDrift(500000, 600, 1000)).toEqual(-100000);
+}
