@@ -6,6 +6,7 @@
 
 import "jetton/messages"
 import "oracle_state"
+import "burn_mirror"
 
 const FEE_BPS = 50;          // 0.5% = 50 bps
 const BPS_DENOM = 10000;
@@ -16,6 +17,7 @@ const ERR_NOT_OWNER = 101;
 const ERR_SUPPLY = 102;
 const ERR_NOT_ORACLE = 103;
 const ERR_STALE_PRICE = 104;
+const ERR_NOT_MINTER = 105;
 
 // Fee split (white paper §8.4): 45% buyback-burn / 30% reserve / 25% PLTG staking.
 const BURN_SHARE_BPS = 4500;
@@ -63,11 +65,6 @@ struct (0x10000001) Mint {
     amount: int64    // USDC (6 decimals)
 }
 
-struct (0x10000002) Burn {
-    queryId: int64
-    amount: int64    // PLT (6 decimals)
-}
-
 struct (0x10000003) UpdatePrice {
     queryId: int64
     price: int64     // 1e6 fixed point (Phase 0 placeholder; oracle TBD)
@@ -94,7 +91,7 @@ struct (0x10000007) OracleUpdatePrice {
     timestamp: int64 // must be strictly newer than the last oracle push
 }
 
-type AllowedMessage = Mint | Burn | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | OracleUpdatePrice
+type AllowedMessage = Mint | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | OracleUpdatePrice | BurnMirror
 
 // ---------------- Contract ABI ----------------
 
@@ -155,12 +152,12 @@ fun onInternalMessage(in: InMessage) {
     val msg = lazy AllowedMessage.fromSlice(in.body);
     match (msg) {
         Mint => { handleMint(in.senderAddress, in.valueCoins, msg); }
-        Burn => { handleBurn(msg); }
         UpdatePrice => { handleUpdatePrice(in.senderAddress, msg); }
         SetPaused => { handleSetPaused(in.senderAddress, msg); }
         SetJettonMinter => { handleSetJettonMinter(in.senderAddress, msg); }
         SetOracle => { handleSetOracle(in.senderAddress, msg); }
         OracleUpdatePrice => { handleOracleUpdatePrice(in.senderAddress, msg); }
+        BurnMirror => { handleBurnMirror(in.senderAddress, msg); }
         else => { assert (in.body.isEmpty()) throw 0xFFFF; }
     }
 }
@@ -201,12 +198,15 @@ fun handleMint(sender: address, msgValue: coins, msg: Mint) {
     mintMsg.send(SEND_MODE_PAY_FEES_SEPARATELY);
 }
 
-fun handleBurn(msg: Burn) {
+// Mirrored burn: the PLT Jetton minter already burned `jettonAmount` from supply
+// (via a wallet's AskToBurn). Core reduces its own accounting by the same amount and
+// by the USD actually paid out (net of fee), keeping core in sync with the minter.
+fun handleBurnMirror(sender: address, msg: BurnMirror) {
     var storage = lazy Storage.load();
-    assert (!storage.paused) throw ERR_PAUSED;
-    assert (storage.totalSupply >= msg.amount) throw ERR_SUPPLY;
-    val received = burnAmount(msg.amount, storage.currentPpi);
-    storage.totalSupply -= msg.amount;
+    assert (sender == storage.jettonMinter) throw ERR_NOT_MINTER;
+    assert (storage.totalSupply >= msg.jettonAmount) throw ERR_SUPPLY;
+    val received = burnAmount(msg.jettonAmount, storage.currentPpi);
+    storage.totalSupply -= msg.jettonAmount;
     storage.totalReserve -= received;
     storage.save();
 }

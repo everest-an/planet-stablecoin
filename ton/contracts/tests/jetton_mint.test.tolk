@@ -87,6 +87,9 @@ get fun `test wallet burn reduces minter supply`() {
 
     expect(wallet.getWalletData().jettonBalance).toEqual(895000);
     expect(minter.getJettonData().totalSupply).toEqual(895000);
+    // the minter mirrors the burn to PlanetCore, keeping core accounting in sync
+    expect(core.supply()).toEqual(895000);
+    expect(core.reserve()).toEqual(900500); // 1e6 - burnAmount(100000, 1e6)=99500
 }
 
 get fun `test wallet transfer moves PLT to recipient`() {

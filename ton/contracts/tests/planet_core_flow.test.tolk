@@ -16,7 +16,7 @@ fun deployCore(): (PlanetCore, Treasury, Treasury) {
     val alice = testing.treasury("alice");
     val core = PlanetCore.fromStorage({
         owner: deployer.address,
-        jettonMinter: deployer.address,
+        jettonMinter: alice.address,
         totalReserve: 0,
         totalSupply: 0,
         currentPpi: 1000000,
@@ -95,17 +95,24 @@ get fun `test mint accrues fees split 45-30-25`() {
 
 // ---------------- Burn accounting (ERR_SUPPLY = 102) ----------------
 
-get fun `test core burn reduces supply and reserve`() {
-    val (core, _, alice) = deployCore();
+get fun `test minter can mirror a burn into core accounting`() {
+    val (core, _, alice) = deployCore();   // alice is the registered minter in this fixture
     core.sendMint(alice.address, 0, 1000000, { value: ton("0.5") });
-    // burn 500000 PLT at PPI 1.0 → received = 500000 * 0.995 = 497500
-    core.sendBurn(alice.address, 0, 500000, { value: ton("0.05") });
+    expect(core.supply()).toEqual(995000);
+    // mirror a 500000 PLT burn at PPI 1.0 → received = 500000 * 0.995 = 497500
+    core.sendBurnMirror(alice.address, 0, 500000, { value: ton("0.05") });
     expect(core.supply()).toEqual(495000);
     expect(core.reserve()).toEqual(502500);
 }
 
-get fun `test burn above supply fails`() {
+get fun `test only the minter can mirror a burn`() {
+    val (core, deployer, _) = deployCore();
+    val res = core.sendBurnMirror(deployer.address, 0, 1, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: deployer.address, to: core.address, exitCode: 105 });
+}
+
+get fun `test mirror burn above supply fails`() {
     val (core, _, alice) = deployCore();
-    val res = core.sendBurn(alice.address, 0, 1, { value: ton("0.05") });
+    val res = core.sendBurnMirror(alice.address, 0, 1, { value: ton("0.05") });
     expect(res).toHaveFailedTx({ from: alice.address, to: core.address, exitCode: 102 });
 }
