@@ -45,3 +45,15 @@ get fun `test fee split is 45/30/25`() {
     expect(reserve).toEqual(3000);
     expect(staking).toEqual(2500);
 }
+
+get fun `test RTRA drift is zero at target weight`() {
+    // weight 50%, value 500 of totalReserve 1000 -> actual 50% -> drift 0
+    expect(rebalanceDrift(500000, 500, 1000)).toEqual(0);
+}
+
+get fun `test RTRA triggers when drift exceeds 0.5%`() {
+    // weight 50%, value 400 of 1000 -> actual 40% -> drift +10% -> rebalance
+    expect(shouldRebalance(500000, 400, 1000)).toEqual(true);
+    // at target -> no rebalance
+    expect(shouldRebalance(500000, 500, 1000)).toEqual(false);
+}

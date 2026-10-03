@@ -18,6 +18,10 @@ const ERR_SUPPLY = 102;
 const BURN_SHARE_BPS = 4500;
 const RESERVE_SHARE_BPS = 3000;
 
+// Basket weights (ppm, 1e6 = 100%) and rebalance threshold (0.5%).
+const WEIGHT_SCALE = 1000000;
+const REBALANCE_THRESHOLD = 5000;
+
 // ---------------- Storage ----------------
 
 struct Storage {
@@ -104,6 +108,23 @@ fun feeSplit(fee: int64): (int64, int64, int64) {
     val reserve = fee * RESERVE_SHARE_BPS / BPS_DENOM;
     val staking = fee - burn - reserve;
     return (burn, reserve, staking);
+}
+
+// RTRA (real-time rebalancing algorithm) drift: ΔA_i = (w_i − V_i/ΣV) × T
+// Returned as ppm of total reserve; positive = underweight (buy), negative = overweight (sell).
+fun rebalanceDrift(weight: int64, positionValue: int64, totalReserve: int64): int64 {
+    if (totalReserve == 0) {
+        return weight;
+    }
+    val actual = positionValue * WEIGHT_SCALE / totalReserve;
+    return weight - actual;
+}
+
+// Trigger a rebalance for asset i when |drift| > 0.5%.
+fun shouldRebalance(weight: int64, positionValue: int64, totalReserve: int64): bool {
+    val drift = rebalanceDrift(weight, positionValue, totalReserve);
+    val abs = drift < 0 ? -drift : drift;
+    return abs > REBALANCE_THRESHOLD;
 }
 
 // ---------------- Message handling ----------------
