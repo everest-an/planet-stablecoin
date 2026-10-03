@@ -1,8 +1,6 @@
 // PlanetCore.tolk — Planet on TON (Phase 0 skeleton, Tolk language)
 //
-// ⚠️ DRAFT: this file must be compiled with the **Acton** toolchain
-//    (WSL/Linux/Docker). It has NOT been compiled yet on this Windows machine
-//    because Acton does not support native Windows (see ton/README.md).
+// Compiled with the Acton toolchain (see ton/README.md). CI: .github/workflows/ton-build.yml
 //
 // Fixed-point integers only (1e6). No floats.
 
@@ -24,24 +22,32 @@ struct Storage {
     paused: bool
 }
 
+fun Storage.load() {
+    return Storage.fromCell(contract.getData())
+}
+
+fun Storage.save(self) {
+    contract.setData(self.toCell())
+}
+
 // ---------------- Messages ----------------
 
-struct Mint {
+struct (0x10000001) Mint {
     queryId: int
     amount: int      // USDC (6 decimals)
 }
 
-struct Burn {
+struct (0x10000002) Burn {
     queryId: int
     amount: int      // PLT (6 decimals)
 }
 
-struct UpdatePrice {
+struct (0x10000003) UpdatePrice {
     queryId: int
     price: int       // 1e6 fixed point (Phase 0 placeholder; oracle TBD)
 }
 
-struct SetPaused {
+struct (0x10000004) SetPaused {
     queryId: int
     paused: bool
 }
@@ -78,11 +84,12 @@ fun onInternalMessage(in: InMessage) {
         Burn => { handleBurn(msg); }
         UpdatePrice => { handleUpdatePrice(in.senderAddress, msg); }
         SetPaused => { handleSetPaused(in.senderAddress, msg); }
+        else => { assert (in.body.isEmpty()) throw 0xFFFF; }
     }
 }
 
 fun handleMint(msg: Mint) {
-    val storage = lazy Storage.load();
+    var storage = lazy Storage.load();
     assert (!storage.paused) throw ERR_PAUSED;
     val minted = mintAmount(msg.amount, storage.currentPpi);
     storage.totalReserve += msg.amount;
@@ -91,7 +98,7 @@ fun handleMint(msg: Mint) {
 }
 
 fun handleBurn(msg: Burn) {
-    val storage = lazy Storage.load();
+    var storage = lazy Storage.load();
     assert (!storage.paused) throw ERR_PAUSED;
     assert (storage.totalSupply >= msg.amount) throw ERR_SUPPLY;
     val received = burnAmount(msg.amount, storage.currentPpi);
@@ -101,14 +108,14 @@ fun handleBurn(msg: Burn) {
 }
 
 fun handleUpdatePrice(sender: address, msg: UpdatePrice) {
-    val storage = lazy Storage.load();
+    var storage = lazy Storage.load();
     assert (sender == storage.owner) throw ERR_NOT_OWNER;
     storage.currentPpi = msg.price;
     storage.save();
 }
 
 fun handleSetPaused(sender: address, msg: SetPaused) {
-    val storage = lazy Storage.load();
+    var storage = lazy Storage.load();
     assert (sender == storage.owner) throw ERR_NOT_OWNER;
     storage.paused = msg.paused;
     storage.save();
