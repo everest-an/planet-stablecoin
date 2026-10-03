@@ -1,0 +1,142 @@
+# Planet — 会话交接（HANDOFF）
+
+> 目的：让下一个会话（或另一位协作者）能在**不重读历史**的情况下继续。
+> 仓库即持久记忆；本文档 + `docs/*` 是唯一可信来源。
+
+---
+
+## 0. 一句话 + 链接
+
+Planet（PLT）= 全球大宗商品购买力指数协议；当前实现为 **TON 上的合成指数代币 + TEP-74 代币 + 铸赎骨架**。
+仓库：`github.com/everest-an/planet-stablecoin`（**private**），分支 `main`。
+最后验证：HEAD `b4a971b`，CI 全绿。
+
+---
+
+## 1. 决策链（为什么是现在这样）
+
+1. **目标**：发行即获客，早期无资金、**无主体（no legal entity）**、纯链上，优先服务"被市场挡住的人"。
+2. **入口 = Telegram** → Telegram 官方《Blockchain Guidelines》硬性要求 Mini App 只能用 **TON + TON Connect** → **协议上 TON**（见 `GTM.md`）。
+3. **语言 = Tolk**（TON 官方推荐；**Tact 已弃用**），工具链 **Acton**（不支持 Windows 原生，需 WSL/Linux/Docker）。
+4. **预言机 = RedStone（主）+ DIA（备）**：**Pyth Core 已于 2026-08-26 停止支持 TON**。
+5. **PLT 供应量以 JettonMinter 为唯一真相源**；赎回走 Phase 1 授权放款（见 `TON-MAPPING.md`）。
+6. **多链**：暂缓，后期 hub-and-spoke（TON 枢纽 + BSC 镜像）。
+
+详见：`GTM.md`、`PLAN-TON.md`、`TON-MAPPING.md`、`AUDIT.md`、`whitepaper-extracted.md`。
+
+---
+
+## 2. 仓库结构（关键文件）
+
+```
+docs/
+  whitepaper-extracted.md   白皮书全文（18页，Node pdf-parse 抽取）
+  GTM.md                    定位/获客/Telegram 链限制/多链
+  PLAN-TON.md               TON 迁移计划（Tolk/Acton/预言机/组件）
+  TON-MAPPING.md            Solana→TON 映射 + 设计决策
+  AUDIT.md                  可信任/审计清单（无主体信任模型）
+  HANDOFF.md                本文档
+ton/
+  Acton.toml                项目清单（[package]/[toolchain]/[contracts]/[import-mappings]/[wrappers.tolk]）
+  contracts/planet_core.tolk    核心：PPI/铸赎/风控/费率45-30-25/RTRA/Jetton 接线
+  contracts/planet_basket.tolk  组合注册表：assetCount()/assetAt(i)
+  contracts/jetton/*.tolk       PLT TEP-74（vendored 自 ton-blockchain/tolk-bench 01_jetton）
+  contracts/tests/planet_core.test.tolk   单元+不变量测试
+  contracts/tests/integration.test.tolk   部署 PlanetCore 集成测试
+  README.md                 构建说明（WSL/Acton + Tact PoC）
+app-tg/                     Telegram Mini App（Vite+React+TON Connect）
+  src/App.tsx               读 PlanetCore + 篮子表 + mint UI + burn UI
+.github/workflows/ton-build.yml   3 job：Tolk(Acton) / TG Mini App / Tact PoC
+programs/planet/            （遗留 Solana/Anchor 版，仅作算法参考，已不作为主线）
+```
+
+---
+
+## 3. 当前验证状态（可核对）
+
+- **CI 3 job 全绿**：`Tolk (Acton)`（build + wrapper + test --coverage）、`TG Mini App`（vite build）、`Tact PoC`。
+- **11 个测试**：单元（mint/burn/feeAmount/feeSplit/rebalanceDrift/shouldRebalance）+ 不变量（无 dust、drift 符号）+ 集成（部署 PlanetCore + getter）。
+- **触发路径**：`.github/workflows/ton-build.yml` 监听 `ton/**` 与 `app-tg/**`。
+- 近期提交：`b4a971b`(coverage) · `c390639`(不变量测试) · `db29967`(AUDIT) · `6d6926b`(篮子 UI) · `0b3196e`(PlanetBasket) · `d6c54b6`(RTRA)。
+
+---
+
+## 4. 如何构建与测试
+
+**本地（推荐，快）**——需 WSL2 发行版（本机 WSL 已装但**无 distro**）：
+```bash
+wsl --install -d Ubuntu          # 一次性
+# 在 WSL 内：
+curl -LsSf https://github.com/ton-blockchain/acton/releases/latest/download/acton-installer.sh | sh
+cd ton && acton build && acton wrapper --all && acton test --coverage
+```
+**不装 WSL**：靠 GitHub Actions（push 即编译，产物在 run artifact）。
+
+**TG 小程序**（Node 本机可用）：
+```bash
+cd app-tg && npm install && npm run build
+```
+
+---
+
+## 5. 已完成（Phase 0 + Phase 1 前端/合约）
+
+- 白皮书全文归档。
+- TON 合约：`PlanetCore`（PPI、铸赎、风控、暂停、费率 45/30/25、**RTRA 再平衡**、**mint→JettonMinter `MintNewJettons` 接线**、`setJettonMinter`）。
+- `PlanetBasket`：链上组合注册表 + getter。
+- **PLT TEP-74 Jetton**（minter + wallet，vendored）。
+- TG 小程序：读 PPI/储备/供应 + **链上篮子表** + **mint UI** + **burn UI**（TEP-74 AskToBurn）。
+- 11 测试 + 覆盖率 + CI 门禁。
+- 文档：GTM / PLAN-TON / TON-MAPPING / AUDIT。
+
+---
+
+## 6. 待办 + 精确下一步 + 阻塞
+
+| 优先级 | 任务 | 状态 / 阻塞 |
+|---|---|---|
+| P1 | **Mint→Jetton 全链路集成测试**（在 emulator 里部署 Minter+Wallet，发 Mint，验 PLT 余额） | ⚠️ 多迭代；**建议本地 Acton**；有把 CI 改红风险 |
+| P1 | **覆盖率门禁**（`--coverage-minimum-percent 80`） | ✅ 已跑 `--coverage`（仅展示）；**设阈值**待做 |
+| P2 | **RedStone 预言机接入**（替换 `UpdatePrice` 占位） | ❌ 阻塞：需 **RedStone TON 合约地址 + payload 格式**（外部） |
+| P2 | **测试网部署 + `acton verify`** | ❌ 阻塞：需 **有资金的 TON 钱包**（外部） |
+| P3 | 多签 + 时间锁迁移（owner 权限点：SetPaused/SetJettonMinter/SetAsset/UpdatePrice） | 部署后配置 |
+| P3 | 第三方审计（Halborn/Certora）、漏洞赏金、形式化验证 | 外部机构 |
+
+**下一步最顺（纯代码）**：给覆盖率设阈值（低风险）→ 再做 Mint→Jetton 集成测试（高价值/高风险）。
+
+---
+
+## 7. Tolk 踩坑速查（**重要**，省下重复试错）
+
+- **类型必须定宽**才能序列化：字段/message 不能用 `int`，用 `int64`/`uint64`/`coins`。
+- **存储**：`fun Storage.load() { return Storage.fromCell(contract.getData()) }` + `fun Storage.save(self) { contract.setData(self.toCell()) }`；用 `var storage = lazy Storage.load()` 改后 `storage.save()`。
+- **message**：`struct (0x........) Name { ... }` 必须有 32 位 opcode；联合 `type AllowedMessage = A | B`。
+- **入口** `fun onInternalMessage(in: InMessage)`；`in.senderAddress`/`in.valueCoins` 只在入口可见，辅助函数要显式传参。
+- **map 取值**：`m.get(k)` 返回 `MapLookupResult<V>`（用 `isFound` + `loadValue()`）；直接取用 **`m.mustGet(k)`**。空 map 字面量 `[]`。
+- **三元**两个分支类型必须一致（`-int64` 可能变 `int` → 报错）；避免 `? :` 混类型。
+- **空 slice / forwardPayload**：`beginCell().endCell().beginParse()`。
+- **类型转换**：`x as uint64` / `x as coins`。
+- **构建**：`acton build` → `acton wrapper --all` → `acton test --coverage`。
+
+---
+
+## 8. 需外部输入（给下个会话的清单）
+
+1. RedStone 的 **TON 合约地址 + 价格更新 payload 格式**。
+2. 一个**有资金的 TON 测试网钱包**（地址或 `wallets.toml`）。
+3. （可选）WSL Ubuntu 安装（让合约测试秒级迭代）。
+
+---
+
+## 9. 下一次开局的推荐指令
+
+> "读 `docs/HANDOFF.md`。装/用本地 Acton，然后做 **Mint→Jetton 全链路集成测试**（部署 JettonMinter+JettonWallet，发 Mint，断言 PLT 余额），再给覆盖率设阈值 80%。改动保持 CI 绿。"
+
+---
+
+## 10. 上下文管理教训（给 Agent）
+
+- **别把大文档整页抓进主上下文**：用 `task` 派子智能体读 TON docs/大文件，只回收结论。
+- **CI 日志用 grep 抓关键行**，别整段 dump。
+- **中间结果写进仓库文件**（`docs/*`），让持久状态在磁盘而非上下文。
+- 一次 2 万 token 的抓取 ≈ 几十轮对话；节流就是续命。
