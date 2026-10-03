@@ -9,7 +9,7 @@
 
 Planet（PLT）= 全球大宗商品购买力指数协议；当前实现为 **TON 上的合成指数代币 + TEP-74 代币 + 铸赎骨架**。
 仓库：`github.com/everest-an/planet-stablecoin`（**private**），分支 `main`。
-最后验证：分支 `feat/ton-coverage-gate-and-jetton-mint`，CI 全绿（14 测试，覆盖率 47.6%）。合并进 `main` 后此处改为 `main` HEAD。
+最后验证：分支 `feat/ton-coverage-gate-and-jetton-mint`，CI 全绿（32 测试，覆盖率 82.5%）。合并进 `main` 后此处改为 `main` HEAD。
 
 ---
 
@@ -41,8 +41,11 @@ ton/
   contracts/planet_core.tolk    核心：PPI/铸赎/风控/费率45-30-25/RTRA/Jetton 接线
   contracts/planet_basket.tolk  组合注册表：assetCount()/assetAt(i)
   contracts/jetton/*.tolk       PLT TEP-74（vendored 自 ton-blockchain/tolk-bench 01_jetton）
-  contracts/tests/planet_core.test.tolk   单元+不变量测试
-  contracts/tests/integration.test.tolk   部署 PlanetCore 集成测试
+  contracts/tests/planet_core.test.tolk      纯数学 / 不变量
+  contracts/tests/planet_core_flow.test.tolk PlanetCore 管理/暂停/费率/赎回
+  contracts/tests/integration.test.tolk     部署 PlanetCore 集成
+  contracts/tests/jetton_mint.test.tolk     全链路 mint / burn / transfer
+  contracts/tests/jetton_minter_admin.test.tolk minter 管理路径 + TEP-89
   README.md                 构建说明（WSL/Acton + Tact PoC）
 app-tg/                     Telegram Mini App（Vite+React+TON Connect）
   src/App.tsx               读 PlanetCore + 篮子表 + mint UI + burn UI
@@ -55,9 +58,9 @@ legacy-solana/              Solana/Anchor 遗留实现 + 原 README（算法参�
 ## 3. 当前验证状态（可核对）
 
 - **CI 3 job 全绿**：`Tolk (Acton)`（build + wrapper + test --coverage）、`TG Mini App`（vite build）、`Tact PoC`。
-- **14 个测试（3 文件）**：12 单元/不变量（mint/burn/fee*/RTRA）+ 集成（部署 PlanetCore）+ **全链路**（PlanetCore `Mint` → JettonMinter `MintNewJettons` → 新钱包自动部署 → 断言 PLT 余额 = 995000）。
+- **32 个测试（5 文件）**：纯数学/不变量 + 集成（部署 PlanetCore）+ **全链路**（PlanetCore `Mint`→JettonMinter→新钱包 PLT 余额；wallet burn；wallet transfer）+ PlanetCore 管理/暂停/费率/赎回 + minter 管理路径/TEP-89。
 - **触发路径**：`.github/workflows/ton-build.yml` 监听 `ton/**` 与 `app-tg/**`。
-- **覆盖率（基线棘轮）**：All files **47.6% score**（行 45.9% / 分支 55.8%）；`planet_core.tolk` 66.7%。门禁 `ton/Acton.toml [test.coverage] minimum-percent = 47`，**只升不降**。
+- **覆盖率（基线棘轮）**：All files **82.5% score**（行 86.4% / 分支 72.9%）；`planet_core.tolk` 94.8%、JettonMinter 83.0%、JettonWallet 68.4%。门禁 `ton/Acton.toml [test.coverage] minimum-percent = 80`，**只升不降**。
 - 近期提交：见分支 `feat/ton-coverage-gate-and-jetton-mint`（`chore` 仓库整理 · `ci` 覆盖率棘轮 · `fix` mint tonAmount + 全链路测试 · `fix` camelCase getters）。
 
 ---
@@ -87,7 +90,7 @@ cd app-tg && npm install && npm run build
 - `PlanetBasket`：链上组合注册表 + getter。
 - **PLT TEP-74 Jetton**（minter + wallet，vendored）。
 - TG 小程序：读 PPI/储备/供应 + **链上篮子表** + **mint UI** + **burn UI**（TEP-74 AskToBurn）。
-- 14 测试 + 覆盖率（47.6% score）+ CI 门禁（棘轮，只升不降）。
+- 32 测试 + 覆盖率（82.5% score，门禁 80）+ CI 门禁（棘轮，只升不降）。
 - 文档：GTM / PLAN-TON / TON-MAPPING / AUDIT。
 
 ---
@@ -97,13 +100,13 @@ cd app-tg && npm install && npm run build
 | 优先级 | 任务 | 状态 / 阻塞 |
 |---|---|---|
 | ✅ | **Mint→Jetton 全链路集成测试**（emulator 部署 Minter+Wallet，发 Mint，断言 PLT 余额） | ✅ 完成（`contracts/tests/jetton_mint.test.tolk`，CI 绿） |
-| ✅ | **覆盖率门禁** | ✅ 完成：基线棘轮 `minimum-percent = 47`（HANDOFF 原定 80% 不可达——实测基线仅 29.8%，现 47.6%；80% 需继续补测） |
+| ✅ | **覆盖率门禁（目标 80%）** | ✅ 达成：All files **82.5%**，门禁 `minimum-percent = 80`（起点 29.8% → 82.5%） |
 | P2 | **RedStone 预言机接入**（替换 `UpdatePrice` 占位） | ❌ 阻塞：需 **RedStone TON 合约地址 + payload 格式**（外部） |
 | P2 | **测试网部署 + `acton verify`** | ❌ 阻塞：需 **有资金的 TON 钱包**（外部） |
 | P3 | 多签 + 时间锁迁移（owner 权限点：SetPaused/SetJettonMinter/SetAsset/UpdatePrice） | 部署后配置 |
 | P3 | 第三方审计（Halborn/Certora）、漏洞赏金、形式化验证 | 外部机构 |
 
-**下一步最顺（纯代码）**：补单元测试把覆盖率从 47.6% 推向 80%（门禁只升不降）→ 接入 RedStone（需外部地址）→ 测试网部署。
+**下一步最顺（纯代码）**：覆盖率目标已达成（82.5% ≥ 80%）；继续补 JettonWallet 边界（反弹/forwardTon/excesses）可再升 → 接入 RedStone（需外部地址）→ 测试网部署。
 
 ---
 
@@ -134,7 +137,7 @@ cd app-tg && npm install && npm run build
 
 ## 9. 下一次开局的推荐指令
 
-> "读 `docs/HANDOFF.md`。仓库已整理（主线 `ton/`+`app-tg/`，Solana 归档 `legacy-solana/`）。全链路铸币测试已绿。下一步：补单元测试把覆盖率从 47.6% 推向 80%（门禁在 `ton/Acton.toml`，只升不降）。改动保持 CI 绿。"
+> "读 `docs/HANDOFF.md`。仓库已整理（主线 `ton/`+`app-tg/`，Solana 归档 `legacy-solana/`）。全链路铸币/转账/赎回测试已绿，覆盖率 82.5%（门禁 80，只升不降）。下一步：接 RedStone（需 TON 合约地址 + payload 格式）或测试网部署（需有资金钱包）。改动保持 CI 绿。"
 
 ---
 
