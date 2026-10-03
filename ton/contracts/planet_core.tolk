@@ -22,6 +22,11 @@ const RESERVE_SHARE_BPS = 3000;
 const WEIGHT_SCALE = 1000000;
 const REBALANCE_THRESHOLD = 5000;
 
+// TON forwarded (through the minter) to the recipient's Jetton wallet so that the
+// auto-deployed wallet has gas to credit the minted PLT. Matches tolk-bench's
+// 0.05 TON mint forward used by the reference TEP-74 tests.
+const MINT_FORWARD_TON = ton("0.05");
+
 // ---------------- Storage ----------------
 
 struct Storage {
@@ -169,7 +174,7 @@ fun handleMint(sender: address, msgValue: coins, msg: Mint) {
         body: MintNewJettons {
             queryId: msg.queryId as uint64,
             mintRecipient: sender,
-            tonAmount: 0,
+            tonAmount: MINT_FORWARD_TON,
             internalTransferMsg: step.toCell(),
         },
     });
