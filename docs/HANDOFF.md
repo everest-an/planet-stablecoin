@@ -50,6 +50,7 @@ ton/
   contracts/tests/jetton_minter_admin.test.tolk minter 管理路径 + TEP-89
   contracts/tests/oracle.test.tolk           预言机接缝（set / push / 重放）
   contracts/tests/planet_basket.test.tolk     组合注册表（assetCount/assetAt/SetAsset）
+  scripts/deploy.tolk       部署整套（core+minter+basket）；emulation 可跑，--net 上测试网
   README.md                 构建说明（WSL/Acton + Tact PoC）
 app-tg/                     Telegram Mini App（Vite+React+TON Connect）
   src/App.tsx               读 PlanetCore + 篮子表 + mint UI + burn UI
@@ -61,7 +62,7 @@ legacy-solana/              Solana/Anchor 遗留实现 + 原 README（算法参�
 
 ## 3. 当前验证状态（可核对）
 
-- **CI 3 job 全绿**：`Tolk (Acton)`（build + wrapper + test --coverage）、`TG Mini App`（vite build）、`Tact PoC`。
+- **CI 3 job 全绿**：`Tolk (Acton)`（build + wrapper + test --coverage + **deploy 脚本 emulation 冒烟**）、`TG Mini App`（vite build）、`Tact PoC`。
 - **45 个测试（7 文件）**：纯数学/不变量 + **大额溢出回归** + 集成 + 全链路（mint/burn/transfer）+ PlanetCore 管理/暂停/费率/赎回 + minter 管理/TEP-89 + **预言机接缝** + **PlanetBasket 组合注册表**。
 - **触发路径**：`.github/workflows/ton-build.yml` 监听 `ton/**` 与 `app-tg/**`。
 - **覆盖率（基线棘轮）**：All files **89.6% score**（行 94.4% / 分支 78.0%）；`planet_core.tolk` 96.0%、`planet_basket.tolk` 90.9%、JettonWallet 85.5%、JettonMinter 83.0%。门禁 `ton/Acton.toml [test.coverage] minimum-percent = 89`，**只升不降**（门禁已实证生效：测试编译失败时曾以 70.4% 拦下 CI）。
@@ -93,6 +94,7 @@ cd app-tg && npm install && npm run build
 - TON 合约：`PlanetCore`（PPI、铸赎、风控、暂停、费率 45/30/25、**RTRA 再平衡**、**mint→JettonMinter `MintNewJettons` 接线**、`setJettonMinter`）。
 - **预言机接缝**：`SetOracle`/`OracleUpdatePrice`（仅注册 oracle 可推价 + 时间戳单调防重放；状态存 ref cell）。
 - **溢出修复**：PPI 数学（mint/burn/fee/drift）中间量改用 257-bit `int`，消除 int64 在 ~$9M 存款 / ~920 万 PLT / 大额持仓处的静默溢出。
+- **部署脚本** `ton/scripts/deploy.tolk`：部署 PlanetCore + PLT Minter + 接线 + PlanetBasket；emulation 可跑、CI 冒烟验证、`--net testnet` 可上链（需钱包）。
 - `PlanetBasket`：链上组合注册表 + getter。
 - **PLT TEP-74 Jetton**（minter + wallet，vendored）。
 - TG 小程序：读 PPI/储备/供应 + **链上篮子表** + **mint UI** + **burn UI**（TEP-74 AskToBurn）。
@@ -130,6 +132,8 @@ cd app-tg && npm install && npm run build
 - **Jetton mint 必须给 `MintNewJettons.tonAmount > 0`**（minter 用它给新钱包部署+gas）；否则钱包不被充值。PlanetCore 用 `MINT_FORWARD_TON = ton("0.05")`。
 - **测试部署顺序**：先 `testing.treasury()` → 部署 PlanetCore（jettonMinter 先占位）→ 部署 Minter（admin=PlanetCore 地址）→ `SetJettonMinter` 接线（绕过地址循环依赖）。
 - **int64 静默溢出**：纯函数里 `a * b / c` 当 a、b 为 int64 会静默溢出（如 `net * PPI_SCALE` 在 ~$9M 存款处）；中间量改 `x as int`（257-bit），最后 `as int64` 收回。
+- **顶层类型名冲突**：同一编译单元内两个合约各定义 `AllowedMessage` 会 `redefinition of symbol`（尤其一个文件 import 多个 wrapper 时）。各合约 message 联合用唯一名（本仓：basket 用 `BasketMessage`）。
+- **`println`**：需 `import "@acton/io"`（`lib/io.tolk`）；脚本用 `@acton/emulation/scripts`（测试用 `@acton/emulation/testing`）。
 - **存储 ≤ 1023 bits**：Storage 字段超限会编译报错（2 地址 + 6×int64 已 ~919bit）。超限就把子结构放进 **ref cell**（字段类型 `cell`，用 `Sub.fromCell(x)`/`x.toCell()` 读写；测试里用 `Sub { ... }.toCell()` 构造初始值）。
 - **测试引用具名 struct**：需 `import` 其定义模块（如 `@contracts/oracle_state`）；**本项目无 `@contracts/types`**。跨文件共享类型抽成独立 `.tolk` 模块，避免与 wrapper 同名 struct 冲突。
 - **构建**：`acton build` → `acton wrapper --all` → `acton test --coverage`。
