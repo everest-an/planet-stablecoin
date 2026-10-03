@@ -123,8 +123,7 @@ fun rebalanceDrift(weight: int64, positionValue: int64, totalReserve: int64): in
 // Trigger a rebalance for asset i when |drift| > 0.5%.
 fun shouldRebalance(weight: int64, positionValue: int64, totalReserve: int64): bool {
     val drift = rebalanceDrift(weight, positionValue, totalReserve);
-    val abs = drift < 0 ? -drift : drift;
-    return abs > REBALANCE_THRESHOLD;
+    return drift > REBALANCE_THRESHOLD || drift < -REBALANCE_THRESHOLD;
 }
 
 // ---------------- Message handling ----------------
