@@ -16,6 +16,7 @@ const ERR_SUPPLY = 102;
 
 struct Storage {
     owner: address
+    jettonMinter: address   // PLT Jetton minter (0 = unset)
     totalReserve: int64
     totalSupply: int64
     currentPpi: int64
@@ -52,7 +53,12 @@ struct (0x10000004) SetPaused {
     paused: bool
 }
 
-type AllowedMessage = Mint | Burn | UpdatePrice | SetPaused
+struct (0x10000005) SetJettonMinter {
+    queryId: int64
+    minter: address
+}
+
+type AllowedMessage = Mint | Burn | UpdatePrice | SetPaused | SetJettonMinter
 
 // ---------------- Contract ABI ----------------
 
@@ -86,6 +92,7 @@ fun onInternalMessage(in: InMessage) {
         Burn => { handleBurn(msg); }
         UpdatePrice => { handleUpdatePrice(in.senderAddress, msg); }
         SetPaused => { handleSetPaused(in.senderAddress, msg); }
+        SetJettonMinter => { handleSetJettonMinter(in.senderAddress, msg); }
         else => { assert (in.body.isEmpty()) throw 0xFFFF; }
     }
 }
@@ -123,6 +130,13 @@ fun handleSetPaused(sender: address, msg: SetPaused) {
     storage.save();
 }
 
+fun handleSetJettonMinter(sender: address, msg: SetJettonMinter) {
+    var storage = lazy Storage.load();
+    assert (sender == storage.owner) throw ERR_NOT_OWNER;
+    storage.jettonMinter = msg.minter;
+    storage.save();
+}
+
 // ---------------- Getters ----------------
 
 get fun reserve(): int64 {
@@ -138,4 +152,9 @@ get fun supply(): int64 {
 get fun ppi(): int64 {
     val storage = lazy Storage.load();
     return storage.currentPpi;
+}
+
+get fun jettonMinter(): address {
+    val storage = lazy Storage.load();
+    return storage.jettonMinter;
 }
