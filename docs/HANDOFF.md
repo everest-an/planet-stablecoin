@@ -35,6 +35,7 @@ docs/
   PLAN-TON.md               TON 迁移计划（Tolk/Acton/预言机/组件）
   TON-MAPPING.md            Solana→TON 映射 + 设计决策
   AUDIT.md                  可信任/审计清单（无主体信任模型）
+  oracle-ton.md             RedStone/DIA TON 接入调研 + oracle seam 设计
   HANDOFF.md                本文档
 ton/
   Acton.toml                项目清单（[package]/[toolchain]/[contracts]/[import-mappings]/[wrappers.tolk]）
@@ -101,7 +102,7 @@ cd app-tg && npm install && npm run build
 |---|---|---|
 | ✅ | **Mint→Jetton 全链路集成测试**（emulator 部署 Minter+Wallet，发 Mint，断言 PLT 余额） | ✅ 完成（`contracts/tests/jetton_mint.test.tolk`，CI 绿） |
 | ✅ | **覆盖率门禁（目标 80%）** | ✅ 达成：All files **82.5%**，门禁 `minimum-percent = 80`（起点 29.8% → 82.5%） |
-| P2 | **RedStone 预言机接入**（替换 `UpdatePrice` 占位） | ❌ 阻塞：需 **RedStone TON 合约地址 + payload 格式**（外部） |
+| P2 | **RedStone 预言机接入** | 🟡 接缝已就绪（`SetOracle`/`OracleUpdatePrice` + 重放保护 + 测试，见 `docs/oracle-ton.md`）；仅剩外部：**已部署 adapter 地址 + feed_id 清单** |
 | P2 | **测试网部署 + `acton verify`** | ❌ 阻塞：需 **有资金的 TON 钱包**（外部） |
 | P3 | 多签 + 时间锁迁移（owner 权限点：SetPaused/SetJettonMinter/SetAsset/UpdatePrice） | 部署后配置 |
 | P3 | 第三方审计（Halborn/Certora）、漏洞赏金、形式化验证 | 外部机构 |
