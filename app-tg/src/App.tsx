@@ -6,8 +6,10 @@ import { TonClient } from "@ton/ton";
 const ENDPOINT =
   import.meta.env.VITE_TON_ENDPOINT ?? "https://testnet.toncenter.com/api/v2/jsonRPC";
 const PLANET_ADDRESS = import.meta.env.VITE_PLANET_ADDRESS ?? "";
+const PLT_MINTER_ADDRESS = import.meta.env.VITE_PLT_MINTER_ADDRESS ?? "";
 
 const OP_MINT = 0x10000001; // PlanetCore Mint message opcode
+const OP_ASK_TO_BURN = 0x595f07bc; // TEP-74 AskToBurn (sent to the user's jetton wallet)
 const USD_DECIMALS = 6;
 
 const client = new TonClient({ endpoint: ENDPOINT });
@@ -33,6 +35,7 @@ export default function App() {
   const [reserve, setReserve] = useState("—");
   const [supply, setSupply] = useState("—");
   const [amount, setAmount] = useState("");
+  const [burnAmount, setBurnAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
@@ -95,6 +98,48 @@ export default function App() {
     }
   }
 
+  async function onBurn() {
+    if (!PLT_MINTER_ADDRESS || !userAddress) return;
+    const units = BigInt(Math.floor(Number(burnAmount) * 10 ** USD_DECIMALS));
+    if (units <= 0n) {
+      setError("Enter an amount");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    setMsg("");
+    try {
+      const minter = Address.parse(PLT_MINTER_ADDRESS);
+      const res = await client.runMethod(minter, "get_wallet_address", [
+        { type: "slice", cell: beginCell().storeAddress(Address.parse(userAddress)).endCell() },
+      ]);
+      const walletAddr = res.stack.readAddress();
+      const body = beginCell()
+        .storeUint(OP_ASK_TO_BURN, 32)
+        .storeUint(BigInt(Date.now()), 64) // queryId (uint64)
+        .storeCoins(units) // jettonAmount
+        .storeAddress(null) // sendExcessesTo: address? = null
+        .storeMaybeRef(null) // customPayload: cell? = null
+        .endCell();
+      await tonConnectUI.sendTransaction({
+        validUntil: Math.floor(Date.now() / 1000) + 300,
+        messages: [
+          {
+            address: walletAddr.toString(),
+            amount: toNano("0.05").toString(),
+            payload: body.toBoc().toString("base64"),
+          },
+        ],
+      });
+      setMsg(`Sent burn of ${burnAmount} PLT`);
+      setBurnAmount("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <main className="wrap">
       <header className="head">
@@ -137,6 +182,28 @@ export default function App() {
           </button>
         </div>
         {!userAddress && <p className="muted">Connect a wallet to mint.</p>}
+      </section>
+
+      <section className="mint">
+        <label className="k" htmlFor="burn">
+          Burn PLT (TEP-74 burn via your jetton wallet)
+        </label>
+        <div className="row">
+          <input
+            id="burn"
+            inputMode="decimal"
+            placeholder="0.00"
+            value={burnAmount}
+            onChange={(e) => setBurnAmount(e.target.value)}
+            disabled={busy || !userAddress}
+          />
+          <button onClick={onBurn} disabled={busy || !userAddress || !burnAmount}>
+            {busy ? "…" : "Burn"}
+          </button>
+        </div>
+        {!PLT_MINTER_ADDRESS && (
+          <p className="muted">Set VITE_PLT_MINTER_ADDRESS to enable burn.</p>
+        )}
         {msg && <p className="ok">{msg}</p>}
       </section>
 
