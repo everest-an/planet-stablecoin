@@ -21,10 +21,6 @@ src = "contracts/jetton/JettonMinter.tolk"
 display-name = "PLT Jetton Wallet"
 src = "contracts/jetton/JettonWallet.tolk"
 
-[contracts.PlanetBasket]
-display-name = "Planet Basket"
-src = "contracts/planet_basket.tolk"
-
 [build]
 out-dir = "build"
 output-abi = "build/abi"
