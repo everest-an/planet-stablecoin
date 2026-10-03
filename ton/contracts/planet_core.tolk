@@ -4,6 +4,8 @@
 //
 // Fixed-point integers only (1e6). No floats.
 
+import "jetton/messages"
+
 const FEE_BPS = 50;          // 0.5% = 50 bps
 const BPS_DENOM = 10000;
 const PPI_SCALE = 1000000;   // 1.0 in 1e6 fixed point
@@ -88,7 +90,7 @@ fun burnAmount(plt: int64, ppi: int64): int64 {
 fun onInternalMessage(in: InMessage) {
     val msg = lazy AllowedMessage.fromSlice(in.body);
     match (msg) {
-        Mint => { handleMint(msg); }
+        Mint => { handleMint(in.senderAddress, in.valueCoins, msg); }
         Burn => { handleBurn(msg); }
         UpdatePrice => { handleUpdatePrice(in.senderAddress, msg); }
         SetPaused => { handleSetPaused(in.senderAddress, msg); }
@@ -97,13 +99,35 @@ fun onInternalMessage(in: InMessage) {
     }
 }
 
-fun handleMint(msg: Mint) {
+fun handleMint(sender: address, msgValue: coins, msg: Mint) {
     var storage = lazy Storage.load();
     assert (!storage.paused) throw ERR_PAUSED;
     val minted = mintAmount(msg.amount, storage.currentPpi);
     storage.totalReserve += msg.amount;
     storage.totalSupply += minted;
     storage.save();
+
+    // Ask the PLT Jetton minter to mint to the sender (empty forward payload).
+    val step = InternalTransferStep {
+        queryId: msg.queryId as uint64,
+        jettonAmount: minted as coins,
+        transferInitiator: null,
+        sendExcessesTo: null,
+        forwardTonAmount: 0,
+        forwardPayload: beginCell().endCell().beginParse(),
+    };
+    val mintMsg = createMessage({
+        bounce: BounceMode.Only256BitsOfBody,
+        dest: storage.jettonMinter,
+        value: msgValue,
+        body: MintNewJettons {
+            queryId: msg.queryId as uint64,
+            mintRecipient: sender,
+            tonAmount: 0,
+            internalTransferMsg: step.toCell(),
+        },
+    });
+    mintMsg.send(SEND_MODE_PAY_FEES_SEPARATELY);
 }
 
 fun handleBurn(msg: Burn) {
