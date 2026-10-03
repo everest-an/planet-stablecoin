@@ -76,8 +76,8 @@ fun onInternalMessage(in: InMessage) {
     match (msg) {
         Mint => { handleMint(msg); }
         Burn => { handleBurn(msg); }
-        UpdatePrice => { handleUpdatePrice(msg); }
-        SetPaused => { handleSetPaused(msg); }
+        UpdatePrice => { handleUpdatePrice(in.senderAddress, msg); }
+        SetPaused => { handleSetPaused(in.senderAddress, msg); }
     }
 }
 
@@ -100,16 +100,16 @@ fun handleBurn(msg: Burn) {
     storage.save();
 }
 
-fun handleUpdatePrice(msg: UpdatePrice) {
+fun handleUpdatePrice(sender: address, msg: UpdatePrice) {
     val storage = lazy Storage.load();
-    assert (in.senderAddress == storage.owner) throw ERR_NOT_OWNER;
+    assert (sender == storage.owner) throw ERR_NOT_OWNER;
     storage.currentPpi = msg.price;
     storage.save();
 }
 
-fun handleSetPaused(msg: SetPaused) {
+fun handleSetPaused(sender: address, msg: SetPaused) {
     val storage = lazy Storage.load();
-    assert (in.senderAddress == storage.owner) throw ERR_NOT_OWNER;
+    assert (sender == storage.owner) throw ERR_NOT_OWNER;
     storage.paused = msg.paused;
     storage.save();
 }
