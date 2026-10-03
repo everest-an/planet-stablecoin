@@ -9,7 +9,7 @@
 
 Planet（PLT）= 全球大宗商品购买力指数协议；当前实现为 **TON 上的合成指数代币 + TEP-74 代币 + 铸赎骨架**。
 仓库：`github.com/everest-an/planet-stablecoin`（**private**），分支 `main`。
-最后验证：分支 `feat/ton-coverage-gate-and-jetton-mint`，CI 全绿（45 测试，覆盖率 89.6%）。合并进 `main` 后此处改为 `main` HEAD。
+最后验证：分支 `feat/ton-coverage-gate-and-jetton-mint`，CI 全绿（46 测试，覆盖率 90.0%）。合并进 `main` 后此处改为 `main` HEAD。
 
 ---
 
@@ -43,6 +43,7 @@ ton/
   contracts/planet_core.tolk    核心：PPI/铸赎/风控/费率45-30-25/RTRA/Jetton 接线
   contracts/planet_basket.tolk  组合注册表：assetCount()/assetAt(i)
   contracts/oracle_state.tolk   预言机状态（ref cell，避开 1023-bit 限制）
+  contracts/burn_mirror.tolk    赎回镜像消息（minter → Core，共享类型）
   contracts/jetton/*.tolk       PLT TEP-74（vendored 自 ton-blockchain/tolk-bench 01_jetton）
   contracts/tests/planet_core.test.tolk      纯数学 / 不变量
   contracts/tests/planet_core_flow.test.tolk PlanetCore 管理/暂停/费率/赎回
@@ -64,9 +65,9 @@ legacy-solana/              Solana/Anchor 遗留实现 + 原 README（算法参�
 ## 3. 当前验证状态（可核对）
 
 - **CI 3 job 全绿**：`Tolk (Acton)`（build + wrapper + test --coverage + **deploy 脚本 emulation 冒烟**）、`TG Mini App`（vite build）、`Tact PoC`。
-- **45 个测试（7 文件）**：纯数学/不变量 + **大额溢出回归** + 集成 + 全链路（mint/burn/transfer）+ PlanetCore 管理/暂停/费率/赎回 + minter 管理/TEP-89 + **预言机接缝** + **PlanetBasket 组合注册表**。
+- **46 个测试（7 文件）**：纯数学/不变量 + 大额溢出回归 + 集成 + 全链路（mint/burn/transfer）+ **赎回镜像**（minter→Core）+ PlanetCore 管理/暂停/费率 + minter 管理/TEP-89 + 预言机接缝 + PlanetBasket。
 - **触发路径**：`.github/workflows/ton-build.yml` 监听 `ton/**` 与 `app-tg/**`。
-- **覆盖率（基线棘轮）**：All files **89.6% score**（行 94.4% / 分支 78.0%）；`planet_core.tolk` 96.0%、`planet_basket.tolk` 90.9%、JettonWallet 85.5%、JettonMinter 83.0%。门禁 `ton/Acton.toml [test.coverage] minimum-percent = 89`，**只升不降**（门禁已实证生效：测试编译失败时曾以 70.4% 拦下 CI）。
+- **覆盖率（基线棘轮）**：All files **90.0% score**（行 94.6% / 分支 78.8%）；`planet_core.tolk` 96.6%、`planet_basket.tolk` 90.9%、JettonWallet 85.5%、JettonMinter 84.3%。门禁 `ton/Acton.toml [test.coverage] minimum-percent = 89`，**只升不降**（门禁已实证生效：测试编译失败时曾以 70.4% 拦下 CI）。
 - 近期提交：见分支 `feat/ton-coverage-gate-and-jetton-mint`（仓库整理 · 覆盖率棘轮 29→47→73→80 · mint tonAmount 修复 + 全链路/预言机测试）。
 
 ---
@@ -96,10 +97,11 @@ cd app-tg && npm install && npm run build
 - **预言机接缝**：`SetOracle`/`OracleUpdatePrice`（仅注册 oracle 可推价 + 时间戳单调防重放；状态存 ref cell）。
 - **溢出修复**：PPI 数学（mint/burn/fee/drift）中间量改用 257-bit `int`，消除 int64 在 ~$9M 存款 / ~920 万 PLT / 大额持仓处的静默溢出。
 - **部署脚本** `ton/scripts/deploy.tolk`：部署 PlanetCore + PLT Minter + 接线 + PlanetBasket；emulation 可跑、CI 冒烟验证、`--net testnet` 可上链（需钱包）。
+- **赎回链路打通**：钱包 `AskToBurn` → minter 减供应 → minter 镜像 `BurnMirror`(0x10000008) → Core 同步减 `totalSupply`/`totalReserve`（净额）；移除会双算的旧 `core.Burn`。
 - `PlanetBasket`：链上组合注册表 + getter。
 - **PLT TEP-74 Jetton**（minter + wallet，vendored）。
 - TG 小程序：读 PPI/储备/供应 + **链上篮子表** + **mint UI** + **burn UI**（TEP-74 AskToBurn）。
-- 45 测试 + 覆盖率（89.6% score，门禁 89）+ CI 门禁（棘轮，只升不降）。
+- 46 测试 + 覆盖率（90.0% score，门禁 89）+ CI 门禁（棘轮，只升不降）。
 - 文档：GTM / PLAN-TON / TON-MAPPING / AUDIT。
 
 ---
@@ -109,14 +111,14 @@ cd app-tg && npm install && npm run build
 | 优先级 | 任务 | 状态 / 阻塞 |
 |---|---|---|
 | ✅ | **Mint→Jetton 全链路集成测试**（emulator 部署 Minter+Wallet，发 Mint，断言 PLT 余额） | ✅ 完成（`contracts/tests/jetton_mint.test.tolk`，CI 绿） |
-| ✅ | **覆盖率门禁（目标 80%）** | ✅ 超额达成：All files **89.6%**，门禁 `minimum-percent = 89`（起点 29.8% → 89.6%） |
+| ✅ | **覆盖率门禁（目标 80%）** | ✅ 超额达成：All files **90.0%**，门禁 `minimum-percent = 89`（起点 29.8% → 90.0%） |
 | P2 | **RedStone 预言机接入** | 🟡 接缝已就绪并测试（`planet_core.tolk` + `oracle.test.tolk`，见 `docs/oracle-ton.md`）；仅剩外部：**已部署 adapter 地址 + feed_id 清单**。注：RedStone TON connector 为 legacy/unmaintained（FunC），需评估 DIA 备选 |
-| P1 | **赎回链路打通**（`Core.Burn` 与钱包 `AskToBurn` 脱节，与"供应以 minter 为准"矛盾） | 🟡 设计稿就绪 `docs/burn-linkage.md`（方案 A：minter 减供应后镜像通知 Core）；**待批复实施** |
+| ✅ | **赎回链路打通**（Core 与钱包 burn 脱节） | ✅ 完成：minter 镜像 `BurnMirror` → Core（`docs/burn-linkage.md` 方案 A）；旧 `core.Burn` 已移除 |
 | P2 | **测试网部署 + `acton verify`** | ❌ 阻塞：需 **有资金的 TON 钱包**（外部） |
 | P3 | 多签 + 时间锁迁移（owner 权限点：SetPaused/SetJettonMinter/SetAsset/UpdatePrice） | 部署后配置 |
 | P3 | 第三方审计（Halborn/Certora）、漏洞赏金、形式化验证 | 外部机构 |
 
-**下一步最顺（纯代码）**：覆盖率已 89.6%；可选补 JettonWallet 反弹/零值边界；再接 RedStone/DIA（需外部 adapter 地址+feed_id）或测试网部署（需有资金钱包）。
+**下一步最顺（纯代码）**：覆盖率已 90.0%；可选 A2 多资产 PPI（需设计）、A5 前端；接 RedStone/DIA（需外部 adapter 地址+feed_id）或测试网部署（需有资金钱包）。
 
 ---
 
@@ -134,6 +136,7 @@ cd app-tg && npm install && npm run build
 - **Jetton mint 必须给 `MintNewJettons.tonAmount > 0`**（minter 用它给新钱包部署+gas）；否则钱包不被充值。PlanetCore 用 `MINT_FORWARD_TON = ton("0.05")`。
 - **测试部署顺序**：先 `testing.treasury()` → 部署 PlanetCore（jettonMinter 先占位）→ 部署 Minter（admin=PlanetCore 地址）→ `SetJettonMinter` 接线（绕过地址循环依赖）。
 - **int64 静默溢出**：纯函数里 `a * b / c` 当 a、b 为 int64 会静默溢出（如 `net * PPI_SCALE` 在 ~$9M 存款处）；中间量改 `x as int`（257-bit），最后 `as int64` 收回。
+- **跨合约共享 message 的字段类型**：TEP-74 侧是 `uint64`/`coins`，Planet 侧是 `int64`；共享结构（如 `BurnMirror`）统一设 `int64`，在 TEP-74 侧显式 `as int64` 转换。
 - **顶层类型名冲突**：同一编译单元内两个合约各定义 `AllowedMessage` 会 `redefinition of symbol`（尤其一个文件 import 多个 wrapper 时）。各合约 message 联合用唯一名（本仓：basket 用 `BasketMessage`）。
 - **`println`**：需 `import "@acton/io"`（`lib/io.tolk`）；脚本用 `@acton/emulation/scripts`（测试用 `@acton/emulation/testing`）。
 - **存储 ≤ 1023 bits**：Storage 字段超限会编译报错（2 地址 + 6×int64 已 ~919bit）。超限就把子结构放进 **ref cell**（字段类型 `cell`，用 `Sub.fromCell(x)`/`x.toCell()` 读写；测试里用 `Sub { ... }.toCell()` 构造初始值）。
@@ -152,7 +155,7 @@ cd app-tg && npm install && npm run build
 
 ## 9. 下一次开局的推荐指令
 
-> "读 `docs/HANDOFF.md`。仓库已整理（主线 `ton/`+`app-tg/`，Solana 归档 `legacy-solana/`）。45 测试全绿，覆盖率 89.6%（门禁 89，只升不降）；预言机接缝已就绪（见 `docs/oracle-ton.md`）。下一步：接入 RedStone/DIA（需 adapter 地址 + feed_id）或测试网部署（需有资金钱包）。改动保持 CI 绿。"
+> "读 `docs/HANDOFF.md`。仓库已整理（主线 `ton/`+`app-tg/`，Solana 归档 `legacy-solana/`）。46 测试全绿，覆盖率 90.0%（门禁 89，只升不降）；赎回链路已打通、预言机接缝已就绪（见 `docs/burn-linkage.md`、`docs/oracle-ton.md`）。下一步：接入 RedStone/DIA（需 adapter 地址 + feed_id）或测试网部署（需有资金钱包）。改动保持 CI 绿。"
 
 ---
 
