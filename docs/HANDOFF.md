@@ -9,7 +9,7 @@
 
 Planet（PLT）= 全球大宗商品购买力指数协议；当前实现为 **TON 上的合成指数代币 + TEP-74 代币 + 铸赎骨架**。
 仓库：`github.com/everest-an/planet-stablecoin`（**private**），分支 `main`。
-最后验证：HEAD `2ccb9da`，CI 全绿。
+最后验证：分支 `feat/ton-coverage-gate-and-jetton-mint`，CI 全绿（14 测试，覆盖率 47.6%）。合并进 `main` 后此处改为 `main` HEAD。
 
 ---
 
@@ -47,7 +47,7 @@ ton/
 app-tg/                     Telegram Mini App（Vite+React+TON Connect）
   src/App.tsx               读 PlanetCore + 篮子表 + mint UI + burn UI
 .github/workflows/ton-build.yml   3 job：Tolk(Acton) / TG Mini App / Tact PoC
-programs/planet/            （遗留 Solana/Anchor 版，仅作算法参考，已不作为主线）
+legacy-solana/              Solana/Anchor 遗留实现 + 原 README（算法参考，非主线）
 ```
 
 ---
@@ -55,9 +55,10 @@ programs/planet/            （遗留 Solana/Anchor 版，仅作算法参考，�
 ## 3. 当前验证状态（可核对）
 
 - **CI 3 job 全绿**：`Tolk (Acton)`（build + wrapper + test --coverage）、`TG Mini App`（vite build）、`Tact PoC`。
-- **11 个测试**：单元（mint/burn/feeAmount/feeSplit/rebalanceDrift/shouldRebalance）+ 不变量（无 dust、drift 符号）+ 集成（部署 PlanetCore + getter）。
+- **14 个测试（3 文件）**：12 单元/不变量（mint/burn/fee*/RTRA）+ 集成（部署 PlanetCore）+ **全链路**（PlanetCore `Mint` → JettonMinter `MintNewJettons` → 新钱包自动部署 → 断言 PLT 余额 = 995000）。
 - **触发路径**：`.github/workflows/ton-build.yml` 监听 `ton/**` 与 `app-tg/**`。
-- 近期提交：`b4a971b`(coverage) · `c390639`(不变量测试) · `db29967`(AUDIT) · `6d6926b`(篮子 UI) · `0b3196e`(PlanetBasket) · `d6c54b6`(RTRA)。
+- **覆盖率（基线棘轮）**：All files **47.6% score**（行 45.9% / 分支 55.8%）；`planet_core.tolk` 66.7%。门禁 `ton/Acton.toml [test.coverage] minimum-percent = 47`，**只升不降**。
+- 近期提交：见分支 `feat/ton-coverage-gate-and-jetton-mint`（`chore` 仓库整理 · `ci` 覆盖率棘轮 · `fix` mint tonAmount + 全链路测试 · `fix` camelCase getters）。
 
 ---
 
@@ -86,7 +87,7 @@ cd app-tg && npm install && npm run build
 - `PlanetBasket`：链上组合注册表 + getter。
 - **PLT TEP-74 Jetton**（minter + wallet，vendored）。
 - TG 小程序：读 PPI/储备/供应 + **链上篮子表** + **mint UI** + **burn UI**（TEP-74 AskToBurn）。
-- 11 测试 + 覆盖率 + CI 门禁。
+- 14 测试 + 覆盖率（47.6% score）+ CI 门禁（棘轮，只升不降）。
 - 文档：GTM / PLAN-TON / TON-MAPPING / AUDIT。
 
 ---
@@ -95,14 +96,14 @@ cd app-tg && npm install && npm run build
 
 | 优先级 | 任务 | 状态 / 阻塞 |
 |---|---|---|
-| P1 | **Mint→Jetton 全链路集成测试**（在 emulator 里部署 Minter+Wallet，发 Mint，验 PLT 余额） | ⚠️ 多迭代；**建议本地 Acton**；有把 CI 改红风险 |
-| P1 | **覆盖率门禁**（`--coverage-minimum-percent 80`） | ✅ 已跑 `--coverage`（仅展示）；**设阈值**待做 |
+| ✅ | **Mint→Jetton 全链路集成测试**（emulator 部署 Minter+Wallet，发 Mint，断言 PLT 余额） | ✅ 完成（`contracts/tests/jetton_mint.test.tolk`，CI 绿） |
+| ✅ | **覆盖率门禁** | ✅ 完成：基线棘轮 `minimum-percent = 47`（HANDOFF 原定 80% 不可达——实测基线仅 29.8%，现 47.6%；80% 需继续补测） |
 | P2 | **RedStone 预言机接入**（替换 `UpdatePrice` 占位） | ❌ 阻塞：需 **RedStone TON 合约地址 + payload 格式**（外部） |
 | P2 | **测试网部署 + `acton verify`** | ❌ 阻塞：需 **有资金的 TON 钱包**（外部） |
 | P3 | 多签 + 时间锁迁移（owner 权限点：SetPaused/SetJettonMinter/SetAsset/UpdatePrice） | 部署后配置 |
 | P3 | 第三方审计（Halborn/Certora）、漏洞赏金、形式化验证 | 外部机构 |
 
-**下一步最顺（纯代码）**：给覆盖率设阈值（低风险）→ 再做 Mint→Jetton 集成测试（高价值/高风险）。
+**下一步最顺（纯代码）**：补单元测试把覆盖率从 47.6% 推向 80%（门禁只升不降）→ 接入 RedStone（需外部地址）→ 测试网部署。
 
 ---
 
@@ -116,6 +117,9 @@ cd app-tg && npm install && npm run build
 - **三元**两个分支类型必须一致（`-int64` 可能变 `int` → 报错）；避免 `? :` 混类型。
 - **空 slice / forwardPayload**：`beginCell().endCell().beginParse()`。
 - **类型转换**：`x as uint64` / `x as coins`。
+- **wrapper getter 是 camelCase**：`get_jetton_data`→`getJettonData()`、`get_wallet_address`→`getWalletAddress(owner)`、`get_wallet_data`→`getWalletData()`；契约 code cell 用 **`build("ContractName")`** 取。
+- **Jetton mint 必须给 `MintNewJettons.tonAmount > 0`**（minter 用它给新钱包部署+gas）；否则钱包不被充值。PlanetCore 用 `MINT_FORWARD_TON = ton("0.05")`。
+- **测试部署顺序**：先 `testing.treasury()` → 部署 PlanetCore（jettonMinter 先占位）→ 部署 Minter（admin=PlanetCore 地址）→ `SetJettonMinter` 接线（绕过地址循环依赖）。
 - **构建**：`acton build` → `acton wrapper --all` → `acton test --coverage`。
 
 ---
@@ -130,7 +134,7 @@ cd app-tg && npm install && npm run build
 
 ## 9. 下一次开局的推荐指令
 
-> "读 `docs/HANDOFF.md`。装/用本地 Acton，然后做 **Mint→Jetton 全链路集成测试**（部署 JettonMinter+JettonWallet，发 Mint，断言 PLT 余额），再给覆盖率设阈值 80%。改动保持 CI 绿。"
+> "读 `docs/HANDOFF.md`。仓库已整理（主线 `ton/`+`app-tg/`，Solana 归档 `legacy-solana/`）。全链路铸币测试已绿。下一步：补单元测试把覆盖率从 47.6% 推向 80%（门禁在 `ton/Acton.toml`，只升不降）。改动保持 CI 绿。"
 
 ---
 
