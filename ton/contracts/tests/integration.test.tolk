@@ -1,4 +1,6 @@
 import "@acton/testing/expect"
+import "@acton/emulation/testing"
+import "@acton/emulation/network"
 import "@wrappers/PlanetCore.gen"
 
 // Phase 1 integration test: deploy PlanetCore and assert initial state.
