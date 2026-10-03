@@ -36,6 +36,7 @@ docs/
   TON-MAPPING.md            Solana→TON 映射 + 设计决策
   AUDIT.md                  可信任/审计清单（无主体信任模型）
   oracle-ton.md             RedStone/DIA TON 接入调研 + oracle seam 设计
+  burn-linkage.md           赎回链路（Core.Burn 与钱包 AskToBurn 脱节）设计方案
   HANDOFF.md                本文档
 ton/
   Acton.toml                项目清单（[package]/[toolchain]/[contracts]/[import-mappings]/[wrappers.tolk]）
@@ -110,6 +111,7 @@ cd app-tg && npm install && npm run build
 | ✅ | **Mint→Jetton 全链路集成测试**（emulator 部署 Minter+Wallet，发 Mint，断言 PLT 余额） | ✅ 完成（`contracts/tests/jetton_mint.test.tolk`，CI 绿） |
 | ✅ | **覆盖率门禁（目标 80%）** | ✅ 超额达成：All files **89.6%**，门禁 `minimum-percent = 89`（起点 29.8% → 89.6%） |
 | P2 | **RedStone 预言机接入** | 🟡 接缝已就绪并测试（`planet_core.tolk` + `oracle.test.tolk`，见 `docs/oracle-ton.md`）；仅剩外部：**已部署 adapter 地址 + feed_id 清单**。注：RedStone TON connector 为 legacy/unmaintained（FunC），需评估 DIA 备选 |
+| P1 | **赎回链路打通**（`Core.Burn` 与钱包 `AskToBurn` 脱节，与"供应以 minter 为准"矛盾） | 🟡 设计稿就绪 `docs/burn-linkage.md`（方案 A：minter 减供应后镜像通知 Core）；**待批复实施** |
 | P2 | **测试网部署 + `acton verify`** | ❌ 阻塞：需 **有资金的 TON 钱包**（外部） |
 | P3 | 多签 + 时间锁迁移（owner 权限点：SetPaused/SetJettonMinter/SetAsset/UpdatePrice） | 部署后配置 |
 | P3 | 第三方审计（Halborn/Certora）、漏洞赏金、形式化验证 | 外部机构 |
