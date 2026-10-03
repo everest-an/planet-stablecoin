@@ -25,7 +25,7 @@ get fun `test mint then burn round trip`() {
     expect(back).toEqual(990025);
 }
 
-get fun `test mint increases with PPI`() {
-    // same deposit, higher PPI -> fewer PLT minted
-    expect(mintAmount(1000000, 1100000)).toBeLessThan(mintAmount(1000000, 1000000));
+get fun `test mint decreases as PPI rises`() {
+    // same deposit, higher PPI -> fewer PLT minted: 995000 * 1e6 / 1.1e6 = 904545
+    expect(mintAmount(1000000, 1100000)).toEqual(904545);
 }
