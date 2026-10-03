@@ -25,6 +25,9 @@ src = "contracts/jetton/JettonWallet.tolk"
 out-dir = "build"
 output-abi = "build/abi"
 
+[wrappers.tolk]
+output-dir = "contracts/wrappers"
+
 [import-mappings]
 "@acton" = ".acton"
 "@contracts" = "contracts"

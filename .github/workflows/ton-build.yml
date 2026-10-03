@@ -36,6 +36,9 @@ jobs:
       - name: Build (Tolk)
         run: acton build
 
+      - name: Generate wrappers (Tolk)
+        run: acton wrapper --all
+
       - name: Test (Tolk)
         run: acton test
 
