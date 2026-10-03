@@ -15,3 +15,10 @@ src = "contracts/planet_core.tolk"
 [build]
 out-dir = "build"
 output-abi = "build/abi"
+
+[import-mappings]
+"@acton" = ".acton"
+"@contracts" = "contracts"
+"@tests" = "contracts/tests"
+"@wrappers" = "contracts/wrappers"
+"@gen" = "gen"
