@@ -7,6 +7,7 @@ const ENDPOINT =
   import.meta.env.VITE_TON_ENDPOINT ?? "https://testnet.toncenter.com/api/v2/jsonRPC";
 const PLANET_ADDRESS = import.meta.env.VITE_PLANET_ADDRESS ?? "";
 const PLT_MINTER_ADDRESS = import.meta.env.VITE_PLT_MINTER_ADDRESS ?? "";
+const BASKET_ADDRESS = import.meta.env.VITE_BASKET_ADDRESS ?? "";
 
 const OP_MINT = 0x10000001; // PlanetCore Mint message opcode
 const OP_ASK_TO_BURN = 0x595f07bc; // TEP-74 AskToBurn (sent to the user's jetton wallet)
@@ -34,6 +35,9 @@ export default function App() {
   const [ppi, setPpi] = useState("—");
   const [reserve, setReserve] = useState("—");
   const [supply, setSupply] = useState("—");
+  const [assets, setAssets] = useState<
+    { i: number; weight: string; base: string; cur: string; value: string }[]
+  >([]);
   const [amount, setAmount] = useState("");
   const [burnAmount, setBurnAmount] = useState("");
   const [busy, setBusy] = useState(false);
@@ -55,6 +59,35 @@ export default function App() {
       setPpi(fmtFixed(p.stack.readBigNumber(), 6));
       setReserve(fmtFixed(r.stack.readBigNumber(), 6));
       setSupply(fmtFixed(s.stack.readBigNumber(), 6));
+
+      // On-chain basket composition (PlanetBasket registry)
+      if (BASKET_ADDRESS) {
+        const basket = Address.parse(BASKET_ADDRESS);
+        const cnt = await client.runMethod(basket, "assetCount");
+        const n = Number(cnt.stack.readBigNumber());
+        const rows: { i: number; weight: string; base: string; cur: string; value: string }[] = [];
+        for (let i = 0; i < n; i++) {
+          try {
+            const a = await client.runMethod(basket, "assetAt", [
+              { type: "int", value: BigInt(i) },
+            ]);
+            const weight = a.stack.readBigNumber();
+            const base = a.stack.readBigNumber();
+            const cur = a.stack.readBigNumber();
+            const value = a.stack.readBigNumber();
+            rows.push({
+              i,
+              weight: ((Number(weight) / 1e6) * 100).toFixed(1) + "%",
+              base: "$" + (Number(base) / 1e6).toFixed(2),
+              cur: "$" + (Number(cur) / 1e6).toFixed(2),
+              value: "$" + (Number(value) / 1e6).toLocaleString(),
+            });
+          } catch {
+            // asset index not set
+          }
+        }
+        setAssets(rows);
+      }
       setError("");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -163,6 +196,34 @@ export default function App() {
           <span className="v">{supply}</span>
         </div>
       </section>
+
+      {assets.length > 0 && (
+        <section className="basket">
+          <label className="k">Underlying basket (on-chain)</label>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Weight</th>
+                <th>Base</th>
+                <th>Now</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {assets.map((a) => (
+                <tr key={a.i}>
+                  <td>{a.i}</td>
+                  <td>{a.weight}</td>
+                  <td>{a.base}</td>
+                  <td>{a.cur}</td>
+                  <td>{a.value}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
 
       <section className="mint">
         <label className="k" htmlFor="amt">

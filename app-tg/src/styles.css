@@ -51,5 +51,12 @@ body {
 .mint button:disabled { opacity: .5; cursor: not-allowed; }
 code { background: #1c1c1e; padding: 1px 5px; border-radius: 4px; }
 
+.basket { margin-top: 24px; }
+.basket .k { display: block; margin-bottom: 8px; color: var(--muted); font-size: 14px; }
+.basket table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.basket th, .basket td { text-align: right; padding: 6px 8px; border-bottom: 1px solid #2a2a2c; }
+.basket th:first-child, .basket td:first-child { text-align: left; color: var(--muted); }
+.basket th { color: var(--muted); font-weight: 500; }
+
 .foot { margin-top: 32px; font-size: 12px; }
 .foot a { color: var(--accent); text-decoration: none; }
