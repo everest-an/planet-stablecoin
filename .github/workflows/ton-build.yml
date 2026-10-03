@@ -7,10 +7,12 @@ on:
   push:
     paths:
       - "ton/**"
+      - "app-tg/**"
       - ".github/workflows/ton-build.yml"
   pull_request:
     paths:
       - "ton/**"
+      - "app-tg/**"
   workflow_dispatch:
 
 jobs:
