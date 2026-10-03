@@ -61,11 +61,11 @@ get fun `test mint credits PLT through the jetton minter`() {
     expect(res).toHaveAllSuccessfulTxs();
 
     // The minter's total supply reflects the freshly minted PLT.
-    expect(minter.get_jetton_data().totalSupply).toEqual(expectedPlt);
+    expect(minter.getJettonData().totalSupply).toEqual(expectedPlt);
 
     // The recipient's auto-deployed wallet holds the PLT (the real end-to-end check).
-    val wallet = JettonWallet.fromAddress(minter.get_wallet_address(alice.address));
-    expect(wallet.get_wallet_data().jettonBalance).toEqual(expectedPlt);
+    val wallet = JettonWallet.fromAddress(minter.getWalletAddress(alice.address));
+    expect(wallet.getWalletData().jettonBalance).toEqual(expectedPlt);
 
     // PlanetCore accounting.
     expect(core.supply()).toEqual(expectedPlt);
