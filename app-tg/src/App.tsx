@@ -35,8 +35,18 @@ export default function App() {
   const [ppi, setPpi] = useState("—");
   const [reserve, setReserve] = useState("—");
   const [supply, setSupply] = useState("—");
+  const [ppiRaw, setPpiRaw] = useState<number | null>(null);
+  const [implied, setImplied] = useState<number | null>(null);
   const [assets, setAssets] = useState<
-    { i: number; weight: string; base: string; cur: string; value: string }[]
+    {
+      i: number;
+      weight: string;
+      weightPct: number;
+      base: string;
+      cur: string;
+      drift: number;
+      value: string;
+    }[]
   >([]);
   const [amount, setAmount] = useState("");
   const [burnAmount, setBurnAmount] = useState("");
@@ -56,7 +66,9 @@ export default function App() {
         client.runMethod(addr, "reserve"),
         client.runMethod(addr, "supply"),
       ]);
-      setPpi(fmtFixed(p.stack.readBigNumber(), 6));
+      const ppiBig = p.stack.readBigNumber();
+      setPpi(fmtFixed(ppiBig, 6));
+      setPpiRaw(Number(ppiBig) / 10 ** USD_DECIMALS);
       setReserve(fmtFixed(r.stack.readBigNumber(), 6));
       setSupply(fmtFixed(s.stack.readBigNumber(), 6));
 
@@ -65,7 +77,17 @@ export default function App() {
         const basket = Address.parse(BASKET_ADDRESS);
         const cnt = await client.runMethod(basket, "assetCount");
         const n = Number(cnt.stack.readBigNumber());
-        const rows: { i: number; weight: string; base: string; cur: string; value: string }[] = [];
+        const rows: {
+          i: number;
+          weight: string;
+          weightPct: number;
+          base: string;
+          cur: string;
+          drift: number;
+          value: string;
+        }[] = [];
+        let impliedSum = 0;
+        let hasAsset = false;
         for (let i = 0; i < n; i++) {
           try {
             const a = await client.runMethod(basket, "assetAt", [
@@ -75,11 +97,21 @@ export default function App() {
             const base = a.stack.readBigNumber();
             const cur = a.stack.readBigNumber();
             const value = a.stack.readBigNumber();
+            const w = Number(weight) / 1e6;
+            const b = Number(base) / 1e6;
+            const c = Number(cur) / 1e6;
+            const drift = b > 0 ? (c / b - 1) * 100 : 0;
+            if (b > 0) {
+              impliedSum += w * (c / b);
+              hasAsset = true;
+            }
             rows.push({
               i,
-              weight: ((Number(weight) / 1e6) * 100).toFixed(1) + "%",
-              base: "$" + (Number(base) / 1e6).toFixed(2),
-              cur: "$" + (Number(cur) / 1e6).toFixed(2),
+              weight: (w * 100).toFixed(1) + "%",
+              weightPct: Math.min(100, Math.max(0, w * 100)),
+              base: "$" + b.toFixed(2),
+              cur: "$" + c.toFixed(2),
+              drift,
               value: "$" + (Number(value) / 1e6).toLocaleString(),
             });
           } catch {
@@ -87,6 +119,7 @@ export default function App() {
           }
         }
         setAssets(rows);
+        setImplied(hasAsset ? impliedSum : null);
       }
       setError("");
     } catch (e) {
@@ -199,7 +232,18 @@ export default function App() {
 
       {assets.length > 0 && (
         <section className="basket">
-          <label className="k">Underlying basket (on-chain)</label>
+          <label className="k">Index composition (on-chain basket)</label>
+          {implied !== null && (
+            <p className="implied">
+              basket-implied PPI <b>{implied.toFixed(4)}</b>
+              {ppiRaw !== null && ppiRaw > 0 && (
+                <>
+                  {" "}· on-chain <b>{ppi}</b> · Δ{" "}
+                  <b>{(((implied - ppiRaw) / ppiRaw) * 100).toFixed(2)}%</b>
+                </>
+              )}
+            </p>
+          )}
           <table>
             <thead>
               <tr>
@@ -207,6 +251,7 @@ export default function App() {
                 <th>Weight</th>
                 <th>Base</th>
                 <th>Now</th>
+                <th>vs base</th>
                 <th>Value</th>
               </tr>
             </thead>
@@ -214,9 +259,18 @@ export default function App() {
               {assets.map((a) => (
                 <tr key={a.i}>
                   <td>{a.i}</td>
-                  <td>{a.weight}</td>
+                  <td className="wcell">
+                    <span className="wbar">
+                      <span className="wfill" style={{ width: `${a.weightPct}%` }} />
+                    </span>
+                    {a.weight}
+                  </td>
                   <td>{a.base}</td>
                   <td>{a.cur}</td>
+                  <td className={a.drift >= 0 ? "drift up" : "drift down"}>
+                    {a.drift >= 0 ? "+" : ""}
+                    {a.drift.toFixed(1)}%
+                  </td>
                   <td>{a.value}</td>
                 </tr>
               ))}
@@ -269,8 +323,10 @@ export default function App() {
       </section>
 
       <p className="muted">
-        Phase 1 MVP — mint sends PlanetCore&apos;s <code>Mint</code> op (0x10000001).
-        Burn UI follows once redemption is wired.
+        Phase 1 MVP — mint sends PlanetCore&apos;s <code>Mint</code> op (0x10000001);
+        burn uses TEP-74 <code>AskToBurn</code> (0x595f07bc) and the minter mirrors it
+        back to PlanetCore. PPI is read from PlanetCore; the basket-implied value is
+        computed from the on-chain basket for comparison.
       </p>
 
       {error && <p className="err">{error}</p>}

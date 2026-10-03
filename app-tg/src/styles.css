@@ -60,3 +60,14 @@ code { background: #1c1c1e; padding: 1px 5px; border-radius: 4px; }
 
 .foot { margin-top: 32px; font-size: 12px; }
 .foot a { color: var(--accent); text-decoration: none; }
+
+.basket .wcell { white-space: nowrap; }
+.basket .wbar {
+  display: inline-block; width: 56px; height: 8px; margin-right: 8px;
+  background: #2a2a2c; border-radius: 4px; overflow: hidden; vertical-align: middle;
+}
+.basket .wfill { display: block; height: 100%; background: var(--accent); }
+.basket .drift.up { color: #14f195; }
+.basket .drift.down { color: #ff6b6b; }
+.implied { margin: 2px 0 12px; font-size: 13px; color: var(--muted); }
+.implied b { color: var(--fg); font-variant-numeric: tabular-nums; }
