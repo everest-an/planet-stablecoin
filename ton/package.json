@@ -1,0 +1,16 @@
+{
+  "name": "planet-ton",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Planet on TON - commodity purchasing-power index protocol",
+  "scripts": {
+    "build": "tact --config tact.config.json",
+    "test": "jest"
+  },
+  "devDependencies": {
+    "@tact-lang/compiler": "^1.6.13",
+    "@ton/blueprint": "^0.47.1",
+    "@ton/core": "^0.63.1",
+    "typescript": "^5.6.3"
+  }
+}

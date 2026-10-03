@@ -1,0 +1,65 @@
+name: TON build
+
+# Compiles the TON implementation in the cloud so it works without a local
+# WSL distro / Linux / Docker (Acton does not support native Windows).
+
+on:
+  push:
+    paths:
+      - "ton/**"
+      - ".github/workflows/ton-build.yml"
+  pull_request:
+    paths:
+      - "ton/**"
+  workflow_dispatch:
+
+jobs:
+  tolk:
+    name: Tolk (Acton)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ton
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Acton
+        run: |
+          curl -LsSf https://github.com/ton-blockchain/acton/releases/latest/download/acton-installer.sh | sh
+          echo "$HOME/.acton/bin" >> "$GITHUB_PATH"
+
+      - name: Acton version
+        run: acton --version
+
+      - name: Build (Tolk)
+        run: acton build
+
+      - name: Test (Tolk)
+        run: acton test
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tolk-build
+          path: ton/build
+          if-no-files-found: ignore
+
+  tact-poc:
+    name: Tact PoC (legacy)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ton
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install deps
+        run: npm ci || npm install
+
+      - name: Build (Tact)
+        run: npm run build

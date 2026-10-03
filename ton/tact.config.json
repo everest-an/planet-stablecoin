@@ -1,0 +1,10 @@
+{
+  "$schema": "https://raw.githubusercontent.com/tact-lang/tact/main/src/config/configSchema.json",
+  "projects": [
+    {
+      "name": "planet",
+      "path": "./contracts/planet_core.tact",
+      "output": "./build"
+    }
+  ]
+}
