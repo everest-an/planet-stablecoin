@@ -39,8 +39,8 @@ jobs:
       - name: Generate wrappers (Tolk)
         run: acton wrapper --all
 
-      - name: Test (Tolk)
-        run: acton test
+      - name: Test (Tolk, with coverage)
+        run: acton test --coverage
 
       - name: Upload build artifacts
         if: always()
