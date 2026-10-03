@@ -35,6 +35,21 @@ body {
 .actions { margin-top: 24px; }
 .muted { color: var(--muted); font-size: 13px; }
 .err { color: #ff6b6b; font-size: 13px; word-break: break-all; }
+.ok { color: #14f195; font-size: 13px; }
+
+.mint { margin-top: 24px; }
+.mint .k { display: block; margin-bottom: 8px; color: var(--muted); font-size: 14px; }
+.mint .row { display: flex; gap: 10px; }
+.mint input {
+  flex: 1; background: #1c1c1e; border: 1px solid #2a2a2c; border-radius: 10px;
+  color: var(--fg); padding: 12px 14px; font-size: 16px; font-variant-numeric: tabular-nums;
+}
+.mint button {
+  background: var(--accent); color: #fff; border: 0; border-radius: 10px;
+  padding: 0 20px; font-size: 16px; font-weight: 600; cursor: pointer;
+}
+.mint button:disabled { opacity: .5; cursor: not-allowed; }
+code { background: #1c1c1e; padding: 1px 5px; border-radius: 4px; }
 
 .foot { margin-top: 32px; font-size: 12px; }
 .foot a { color: var(--accent); text-decoration: none; }
