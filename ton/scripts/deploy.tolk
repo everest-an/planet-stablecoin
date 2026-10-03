@@ -1,3 +1,4 @@
+import "@acton/io"
 import "@acton/emulation/scripts"
 import "@acton/emulation/network"
 import "@acton/build"
