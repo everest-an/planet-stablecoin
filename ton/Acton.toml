@@ -12,6 +12,15 @@ acton = "1.2.0"
 display-name = "Planet Core"
 src = "contracts/planet_core.tolk"
 
+# PLT token = standard TEP-74 Jetton, vendored from ton-blockchain/tolk-bench (01_jetton).
+[contracts.JettonMinter]
+display-name = "PLT Jetton Minter"
+src = "contracts/jetton/JettonMinter.tolk"
+
+[contracts.JettonWallet]
+display-name = "PLT Jetton Wallet"
+src = "contracts/jetton/JettonWallet.tolk"
+
 [build]
 out-dir = "build"
 output-abi = "build/abi"
