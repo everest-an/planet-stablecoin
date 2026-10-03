@@ -1,3 +1,17 @@
+[package]
+name = "planet"
+description = "Planet — commodity purchasing-power index protocol on TON"
+version = "0.1.0"
+license = "Apache-2.0"
+
 [toolchain]
 # Pin the Acton CLI version (see https://ton-blockchain.github.io/acton/docs/acton-toml)
 acton = "1.2.0"
+
+[contracts.PlanetCore]
+display-name = "Planet Core"
+src = "contracts/planet_core.tolk"
+
+[build]
+out-dir = "build"
+output-abi = "build/abi"
