@@ -6,6 +6,7 @@ import "@wrappers/PlanetCore.gen"
 import "@wrappers/JettonMinter.gen"
 import "@wrappers/JettonWallet.gen"
 import "@contracts/oracle_state"
+import "@contracts/limits"
 
 // Full-link integration test:
 //   user Mint → PlanetCore (PPI accounting) → JettonMinter MintNewJettons
@@ -36,6 +37,7 @@ fun deployPlanetMintSetup(): (PlanetCore, JettonMinter, Treasury, Treasury) {
         assetCount: 0,
         baseLocked: false,
         oracleState: OracleState { oracle: deployer.address, lastOracleUpdate: 0 }.toCell(),
+        limitsState: Limits { maxPerTx: 0 }.toCell(),
     });
     expect(core.deploy(deployer.address, { value: ton("0.2") }))
         .toHaveSuccessfulDeploy({ to: core.address });

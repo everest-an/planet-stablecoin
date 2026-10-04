@@ -87,3 +87,32 @@ get fun `test rebalance drift handles large position values`() {
     // positionValue 5e13 * WEIGHT_SCALE would overflow int64; at 50% of 1e14 drift is 0.
     expect(rebalanceDrift(500000, 50000000000000, 100000000000000)).toEqual(0);
 }
+
+// ---------------- Band fees (stability batch A) ----------------
+
+get fun `test fee bps bands`() {
+    expect(feeBpsForPpi(1000000)).toEqual(50);   // 0% dev  -> base
+    expect(feeBpsForPpi(1020000)).toEqual(50);   // 2% dev  -> base
+    expect(feeBpsForPpi(1040000)).toEqual(100);  // 4% dev  -> elevated
+    expect(feeBpsForPpi(950000)).toEqual(100);   // 5% dev  -> elevated (boundary)
+    expect(feeBpsForPpi(1100000)).toEqual(200);  // 10% dev -> high
+}
+
+get fun `test band fee amount`() {
+    expect(feeAmountAtPpi(1000000, 1000000)).toEqual(5000);  // 0.5%
+    expect(feeAmountAtPpi(1000000, 1040000)).toEqual(10000); // 1.0%
+    expect(feeAmountAtPpi(1000000, 1100000)).toEqual(20000); // 2.0%
+}
+
+get fun `test band mint amount off-peg`() {
+    // near peg: 1.0 deposit -> 0.995 PLT
+    expect(mintAmountAtPpi(1000000, 1000000)).toEqual(995000);
+    // 4% off peg: 1.0% fee -> net 0.99, /1.04 -> 951923
+    expect(mintAmountAtPpi(1000000, 1040000)).toEqual(951923);
+}
+
+get fun `test diffAbs`() {
+    expect(diffAbs(1000000, 1100000)).toEqual(100000);
+    expect(diffAbs(1100000, 1000000)).toEqual(100000);
+    expect(diffAbs(1000000, 1000000)).toEqual(0);
+}

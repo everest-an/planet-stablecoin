@@ -3,6 +3,7 @@ import "@acton/emulation/testing"
 import "@acton/emulation/network"
 import "@wrappers/PlanetCore.gen"
 import "@contracts/oracle_state"
+import "@contracts/limits"
 
 // Oracle + on-chain PPI tests: the owner designates an oracle and configures the
 // basket; the oracle pushes per-asset prices; PlanetCore computes PPI on-chain
@@ -26,6 +27,7 @@ fun deployCoreForOracle(): (PlanetCore, Treasury, Treasury, Treasury) {
         assetCount: 0,
         baseLocked: false,
         oracleState: OracleState { oracle: deployer.address, lastOracleUpdate: 0 }.toCell(),
+        limitsState: Limits { maxPerTx: 0 }.toCell(),
     });
     expect(core.deploy(deployer.address, { value: ton("0.3") }))
         .toHaveSuccessfulDeploy({ to: core.address });

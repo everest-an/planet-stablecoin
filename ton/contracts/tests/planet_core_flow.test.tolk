@@ -3,6 +3,7 @@ import "@acton/emulation/testing"
 import "@acton/emulation/network"
 import "@wrappers/PlanetCore.gen"
 import "@contracts/oracle_state"
+import "@contracts/limits"
 
 // PlanetCore flow tests: admin control, pausing, and fee/burn accounting that the
 // pure-math unit tests (planet_core.test.tolk) do not exercise.
@@ -28,6 +29,7 @@ fun deployCore(): (PlanetCore, Treasury, Treasury) {
         assetCount: 0,
         baseLocked: false,
         oracleState: OracleState { oracle: deployer.address, lastOracleUpdate: 0 }.toCell(),
+        limitsState: Limits { maxPerTx: 0 }.toCell(),
     });
     expect(core.deploy(deployer.address, { value: ton("0.3") }))
         .toHaveSuccessfulDeploy({ to: core.address });

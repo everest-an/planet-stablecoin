@@ -7,10 +7,16 @@
 import "jetton/messages"
 import "oracle_state"
 import "burn_mirror"
+import "limits"
 
-const FEE_BPS = 50;          // 0.5% = 50 bps
+const FEE_BPS = 50;          // 0.5% = 50 bps (near peg)
+const FEE_BPS_ELEVATED = 100; // 1.0% when |PPI-1| in (3%, 5%]
+const FEE_BPS_HIGH = 200;    // 2.0% when |PPI-1| > 5%
 const BPS_DENOM = 10000;
 const PPI_SCALE = 1000000;   // 1.0 in 1e6 fixed point
+const BAND_LOW = 30000;      // 3%  deviation (ppm)
+const BAND_HIGH = 50000;     // 5%  deviation
+const BAND_FREEZE = 150000;  // 15% deviation -> hard mint freeze
 
 const ERR_PAUSED = 100;
 const ERR_NOT_OWNER = 101;
@@ -22,6 +28,8 @@ const ERR_BAD_BASE = 106;
 const ERR_BAD_WEIGHTS = 107;
 const ERR_BASE_LOCKED = 108;
 const ERR_BAD_INDEX = 109;
+const ERR_DEVIATION = 110;
+const ERR_LIMIT = 111;
 
 // Fee split (white paper §8.4): 45% buyback-burn / 30% reserve / 25% PLTG staking.
 const BURN_SHARE_BPS = 4500;
@@ -61,6 +69,7 @@ struct Storage {
     assetCount: int64
     baseLocked: bool               // base prices immutable once true
     oracleState: cell       // ref: OracleState { oracle, lastOracleUpdate }
+    limitsState: cell       // ref: Limits { maxPerTx }
 }
 
 fun Storage.load() {
@@ -116,7 +125,12 @@ struct (0x1000000B) LockBasePrices {
     queryId: int64
 }
 
-type AllowedMessage = Mint | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | BurnMirror | SetBasketAsset | OracleUpdateAssetPrice | LockBasePrices
+struct (0x1000000E) SetLimits {
+    queryId: int64
+    maxPerTx: int64   // 0 = unlimited
+}
+
+type AllowedMessage = Mint | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | BurnMirror | SetBasketAsset | OracleUpdateAssetPrice | LockBasePrices | SetLimits
 
 // ---------------- Contract ABI ----------------
 
@@ -153,6 +167,43 @@ fun feeSplit(fee: int64): (int64, int64, int64) {
     val reserve = (f * RESERVE_SHARE_BPS / BPS_DENOM) as int64;
     val staking = fee - burn - reserve;
     return (burn, reserve, staking);
+}
+
+// |a - b|
+fun diffAbs(a: int64, b: int64): int64 {
+    val d = a - b;
+    if (d >= 0) {
+        return d;
+    }
+    return -d;
+}
+
+// Band-based fee (stability): low friction near the peg, penalising away from it.
+fun feeBpsForPpi(ppi: int64): int64 {
+    val dev = diffAbs(ppi, PPI_SCALE);
+    if (dev <= BAND_LOW) {
+        return FEE_BPS;
+    }
+    if (dev <= BAND_HIGH) {
+        return FEE_BPS_ELEVATED;
+    }
+    return FEE_BPS_HIGH;
+}
+
+fun feeAmountAtPpi(amount: int64, ppi: int64): int64 {
+    return ((amount as int) * feeBpsForPpi(ppi) / BPS_DENOM) as int64;
+}
+
+// Minted = D * (1 - f(PPI)) / PPI   (band fee)
+fun mintAmountAtPpi(deposit: int64, ppi: int64): int64 {
+    val net = (deposit as int) * (BPS_DENOM - feeBpsForPpi(ppi)) / BPS_DENOM;
+    return (net * PPI_SCALE / (ppi as int)) as int64;
+}
+
+// Received = B * PPI * (1 - f(PPI))   (band fee)
+fun burnAmountAtPpi(plt: int64, ppi: int64): int64 {
+    val gross = (plt as int) * (ppi as int) / PPI_SCALE;
+    return (gross * (BPS_DENOM - feeBpsForPpi(ppi)) / BPS_DENOM) as int64;
 }
 
 // RTRA (real-time rebalancing algorithm) drift: ΔA_i = (w_i − V_i/ΣV) × T
@@ -208,6 +259,7 @@ fun onInternalMessage(in: InMessage) {
         SetBasketAsset => { handleSetBasketAsset(in.senderAddress, msg); }
         OracleUpdateAssetPrice => { handleOracleUpdateAssetPrice(in.senderAddress, msg); }
         LockBasePrices => { handleLockBasePrices(in.senderAddress, msg); }
+        SetLimits => { handleSetLimits(in.senderAddress, msg); }
         else => { assert (in.body.isEmpty()) throw 0xFFFF; }
     }
 }
@@ -215,12 +267,16 @@ fun onInternalMessage(in: InMessage) {
 fun handleMint(sender: address, msgValue: coins, msg: Mint) {
     var storage = lazy Storage.load();
     assert (!storage.paused) throw ERR_PAUSED;
-    val fee = feeAmount(msg.amount);
+    // stability: reject mint when PPI is far off peg (hard band), and enforce per-tx cap
+    assert (diffAbs(storage.currentPpi, PPI_SCALE) <= BAND_FREEZE) throw ERR_DEVIATION;
+    val lim = Limits.fromCell(storage.limitsState);
+    assert (lim.maxPerTx == 0 || msg.amount <= lim.maxPerTx) throw ERR_LIMIT;
+    val fee = feeAmountAtPpi(msg.amount, storage.currentPpi);
     val (feeBurn, feeReserve, feeStaking) = feeSplit(fee);
     storage.feesToBurn += feeBurn;
     storage.feesToReserve += feeReserve;
     storage.feesToStaking += feeStaking;
-    val minted = mintAmount(msg.amount, storage.currentPpi);
+    val minted = mintAmountAtPpi(msg.amount, storage.currentPpi);
     storage.totalReserve += msg.amount;
     storage.totalSupply += minted;
     storage.save();
@@ -255,7 +311,7 @@ fun handleBurnMirror(sender: address, msg: BurnMirror) {
     var storage = lazy Storage.load();
     assert (sender == storage.jettonMinter) throw ERR_NOT_MINTER;
     assert (storage.totalSupply >= msg.jettonAmount) throw ERR_SUPPLY;
-    val received = burnAmount(msg.jettonAmount, storage.currentPpi);
+    val received = burnAmountAtPpi(msg.jettonAmount, storage.currentPpi);
     storage.totalSupply -= msg.jettonAmount;
     storage.totalReserve -= received;
     storage.save();
@@ -317,6 +373,14 @@ fun handleLockBasePrices(sender: address, msg: LockBasePrices) {
     var storage = lazy Storage.load();
     assert (sender == storage.owner) throw ERR_NOT_OWNER;
     storage.baseLocked = true;
+    storage.save();
+}
+
+// Owner sets the per-tx mint cap (0 = unlimited).
+fun handleSetLimits(sender: address, msg: SetLimits) {
+    var storage = lazy Storage.load();
+    assert (sender == storage.owner) throw ERR_NOT_OWNER;
+    storage.limitsState = Limits { maxPerTx: msg.maxPerTx }.toCell();
     storage.save();
 }
 
@@ -384,6 +448,11 @@ get fun assetCount(): int64 {
 get fun assetAt(index: int64): CoreAsset {
     val storage = lazy Storage.load();
     return storage.assets.mustGet(index);
+}
+
+get fun maxPerTx(): int64 {
+    val storage = lazy Storage.load();
+    return Limits.fromCell(storage.limitsState).maxPerTx;
 }
 
 get fun feesBurn(): int64 {

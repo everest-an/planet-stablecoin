@@ -3,6 +3,7 @@ import "@acton/emulation/scripts"
 import "@acton/emulation/network"
 import "@acton/build"
 import "@contracts/oracle_state"
+import "@contracts/limits"
 import "@wrappers/PlanetCore.gen"
 import "@wrappers/JettonMinter.gen"
 import "@wrappers/PlanetBasket.gen"
@@ -39,6 +40,7 @@ fun main() {
         assetCount: 0,
         baseLocked: false,
         oracleState: OracleState { oracle: deployer.address, lastOracleUpdate: 0 }.toCell(),
+        limitsState: Limits { maxPerTx: 0 }.toCell(),
     });
     core.deploy(deployer.address, { value: ton("0.2") });
     println("PlanetCore    -> {}", core.address);
