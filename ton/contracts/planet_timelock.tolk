@@ -87,7 +87,7 @@ fun handlePropose(sender: address, msg: TlPropose) {
     storage.hasPending = true;
     storage.dest = msg.dest;
     storage.body = msg.body;
-    storage.eta = (now() as int64) + storage.delay;
+    storage.eta = (blockchain.now() as int64) + storage.delay;
     storage.save();
 }
 
@@ -95,7 +95,7 @@ fun handleExecute(sender: address, msg: TlExecute) {
     var storage = lazy TimelockStorage.load();
     assert (sender == storage.owner) throw ERR_NOT_OWNER;
     assert (storage.hasPending) throw ERR_NO_PENDING;
-    assert ((now() as int64) >= storage.eta) throw ERR_TOO_EARLY;
+    assert ((blockchain.now() as int64) >= storage.eta) throw ERR_TOO_EARLY;
 
     // Replay the proposed body to its target, from THIS contract (which holds owner
     // rights on Core). Carry the attached value so the inner message is funded.
