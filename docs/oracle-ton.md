@@ -48,3 +48,13 @@ RedStone payload → RedStone TON adapter（签名校验，FunC）→ PlanetCore
 3. （可选）确认采用 Pull（用户携带 payload）还是 Push（relayer 写入）——影响适配器设计。
 
 > 备用预言机 **DIA** 亦支持 TON；若 RedStone 的 legacy 连接器可用性存疑，可评估 DIA 的 TON 方案再做选择。
+
+## 5. 已实现的两种接入接缝（把外部依赖降到"一个公钥"）
+
+1. **注册式**：owner 用 `SetCam{index, cam}` 登记每个指数的 CAM/adapter 地址；对方发 `CamUpdate{index, price, volatility, liquidity, riskState, timestamp}`。
+2. **签名式（无需登记地址）**：owner 用 `SetSigner{key}` 登记一个 **ed25519 公钥**；任何 relayer 发
+   `SignedPriceUpdate{sigR, sigS, payload}`，Core 用 `isSignatureValid(payload.hash(), sig, signerKey)` **链上验签**
+   （签名 R‖S 拼接；`timestamp` 单调防重放、`weightsSum==1e6` 严格校验）。
+
+→ 因此"接真实数据源"**只差一个公开公钥**（或选择注册式时一个 adapter 地址 + feed_id 清单）；
+链上逻辑与测试（`ton/contracts/tests/signed_oracle.test.tolk`、`cam.test.tolk`）均已就绪。
