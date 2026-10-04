@@ -173,7 +173,12 @@ struct (0x10000012) CoverDeficit {
     amount: int64      // move this much from the risk fund into the reserve
 }
 
-type AllowedMessage = Mint | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | BurnMirror | SetBasketAsset | OracleUpdateAssetPrice | LockBasePrices | SetLimits | SetCam | CamUpdate | SetArb | SetSigner | SignedPriceUpdate | CoverDeficit | SetSigner2
+struct (0x10000014) SetOwner {
+    queryId: int64
+    newOwner: address  // e.g. migrate to a TON multisig wallet
+}
+
+type AllowedMessage = Mint | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | BurnMirror | SetBasketAsset | OracleUpdateAssetPrice | LockBasePrices | SetLimits | SetCam | CamUpdate | SetArb | SetSigner | SignedPriceUpdate | CoverDeficit | SetSigner2 | SetOwner
 
 // ---------------- Contract ABI ----------------
 
@@ -365,6 +370,7 @@ fun onInternalMessage(in: InMessage) {
         SignedPriceUpdate => { handleSignedPriceUpdate(msg); }
         CoverDeficit => { handleCoverDeficit(in.senderAddress, msg); }
         SetSigner2 => { handleSetSigner2(in.senderAddress, msg); }
+        SetOwner => { handleSetOwner(in.senderAddress, msg); }
         else => { assert (in.body.isEmpty()) throw 0xFFFF; }
     }
 }
@@ -553,6 +559,14 @@ fun handleSetSigner2(sender: address, msg: SetSigner2) {
     storage.save();
 }
 
+// Owner transfers ownership (e.g. migrate `owner` to a TON multisig wallet).
+fun handleSetOwner(sender: address, msg: SetOwner) {
+    var storage = lazy Storage.load();
+    assert (sender == storage.owner) throw ERR_NOT_OWNER;
+    storage.owner = msg.newOwner;
+    storage.save();
+}
+
 // Anyone may relay a signed price update; authenticity comes from the signature
 // (verified against the registered signer key), not from the sender.
 fun handleSignedPriceUpdate(msg: SignedPriceUpdate) {
@@ -688,6 +702,11 @@ get fun ppi(): int64 {
 get fun jettonMinter(): address {
     val storage = lazy Storage.load();
     return storage.jettonMinter;
+}
+
+get fun owner(): address {
+    val storage = lazy Storage.load();
+    return storage.owner;
 }
 
 get fun oracle(): address {

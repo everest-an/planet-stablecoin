@@ -74,6 +74,24 @@ get fun `test non-owner cannot pause`() {
     expect(res).toHaveFailedTx({ from: alice.address, to: core.address, exitCode: 101 });
 }
 
+// ---------------- Ownership transfer (migrate to a multisig wallet) ----------------
+
+get fun `test owner can transfer ownership`() {
+    val (core, deployer, alice) = deployCore();
+    core.sendSetOwner(deployer.address, 0, alice.address, { value: ton("0.05") });
+    expect(core.owner()).toEqual(alice.address);
+    // the new owner can act; the old owner cannot
+    core.sendSetPaused(alice.address, 0, true, { value: ton("0.05") });
+    val res = core.sendSetPaused(deployer.address, 0, false, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: deployer.address, to: core.address, exitCode: 101 });
+}
+
+get fun `test non-owner cannot transfer ownership`() {
+    val (core, _, alice) = deployCore();
+    val res = core.sendSetOwner(alice.address, 0, alice.address, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: alice.address, to: core.address, exitCode: 101 });
+}
+
 get fun `test pause blocks mint and unpause restores it`() {
     val (core, deployer, alice) = deployCore();
 
