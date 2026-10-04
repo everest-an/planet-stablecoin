@@ -1,0 +1,33 @@
+name: Relayer gas check (testnet)
+
+# Daily guard: warns (job fails) when the testnet deployer wallet is low on gas so
+# privileged actions don't fail silently. A depleted wallet rejects external messages
+# (no seqno bump) and every send appears to "succeed" while doing nothing.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 5 * * *" # daily, an hour before the price push
+
+jobs:
+  check:
+    name: Wallet balance
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: relayer
+    env:
+      PLANET_CORE: kQB_jRsajqfsRNI8Pp7pqr1zlAbBhIoMBzITYWEainyEm2bH
+      RELAYER_MNEMONIC: ${{ secrets.TON_WALLET_MNEMONIC }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install deps
+        run: npm install --no-audit --no-fund
+
+      - name: Check gas
+        run: node relayer.mjs check

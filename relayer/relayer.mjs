@@ -58,7 +58,7 @@ function payloadCell(p) {
 
 async function main() {
   const cmd = process.argv[2];
-  if (cmd !== "configure" && cmd !== "register" && cmd !== "push" && cmd !== "e2e" && cmd !== "timelock") die("usage: node relayer.mjs configure|register|push|e2e|timelock");
+  if (cmd !== "configure" && cmd !== "register" && cmd !== "push" && cmd !== "e2e" && cmd !== "timelock" && cmd !== "check") die("usage: node relayer.mjs configure|register|push|e2e|timelock|check");
   if (!CORE_RAW) die("PLANET_CORE not set");
   if (!MNEMONIC) die("RELAYER_MNEMONIC not set");
 
@@ -86,6 +86,20 @@ async function main() {
     }
   }
 
+  // Gas guard: a depleted wallet silently rejects external messages (seqno never
+  // bumps, "no seqno confirmation" below). Fail LOUD and early instead.
+  const MIN_GAS = 200000000n; // 0.2 TON
+  const bal = await rpcRetry("getBalance", () => client.getBalance(wallet.address));
+  console.log("wallet balance: " + (Number(bal) / 1e9).toFixed(4) + " TON");
+  if (cmd === "check") {
+    if (bal < MIN_GAS) die("LOW — wallet balance " + (Number(bal) / 1e9).toFixed(4) + " TON < 0.2; top up testnet TON (e.g. @testgiver_ton_bot)");
+    console.log("OK — wallet balance " + (Number(bal) / 1e9).toFixed(4) + " TON");
+    return;
+  }
+  if (bal < MIN_GAS) {
+    die("wallet balance too low (" + (Number(bal) / 1e9).toFixed(4) + " TON < 0.2) — top up testnet TON (e.g. @testgiver_ton_bot)");
+  }
+
   // Broadcast once (retry only the broadcast itself, never after it may have landed).
   async function send(body, to = core, value = "0.05") {
     const seqno = await rpcRetry("getSeqno", () => contract.getSeqno());
@@ -105,7 +119,7 @@ async function main() {
         /* ignore transient RPC errors during confirmation */
       }
     }
-    console.log("warn: no seqno confirmation (assuming broadcast)");
+    console.log("warn: no seqno confirmation (assuming broadcast) — check wallet balance/gas");
   }
 
   async function runGet(addr, method, args = []) {
