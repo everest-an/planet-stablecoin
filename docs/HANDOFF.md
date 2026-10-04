@@ -31,6 +31,7 @@ Planet（PLT）= 全球大宗商品购买力指数协议；当前实现为 **TON
 ```
 docs/
   whitepaper-extracted.md   白皮书全文（18页，Node pdf-parse 抽取，v1）
+  WHITEPAPER-V2.md          白皮书 v2 工程增补正文（区分已实现/设计）
   PRODUCT-DESIGN.md         产品设计 v2（分层架构 L0–L4 + 架构稳健性分析）
   PRD.md                    产品需求 v0.2（TON 主线）
   peg-stability.md          稳定机制（借 AMM 设计，不自建 DEX）

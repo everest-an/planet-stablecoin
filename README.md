@@ -51,7 +51,7 @@ cd app-tg && npm install && npm run build
 - **产品/架构**：`PRODUCT-DESIGN.md`（v2 分层架构 + 稳健性）、`PRD.md`、`GTM.md`、`PLAN-TON.md`、`TON-MAPPING.md`
 - **机制设计**：`ppi-multiasset.md`（链上 PPI）、`commodity-cam.md`（CAM）、`peg-stability.md`（稳定机制，借 AMM 设计，不自建 DEX）、`burn-linkage.md`（赎回）
 - **调研/审计**：`oracle-ton.md`（RedStone/DIA）、`AUDIT.md`
-- **白皮书**：`whitepaper-extracted.md`（v1 抽取）
+- **白皮书**：`WHITEPAPER-V2.md`（v2 工程增补正文）、`whitepaper-extracted.md`（v1 抽取）
 
 ## 仓库结构
 
