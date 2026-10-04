@@ -209,8 +209,10 @@ cd app-tg && npm install && npm run build
 
 - **链上状态**：`assetCount=3`、`signerAt(0)=0x9471…0f8f`（relayer 公钥，`threshold=1`）、`ppi=1.0`（基准=建仓价）。
 - **mint/burn 端到端**：`.github/workflows/e2e-test.yml`（`gh workflow run e2e-test.yml`）→ 铸 1.0 USDC 得 0.995 PLT，`AskToBurn` 0.5 → Core `supply` 995000→495000，链上实测通过。
-- **时间锁**：`PlanetTimelock` 已部署（24h prod = `kQDc_iZ7...`，0s demo = `kQCMwDV...`）。**合约逻辑已在模拟器端到端验证**（`timelock.test.tolk`：tl propose+execute `SetOwner(core, other)` → Core owner 变更 + pending 清零，108 测试全绿）。
-  - **已知问题（已定位：gas 耗尽，非合约/脚本逻辑）**：测试网部署钱包余额仅 **0.0116 TON**，无法支付 gas → 所有外部消息被拒（relayer 日志 `warn: no seqno confirmation`，钱包交易 `out_msgs=0`，demo 无新交易）。**→ 需充值测试网 TON 后重跑 `timelock-node.yml` 即可完成 Core SetOwner 往返**。合约逻辑已由模拟器证明无误。
+- **时间锁**：`PlanetTimelock` 已部署（24h prod = `kQDc_iZ7...`，0s demo = `kQCMwDV...`）。
+  - ✅ **propose→execute 投递** 链上验证（`tl2.delay=777`）；模拟器端到端亦有测试（`timelock.test.tolk`）。
+  - ✅ **Core SetOwner 往返（链上验证）**：`SetOwner(Core, demo)` → demo timelock propose+execute `SetOwner(Core, deployer)` → Core 侧出现 **demo 来源交易**（`lt=100906097000012`）→ `core.owner` 恢复 = 部署钱包、`demo.hasPending=0`。**时间锁成功门控 Core owner 变更**。
+  - ⚠️ 事故与修复：曾因**部署钱包 gas 耗尽（0.0116 TON）**导致所有发送静默失败（`warn: no seqno confirmation`）；已加 **`relayer.mjs check` gas 预检（低于 0.2 TON 直接报错）+ 每日 `relayer-check.yml` 告警**。充值后 `timelock-node.yml` 一次通过。
 - **部署**：`.github/workflows/ton-deploy.yml`（`gh workflow run ton-deploy.yml`）。
 - **数据源**：`.github/workflows/relayer-push.yml`（`gh workflow run relayer-push.yml`）→ `relayer/` 取 **Yahoo Finance** 行情（`CL=F`/`GC=F`/`HG=F`）→ 签 `PricePayload` → 发 `SignedPriceUpdate`（Core 链上 `isSignatureValid` 验签）→ 重算 PPI。
 - **重要经验**：本机/公共 IP 对 toncenter 的 `sendBoc` 会被 **429 限流**；**部署与 relayer 都放在 CI 跑**（runner IP 不限），relayer 内置 429 重试即可。
