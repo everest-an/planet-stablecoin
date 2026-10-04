@@ -164,7 +164,7 @@ cd app-tg && npm install && npm run build
 
 ## 9. 下一次开局的推荐指令
 
-> "读 `docs/HANDOFF.md`。仓库已整理（主线 `ton/`+`app-tg/`，Solana 归档 `legacy-solana/`）。52 测试全绿，覆盖率 90.0%（门禁 89，只升不降）；链上多资产 PPI、赎回镜像、预言机接缝均已就绪；CAM 插件层设计稿在 `docs/commodity-cam.md`。下一步：接 RedStone/DIA（需 adapter 地址 + feed_id）或测试网部署（需有资金钱包），或实施 CAM Phase A；市场层 DL-AMM 为设计稿（建议先用现成 DEX）。改动保持 CI 绿。"
+> "读 `docs/HANDOFF.md`。仓库已整理（主线 `ton/`+`app-tg/`，Solana 归档 `legacy-solana/`）。52 测试全绿，覆盖率 90.0%（门禁 89，只升不降）；链上多资产 PPI、赎回镜像、预言机接缝均已就绪；CAM 插件层设计稿在 `docs/commodity-cam.md`。下一步：接 RedStone/DIA（需 adapter 地址 + feed_id）或测试网部署（需有资金钱包），或实施 CAM Phase A；稳定机制（借 AMM 设计，不自建 DEX）见 `docs/peg-stability.md`。改动保持 CI 绿。"
 
 ---
 
