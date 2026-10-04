@@ -116,3 +116,14 @@ PPI = 0.40·1.10 + 0.35·0.95 + 0.25·1.02 = 0.440 + 0.3325 + 0.255 = 1.0275  �
 - `PlanetBasket`：若采纳 (i) 则改为被 Core 镜像驱动；否则不变。
 - 前端：可选展示每资产权重/现价/贡献。
 - 无链上迁移问题（尚未部署）。
+
+---
+
+## 12. 实施记录（as built）
+
+已按方案 (i) 的**核心**落地（CI 绿）：
+- Core 存 `map<int64, CoreAsset>{weight, basePrice, currentPrice}` + `assetCount` + `baseLocked`；链上 `computePpi`（`while` 遍历，257-bit `int` 中间量）。
+- 新消息 `SetBasketAsset`(owner) / `OracleUpdateAssetPrice`(oracle，时间戳单调) / `LockBasePrices`(owner)；**已删除** `OracleUpdatePrice`。
+- **严格校验**：推价前要求权重和 == 1e6（否则 `107`）；`basePrice==0` 拒绝（`106`）；锁价后改篮子拒绝（`108`）；索引越界拒绝（`109`）。
+- 保留 owner 的 `UpdatePrice` 作为应急覆盖。
+- **与设计稿的差异**：未实现"镜像到 PlanetBasket"。改为 **Core 为唯一真相源，前端直接读 Core 的 `assetCount`/`assetAt`**；`PlanetBasket` 降级为可选读模型（仍保留、仍测试）。镜像可在需要时再补。
