@@ -47,8 +47,11 @@
 - **组合做法**：把 timelock 的 owner 设为 **TON 多签钱包** → 同时得到 **M-of-N + 时间延迟**。
 - 部署：`PlanetCore.SetOwner(<timelock>)`，再 `PlanetTimelock.TlSetOwner(<multisig>)`。
 
-### S3 🟡 多源 oracle 交叉验证
-- 现有两条路：**注册式 CAM** + **签名式（M-of-N）**。M-of-N 阈值签名（S1）已要求多个独立来源**对同一 payload 一致**。
+### S3 ✅ 多源 oracle 交叉验证（relayer 已实现）
+- relayer 现同时取 **Yahoo Finance + Sina（外盘期货 `hf_CL/hf_GC/hf_HG`）** 两个独立源，取**中位数**推送；
+  两源偏离 >2%（`MAX_SOURCE_SPREAD`）则推 `riskState=1`（**frozen**，自动排除出 `computePpi`）。
+- **链上实测**：WTI/Gold/Copper 两源 spread 0.04–0.10%，median 推送、PPI=1.0。
+- M-of-N 阈值签名（S1）另要求多个独立来源对同一 payload 一致；两者叠加即「多源 + 门限」。
 
 ### S4 ⬜ 审计与形式化（外部依赖）
 **就绪度**（可交付审计方）：合约清单 + ABI（`ton/Acton.toml`、`ton/build/abi`）、**107 个测试 / 90.2% 覆盖率**

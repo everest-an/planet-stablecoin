@@ -20,6 +20,8 @@ Config via env:
 | `PLANET_CORE` | deployed PlanetCore address (hex or friendly) |
 | `RELAYER_MNEMONIC` | 24-word mnemonic of the funded wallet (signer + gas payer) |
 | `ASSETS_JSON` | path to the asset map (default `assets.json`) |
+| `MULTI_SOURCE` | `0` disables cross-validation (default: on) |
+| `MAX_SOURCE_SPREAD` | freeze asset if sources diverge beyond this (default `0.02` = 2%) |
 
 ## Commands
 
@@ -36,8 +38,8 @@ node relayer.mjs push
 ```json
 {
   "assets": [
-    { "index": 0, "symbol": "CL=F", "name": "WTI Crude" },
-    { "index": 1, "symbol": "GC=F", "name": "Gold" }
+    { "index": 0, "symbol": "CL=F", "sina": "hf_CL", "sinaScale": 1, "name": "WTI Crude" },
+    { "index": 1, "symbol": "GC=F", "sina": "hf_GC", "sinaScale": 1, "name": "Gold" }
   ]
 }
 ```
@@ -45,6 +47,15 @@ node relayer.mjs push
 `index` must match the on-chain basket (`SetBasketAsset`). `symbol` is a **Yahoo Finance**
 symbol (futures `CL=F`, `GC=F`, `HG=F`; ETF `GLD`, `USO`, …). Prices use
 `meta.regularMarketPrice`, converted to 1e6 fixed point (raw price × 1e6).
+
+## Multi-source cross-validation (S3)
+
+Each asset may list a second independent source. The relayer fetches **Yahoo Finance** and
+**Sina** (`hf_CL`/`hf_GC`/`hf_HG` international futures; `sinaScale` normalises units, e.g.
+Copper is cents/lb → `0.01`), takes the **median**, and pushes it. If the sources diverge
+beyond `MAX_SOURCE_SPREAD`, the asset is pushed as **`riskState=1` (frozen)** so the bad
+reading is **excluded from `computePpi`** instead of corrupting the index. Signing the
+median with the single oracle key still satisfies the on-chain M-of-N check.
 
 ## Notes / limits
 

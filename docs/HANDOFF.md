@@ -133,7 +133,8 @@ cd app-tg && npm install && npm run build
 | ✅ | **覆盖率门禁（目标 80%）** | ✅ 超额达成：All files **90.2%**，门禁 `minimum-percent = 90`（起点 29.8% → 90%+） |
 | ✅ | **安全：owner 多签 + 时间锁**（S2，`docs/security.md`） | ✅ 完成：`SetOwner` + **`PlanetTimelock`**（Propose→delay→Execute；其 owner 设为 TON 多签钱包 = M-of-N + 延迟） |
 | ✅ | **多源预言机**（S1） | ✅ 完成：阈值签名集 **M-of-N**（`SetSigner`/`SetThreshold`；M≤2 `SignedPriceUpdate`，M>2 `SignedPriceUpdateN` + 去重 bitmask） |
-| P2 | **真实数据源接入**（RedStone/DIA） | 🟡 两条接缝**已就绪并测试**：①注册 CAM/报告者地址（`SetCam`）；②**签名更新**（`SetSigner`+`SignedPriceUpdate`，链上 ed25519 验签）。外部只需**一个公钥**或 adapter 地址 + feed_id |
+| ✅ | **多源预言机交叉验证**（S3） | ✅ 完成：relayer 取 **Yahoo + Sina** 双独立源 → **中位数**推送，偏差异常则 `riskState=frozen`。链上实测 spread 0.04–0.10%。 |
+| P2 | **真实数据源接入**（RedStone/DIA） | 🟡 ②签名式（`SetSigner`+`SignedPriceUpdate`）已达**双源交叉验证**（Yahoo+Sina）；接 RedStone/DIA 只需其 endpoint/key（本环境不可达）。①注册式 CAM/`SetCam` 接缝亦就绪。 |
 | ✅ | **赎回链路打通**（Core 与钱包 burn 脱节） | ✅ 完成：minter 镜像 `BurnMirror` → Core（`docs/burn-linkage.md` 方案 A）；旧 `core.Burn` 已移除 |
 | ✅ | **多资产 PPI 计算**（按篮子权重链上算，替代单值 `currentPpi`） | ✅ 完成（`docs/ppi-multiasset.md` 方案 (i)；前端读 Core；未做 Basket 镜像） |
 | P2 | **CAM 插件层**（每商品独立适配器 → 标准化 价格/波动率/流动性/风险；解耦+隔离） | 🟡 设计稿就绪 `docs/commodity-cam.md`；建议先做 **Phase A**（MockCam + 风险自适应 RTRA，纯代码可验证），**待批复** |
