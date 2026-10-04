@@ -105,8 +105,17 @@ async function main() {
     console.log("warn: no seqno confirmation (assuming broadcast)");
   }
 
+  async function runGet(addr, method) {
+    return rpcRetry("get " + method, () => client.runMethod(addr, method));
+  }
+
   if (cmd === "configure") {
     const cfg = JSON.parse(readFileSync(ASSETS_JSON, "utf8"));
+    const cnt = Number((await runGet(core, "assetCount")).stack.readBigNumber());
+    if (cnt >= cfg.assets.length) {
+      console.log("basket already configured (" + cnt + " assets); skipping");
+      return;
+    }
     for (const a of cfg.assets) {
       const close = await yahooPrice(a.symbol);
       const base = BigInt(Math.round(close * 1e6));
@@ -127,6 +136,11 @@ async function main() {
   }
 
   if (cmd === "register") {
+    const cur = (await runGet(core, "signerKey")).stack.readBigNumber();
+    if (cur === pubKey) {
+      console.log("signer already set; skipping");
+      return;
+    }
     const body = beginCell().storeUint(OP_SET_SIGNER, 32).storeInt(0, 64).storeUint(pubKey, 256).endCell();
     console.log("registering signer key on core...");
     await send(body);

@@ -202,3 +202,6 @@ cd app-tg && npm install && npm run build
 - **数据源**：`.github/workflows/relayer-push.yml`（`gh workflow run relayer-push.yml`）→ `relayer/` 取 **Yahoo Finance** 行情（`CL=F`/`GC=F`/`HG=F`）→ 签 `PricePayload` → 发 `SignedPriceUpdate`（Core 链上 `isSignatureValid` 验签）→ 重算 PPI。
 - **重要经验**：本机/公共 IP 对 toncenter 的 `sendBoc` 会被 **429 限流**；**部署与 relayer 都放在 CI 跑**（runner IP 不限），relayer 内置 429 重试即可。
 - **前端对接**：把 `app-tg` 的 `VITE_PLANET_ADDRESS` / `VITE_PLT_MINTER_ADDRESS` 设为上表地址即可读真实状态。
+- **前端已验证**：`app-tg` 浏览器实测读到真实篮子（WTI/Gold/Copper）与 PPI（修了 `Buffer` polyfill + RPC 429 重试）。
+- **自动刷新**：`relayer-push.yml` 带**每日 cron**；`configure`/`register` 已**幂等**（已配置则跳过），只刷新价格。
+- **gas 预算**：relayer 钱包 ~2 TON；每次 push ≈0.15 TON，用尽需重新注资。

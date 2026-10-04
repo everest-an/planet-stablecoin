@@ -6,6 +6,8 @@ name: Relayer push (testnet)
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * *" # daily: refresh on-chain prices (idempotent; wallet needs gas)
 
 jobs:
   push:
