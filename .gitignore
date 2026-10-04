@@ -32,3 +32,10 @@ ton/contracts/wrappers/
 
 # Playwright MCP 会话记录（agent 工具产物，非项目代码）
 .playwright-mcp/
+
+# TON 钱包 / 私钥 —— 绝不提交
+ton/.secrets/
+wallets.toml
+global.wallets.toml
+*secret*.json
+*.mnemonic

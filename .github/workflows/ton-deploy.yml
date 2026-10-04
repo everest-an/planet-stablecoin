@@ -1,0 +1,37 @@
+name: TON deploy (testnet)
+
+# Manual, testnet-only deployment. Requires the repository secret
+# TON_WALLET_MNEMONIC (24-word mnemonic of the funded testnet wallet, v4r2).
+# Acton cannot run on native Windows, so deployment is done here in CI.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to TON testnet
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ton
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Acton
+        run: |
+          curl -LsSf https://github.com/ton-blockchain/acton/releases/latest/download/acton-installer.sh | sh
+          echo "$HOME/.acton/bin" >> "$GITHUB_PATH"
+
+      - name: Acton version
+        run: acton --version
+
+      - name: Build + wrappers
+        run: |
+          acton build
+          acton wrapper --all
+
+      - name: Import deployer wallet (testnet)
+        run: acton wallet import --name deployer --version v4r2 --local "${{ secrets.TON_WALLET_MNEMONIC }}"
+
+      - name: Deploy to testnet
+        run: acton script scripts/deploy.tolk --net testnet
