@@ -1,7 +1,7 @@
 {
   "assets": [
-    { "index": 0, "symbol": "CL=F", "name": "WTI Crude (NYM)" },
-    { "index": 1, "symbol": "GC=F", "name": "Gold (COMEX)" },
-    { "index": 2, "symbol": "HG=F", "name": "Copper (COMEX)" }
+    { "index": 0, "symbol": "CL=F", "name": "WTI Crude (NYM)", "weight": 400000 },
+    { "index": 1, "symbol": "GC=F", "name": "Gold (COMEX)", "weight": 350000 },
+    { "index": 2, "symbol": "HG=F", "name": "Copper (COMEX)", "weight": 250000 }
   ]
 }
