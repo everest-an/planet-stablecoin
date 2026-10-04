@@ -8,6 +8,7 @@ import "jetton/messages"
 import "oracle_state"
 import "burn_mirror"
 import "limits"
+import "signed_price"
 
 const FEE_BPS = 50;          // 0.5% = 50 bps (near peg)
 const FEE_BPS_ELEVATED = 100; // 1.0% when |PPI-1| in (3%, 5%]
@@ -35,6 +36,8 @@ const ERR_BAD_INDEX = 109;
 const ERR_DEVIATION = 110;
 const ERR_LIMIT = 111;
 const ERR_NOT_CAM = 112;
+const ERR_NO_SIGNER = 113;
+const ERR_BAD_SIG = 114;
 
 // Fee split (white paper §8.4): 45% buyback-burn / 30% reserve / 25% PLTG staking.
 const BURN_SHARE_BPS = 4500;
@@ -160,7 +163,7 @@ struct (0x1000000F) SetArb {
     rebateBps: int64   // mint-fee rebate when PPI > BAND_RICH (0 = off)
 }
 
-type AllowedMessage = Mint | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | BurnMirror | SetBasketAsset | OracleUpdateAssetPrice | LockBasePrices | SetLimits | SetCam | CamUpdate | SetArb
+type AllowedMessage = Mint | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | BurnMirror | SetBasketAsset | OracleUpdateAssetPrice | LockBasePrices | SetLimits | SetCam | CamUpdate | SetArb | SetSigner | SignedPriceUpdate
 
 // ---------------- Contract ABI ----------------
 
@@ -338,6 +341,8 @@ fun onInternalMessage(in: InMessage) {
         SetCam => { handleSetCam(in.senderAddress, msg); }
         CamUpdate => { handleCamUpdate(in.senderAddress, msg); }
         SetArb => { handleSetArb(in.senderAddress, msg); }
+        SetSigner => { handleSetSigner(in.senderAddress, msg); }
+        SignedPriceUpdate => { handleSignedPriceUpdate(msg); }
         else => { assert (in.body.isEmpty()) throw 0xFFFF; }
     }
 }
@@ -433,6 +438,7 @@ fun handleSetOracle(sender: address, msg: SetOracle) {
     val os = OracleState.fromCell(storage.oracleState);
     storage.oracleState = OracleState {
         oracle: msg.oracle,
+        signerKey: os.signerKey,
         lastOracleUpdate: os.lastOracleUpdate,
     }.toCell();
     storage.save();
@@ -487,6 +493,48 @@ fun handleSetArb(sender: address, msg: SetArb) {
     storage.save();
 }
 
+// Owner sets the oracle signer public key (0 = disable signed updates).
+fun handleSetSigner(sender: address, msg: SetSigner) {
+    var storage = lazy Storage.load();
+    assert (sender == storage.owner) throw ERR_NOT_OWNER;
+    val os = OracleState.fromCell(storage.oracleState);
+    storage.oracleState = OracleState {
+        oracle: os.oracle,
+        signerKey: msg.key as int,
+        lastOracleUpdate: os.lastOracleUpdate,
+    }.toCell();
+    storage.save();
+}
+
+// Anyone may relay a signed price update; authenticity comes from the signature
+// (verified against the registered signer key), not from the sender.
+fun handleSignedPriceUpdate(msg: SignedPriceUpdate) {
+    var storage = lazy Storage.load();
+    val os = OracleState.fromCell(storage.oracleState);
+    assert (os.signerKey != 0) throw ERR_NO_SIGNER;
+    assert (isSignatureValid(msg.payload.hash(), msg.signature, os.signerKey as uint256)) throw ERR_BAD_SIG;
+    val p = PricePayload.fromCell(msg.payload);
+    assert (p.timestamp > os.lastOracleUpdate) throw ERR_STALE_PRICE;
+    assert (p.index < storage.assetCount) throw ERR_BAD_INDEX;
+    assert (weightsSum(storage.assets, storage.assetCount) == WEIGHT_SCALE) throw ERR_BAD_WEIGHTS;
+    val a = storage.assets.mustGet(p.index);
+    storage.assets.set(p.index, CoreAsset {
+        weight: a.weight,
+        basePrice: a.basePrice,
+        currentPrice: p.price,
+        volatility: p.volatility,
+        liquidity: p.liquidity,
+        riskState: p.riskState,
+    });
+    storage.oracleState = OracleState {
+        oracle: os.oracle,
+        signerKey: os.signerKey,
+        lastOracleUpdate: p.timestamp,
+    }.toCell();
+    storage.currentPpi = computePpi(storage.assets, storage.assetCount);
+    storage.save();
+}
+
 // Owner registers the CAM adapter for a basket index.
 fun handleSetCam(sender: address, msg: SetCam) {
     var storage = lazy Storage.load();
@@ -515,6 +563,7 @@ fun handleCamUpdate(sender: address, msg: CamUpdate) {
     });
     storage.oracleState = OracleState {
         oracle: os.oracle,
+        signerKey: os.signerKey,
         lastOracleUpdate: msg.timestamp,
     }.toCell();
     storage.currentPpi = computePpi(storage.assets, storage.assetCount);
@@ -541,6 +590,7 @@ fun handleOracleUpdateAssetPrice(sender: address, msg: OracleUpdateAssetPrice) {
     });
     storage.oracleState = OracleState {
         oracle: os.oracle,
+        signerKey: os.signerKey,
         lastOracleUpdate: msg.timestamp,
     }.toCell();
     storage.currentPpi = computePpi(storage.assets, storage.assetCount);
@@ -603,6 +653,11 @@ get fun maxPerTx(): int64 {
 get fun arbRebateBps(): int64 {
     val storage = lazy Storage.load();
     return Limits.fromCell(storage.limitsState).arbRebateBps;
+}
+
+get fun signerKey(): int {
+    val storage = lazy Storage.load();
+    return OracleState.fromCell(storage.oracleState).signerKey;
 }
 
 get fun feesBurn(): int64 {

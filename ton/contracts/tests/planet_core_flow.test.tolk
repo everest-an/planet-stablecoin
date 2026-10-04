@@ -29,7 +29,7 @@ fun deployCore(): (PlanetCore, Treasury, Treasury) {
         cams: [],
         assetCount: 0,
         baseLocked: false,
-        oracleState: OracleState { oracle: deployer.address, lastOracleUpdate: 0 }.toCell(),
+        oracleState: OracleState { oracle: deployer.address, signerKey: 0, lastOracleUpdate: 0 }.toCell(),
         limitsState: Limits { maxPerTx: 0, arbRebateBps: 0 }.toCell(),
     });
     expect(core.deploy(deployer.address, { value: ton("0.3") }))
