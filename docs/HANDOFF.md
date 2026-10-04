@@ -31,7 +31,7 @@ Planet（PLT）= 全球大宗商品购买力指数协议；当前实现为 **TON
 ```
 docs/
   whitepaper-extracted.md   白皮书全文（18页，Node pdf-parse 抽取，v1）
-  WHITEPAPER-V2.md          白皮书 v2 工程增补正文（区分已实现/设计）
+  WHITEPAPER.md             白皮书 v1.5 工程增补正文（区分已实现/设计；含 CAM 隔离）
   PRODUCT-DESIGN.md         产品设计 v2（分层架构 L0–L4 + 架构稳健性分析）
   PRD.md                    产品需求 v0.2（TON 主线）
   peg-stability.md          稳定机制（借 AMM 设计，不自建 DEX）
@@ -105,7 +105,7 @@ cd app-tg && npm install && npm run build
 - **预言机接缝**：`SetOracle`/`OracleUpdatePrice`（仅注册 oracle 可推价 + 时间戳单调防重放；状态存 ref cell）。
 - **溢出修复**：PPI 数学（mint/burn/fee/drift）中间量改用 257-bit `int`，消除 int64 在 ~$9M 存款 / ~920 万 PLT / 大额持仓处的静默溢出。
 - **部署脚本** `ton/scripts/deploy.tolk`：部署 PlanetCore + PLT Minter + 接线 + PlanetBasket；emulation 可跑、CI 冒烟验证、`--net testnet` 可上链（需钱包）。
-- **CAM 适配层（Phase A）**：每 index 注册 CAM（`SetCam`）；CAM 推标准化 `price/volatility/liquidity/riskState`（`CamUpdate`，时间戳单调）入 `CoreAsset`；新增**风险自适应 RTRA** `shouldRebalanceRisk`（frozen 不调仓、高波动/低流动性抬阈值）。
+- **CAM 适配层（Phase A）**：每 index 注册 CAM（`SetCam`）；CAM 推标准化 `price/volatility/liquidity/riskState`（`CamUpdate`，时间戳单调）入 `CoreAsset`；**frozen 资产被排除出 PPI**（`computePpi` 按活跃资产重归一化）；新增**风险自适应 RTRA** `shouldRebalanceRisk`（frozen 不调仓、高波动/低流动性抬阈值）。
 - **稳定机制（批次 A）**：分档费（近锚 0.5% / 3–5% 1% / >5% 2%）、单笔限额 `SetLimits`、极端偏离（>15%）自动冻结铸币；`limits.tolk` ref cell。
 - **链上多资产 PPI**：Core 存篮子（`map<int64,CoreAsset>`），oracle 推单资产价 → 链上 `computePpi`；`SetBasketAsset`/`OracleUpdateAssetPrice`/`LockBasePrices`；删 `OracleUpdatePrice`。
 - **赎回链路打通**：钱包 `AskToBurn` → minter 减供应 → minter 镜像 `BurnMirror`(0x10000008) → Core 同步减 `totalSupply`/`totalReserve`（净额）；移除会双算的旧 `core.Burn`。

@@ -278,16 +278,26 @@ fun weightsSum(assets: map<int64, CoreAsset>, assetCount: int64): int64 {
     return sum as int64;
 }
 
-// On-chain PPI = Σ w_i · currentPrice_i / basePrice_i   (all 1e6 fixed point).
+// On-chain PPI over ACTIVE (non-frozen) assets, renormalised by their weights:
+//   PPI = Σ_active w_i·(P_i/Pb_i) / Σ_active w_i
+// Frozen assets (riskState == 2) are excluded so a bad feed cannot pollute the index;
+// with nothing frozen this reduces to the plain weighted index.
 fun computePpi(assets: map<int64, CoreAsset>, assetCount: int64): int64 {
-    var sum: int = 0;
+    var num: int = 0;   // Σ_active w_i·(P_i/Pb_i)
+    var den: int = 0;   // Σ_active w_i
     var i: int = 0;
     while (i < assetCount as int) {
         val a = assets.mustGet(i as int64);
-        sum += (a.weight as int) * (a.currentPrice as int) / (a.basePrice as int);
+        if (a.riskState != 2) {
+            num += (a.weight as int) * (a.currentPrice as int) / (a.basePrice as int);
+            den += a.weight as int;
+        }
         i += 1;
     }
-    return sum as int64;
+    if (den == 0) {
+        return PPI_SCALE;   // all assets frozen: fall back to 1.0
+    }
+    return (num * PPI_SCALE / den) as int64;
 }
 
 // ---------------- Message handling ----------------

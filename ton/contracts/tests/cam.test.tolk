@@ -76,3 +76,25 @@ get fun `test stale cam update is rejected`() {
     val replay = core.sendCamUpdate(cam.address, 0, 0, 1200000, 0, 1000000, 0, 1000, { value: ton("0.05") });
     expect(replay).toHaveFailedTx({ from: cam.address, to: core.address, exitCode: 104 });
 }
+
+get fun `test frozen asset is excluded from ppi`() {
+    val (core, deployer, cam, _) = deployCoreCam();
+    core.sendSetBasketAsset(deployer.address, 0, 0, 500000, 1000000, { value: ton("0.05") });
+    core.sendSetBasketAsset(deployer.address, 0, 1, 500000, 1000000, { value: ton("0.05") });
+    core.sendSetCam(deployer.address, 0, 0, cam.address, { value: ton("0.05") });
+    core.sendSetCam(deployer.address, 0, 1, cam.address, { value: ton("0.05") });
+
+    // both at base -> PPI 1.0
+    core.sendCamUpdate(cam.address, 0, 0, 1000000, 0, 1000000, 0, 100, { value: ton("0.05") });
+    core.sendCamUpdate(cam.address, 0, 1, 1000000, 0, 1000000, 0, 200, { value: ton("0.05") });
+    expect(core.ppi()).toEqual(1000000);
+
+    // asset 0 misbehaves (price 2.0) -> PPI 1.5 (polluted)
+    core.sendCamUpdate(cam.address, 0, 0, 2000000, 0, 1000000, 0, 300, { value: ton("0.05") });
+    expect(core.ppi()).toEqual(1500000);
+
+    // CAM marks asset 0 frozen -> excluded, PPI renormalised over asset 1 -> back to 1.0
+    core.sendCamUpdate(cam.address, 0, 0, 2000000, 0, 1000000, 2, 400, { value: ton("0.05") });
+    expect(core.assetAt(0).riskState).toEqual(2);
+    expect(core.ppi()).toEqual(1000000);
+}
