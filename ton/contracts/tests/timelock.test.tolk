@@ -69,20 +69,21 @@ get fun `test owner can set delay and transfer ownership`() {
 }
 
 get fun `test execute replays the proposed body to the target`() {
-    // timelock proposes a SetDelay(777) on a second timelock; execute must deliver it.
+    // tl proposes a SetDelay(777) on `target`; execute must deliver it. target's
+    // owner is tl itself, so target accepts the replayed message (sender == owner).
     val owner = testing.treasury("owner");
-    val target = PlanetTimelock.fromStorage({
-        owner: owner.address, delay: 0, hasPending: false,
-        dest: owner.address, body: beginCell().endCell(), eta: 0,
-    });
-    expect(target.deploy(owner.address, { value: ton("0.2") }))
-        .toHaveSuccessfulDeploy({ to: target.address });
     val tl = PlanetTimelock.fromStorage({
         owner: owner.address, delay: 0, hasPending: false,
         dest: owner.address, body: beginCell().endCell(), eta: 0,
     });
     expect(tl.deploy(owner.address, { value: ton("0.2") }))
         .toHaveSuccessfulDeploy({ to: tl.address });
+    val target = PlanetTimelock.fromStorage({
+        owner: tl.address, delay: 0, hasPending: false,
+        dest: owner.address, body: beginCell().endCell(), eta: 0,
+    });
+    expect(target.deploy(owner.address, { value: ton("0.2") }))
+        .toHaveSuccessfulDeploy({ to: target.address });
 
     // TlSetDelay { queryId: 0, delay: 777 } encoded by hand (op 0x20000004)
     val inner = beginCell().storeUint(0x20000004, 32).storeInt(0, 64).storeInt(777, 64).endCell();
