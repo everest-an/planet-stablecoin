@@ -1,0 +1,92 @@
+import "@acton/testing/expect"
+import "@acton/emulation/testing"
+import "@acton/emulation/network"
+import "@wrappers/PlanetTimelock.gen"
+
+// PlanetTimelock: delayed-owner contract. Owner proposes an action; it can only be
+// executed after `delay` seconds (giving holders a reaction window), or cancelled.
+// Set the timelock's owner to a TON multisig wallet for M-of-N + delay together.
+
+fun deployTimelock(delay: int64): (PlanetTimelock, Treasury, Treasury) {
+    val owner = testing.treasury("owner");
+    val other = testing.treasury("other");
+    val tl = PlanetTimelock.fromStorage({
+        owner: owner.address,
+        delay: delay,
+        hasPending: false,
+        dest: owner.address,
+        body: beginCell().endCell(),
+        eta: 0,
+    });
+    expect(tl.deploy(owner.address, { value: ton("0.2") }))
+        .toHaveSuccessfulDeploy({ to: tl.address });
+    return (tl, owner, other);
+}
+
+get fun `test non-owner cannot propose`() {
+    val (tl, _, other) = deployTimelock(0);
+    val res = tl.sendTlPropose(other.address, 0, other.address, beginCell().endCell(), { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: other.address, to: tl.address, exitCode: 101 });
+}
+
+get fun `test propose with zero delay can be executed`() {
+    val (tl, owner, _) = deployTimelock(0);
+    tl.sendTlPropose(owner.address, 0, owner.address, beginCell().endCell(), { value: ton("0.05") });
+    expect(tl.hasPending()).toEqual(true);
+    tl.sendTlExecute(owner.address, 0, { value: ton("0.2") });
+    expect(tl.hasPending()).toEqual(false);
+}
+
+get fun `test delayed proposal cannot be executed too early`() {
+    val (tl, owner, _) = deployTimelock(100000);
+    tl.sendTlPropose(owner.address, 0, owner.address, beginCell().endCell(), { value: ton("0.05") });
+    val res = tl.sendTlExecute(owner.address, 0, { value: ton("0.2") });
+    expect(res).toHaveFailedTx({ from: owner.address, to: tl.address, exitCode: 212 });
+}
+
+get fun `test cancel clears pending`() {
+    val (tl, owner, _) = deployTimelock(100000);
+    tl.sendTlPropose(owner.address, 0, owner.address, beginCell().endCell(), { value: ton("0.05") });
+    tl.sendTlCancel(owner.address, 0, { value: ton("0.05") });
+    expect(tl.hasPending()).toEqual(false);
+    val res = tl.sendTlExecute(owner.address, 0, { value: ton("0.2") });
+    expect(res).toHaveFailedTx({ from: owner.address, to: tl.address, exitCode: 210 });
+}
+
+get fun `test second propose while one is pending is rejected`() {
+    val (tl, owner, _) = deployTimelock(0);
+    tl.sendTlPropose(owner.address, 0, owner.address, beginCell().endCell(), { value: ton("0.05") });
+    val res = tl.sendTlPropose(owner.address, 0, owner.address, beginCell().endCell(), { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: owner.address, to: tl.address, exitCode: 211 });
+}
+
+get fun `test owner can set delay and transfer ownership`() {
+    val (tl, owner, other) = deployTimelock(0);
+    tl.sendTlSetDelay(owner.address, 0, 3600, { value: ton("0.05") });
+    expect(tl.delay()).toEqual(3600);
+    tl.sendTlSetOwner(owner.address, 0, other.address, { value: ton("0.05") });
+    expect(tl.owner()).toEqual(other.address);
+}
+
+get fun `test execute replays the proposed body to the target`() {
+    // timelock proposes a SetDelay(777) on a second timelock; execute must deliver it.
+    val owner = testing.treasury("owner");
+    val target = PlanetTimelock.fromStorage({
+        owner: owner.address, delay: 0, hasPending: false,
+        dest: owner.address, body: beginCell().endCell(), eta: 0,
+    });
+    expect(target.deploy(owner.address, { value: ton("0.2") }))
+        .toHaveSuccessfulDeploy({ to: target.address });
+    val tl = PlanetTimelock.fromStorage({
+        owner: owner.address, delay: 0, hasPending: false,
+        dest: owner.address, body: beginCell().endCell(), eta: 0,
+    });
+    expect(tl.deploy(owner.address, { value: ton("0.2") }))
+        .toHaveSuccessfulDeploy({ to: tl.address });
+
+    // TlSetDelay { queryId: 0, delay: 777 } encoded by hand (op 0x20000004)
+    val inner = beginCell().storeUint(0x20000004, 32).storeInt(0, 64).storeInt(777, 64).endCell();
+    tl.sendTlPropose(owner.address, 0, target.address, inner, { value: ton("0.05") });
+    tl.sendTlExecute(owner.address, 0, { value: ton("0.3") });
+    expect(target.delay()).toEqual(777);
+}

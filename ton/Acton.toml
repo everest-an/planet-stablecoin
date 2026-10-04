@@ -29,6 +29,12 @@ src = "contracts/planet_basket.tolk"
 display-name = "Planet Bond"
 src = "contracts/planet_bond.tolk"
 
+# Delayed-owner (timelock) — deploy and point PlanetCore.owner at it (SetOwner) so
+# privileged actions need Propose -> delay -> Execute. Owner can be a TON multisig.
+[contracts.PlanetTimelock]
+display-name = "Planet Timelock"
+src = "contracts/planet_timelock.tolk"
+
 [build]
 out-dir = "build"
 output-abi = "build/abi"
