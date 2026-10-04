@@ -1,0 +1,36 @@
+name: Bond deploy (testnet)
+
+# Manual, testnet-only deploy of PlanetBond (separate from the full stack deploy, which
+# would re-deploy Core/Minter/Basket). Requires the TON_WALLET_MNEMONIC secret.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy PlanetBond to TON testnet
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ton
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Acton
+        run: |
+          curl -LsSf https://github.com/ton-blockchain/acton/releases/latest/download/acton-installer.sh | sh
+          echo "$HOME/.acton/bin" >> "$GITHUB_PATH"
+
+      - name: Acton version
+        run: acton --version
+
+      - name: Build + wrappers
+        run: |
+          acton build
+          acton wrapper --all
+
+      - name: Import deployer wallet (testnet)
+        run: acton wallet import --name deployer --version v4r2 --secure false --local "${{ secrets.TON_WALLET_MNEMONIC }}"
+
+      - name: Deploy PlanetBond
+        run: acton script scripts/deploy_bond.tolk --net testnet
