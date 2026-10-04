@@ -1,31 +1,44 @@
 # Planet — Telegram Mini App (`app-tg/`)
 
-Phase 0 MVP: reads **PlanetCore** on-chain state (PPI / reserve / supply) and connects a
-wallet via **TON Connect**. This is the "TG as first entry" surface (see `../docs/GTM.md`).
+Web app (Vite + React + TON Connect) that reads **PlanetCore** live on-chain state and
+lets a connected wallet mint / burn PLT. The **same build** runs as a **Telegram Mini App**
+(Telegram loads the hosted page) — there is no separate "web vs TG" codebase.
 
-## Run
+## Run / Build
 
 ```bash
 npm install
-npm run dev
+npm run dev        # dev server, http://localhost:5173
+npm run build      # -> dist/
 ```
 
-## Build
-
-```bash
-npm run build     # -> dist/
-```
-
-## Env (`.env.local`)
+## Env (`.env.local`, see `.env.example`)
 
 | Var | Purpose |
 |---|---|
-| `VITE_TON_ENDPOINT` | TON RPC endpoint (default testnet toncenter) |
-| `VITE_PLANET_ADDRESS` | Deployed PlanetCore address to read from |
-| `VITE_TONCONNECT_MANIFEST` | Hosted TON Connect manifest URL |
+| `VITE_TON_ENDPOINT` | TON RPC endpoint (default: testnet toncenter) |
+| `VITE_PLANET_ADDRESS` | Deployed PlanetCore address (basket/PPI + mint) |
+| `VITE_PLT_MINTER_ADDRESS` | PLT Jetton minter (burn) |
+| `VITE_TONCONNECT_MANIFEST` | **Self-hosted** TON Connect manifest URL |
 
-## Notes / limits
+Current live testnet values (see `../docs/HANDOFF.md` §11):
 
-- Telegram Mini Apps with blockchain features **must use TON + TON Connect** (Telegram Blockchain Guidelines).
-- Phase 0 reads getters only. **Mint/burn UI is added after the PLT Jetton contract ships.**
-- The TON Connect manifest must be hosted at a public URL before release (default is the demo manifest).
+```
+VITE_PLANET_ADDRESS=kQAyzbletVLCFV7IsR1Vik6hxYVLIANZ7oBYE9wRJPGKnQBV
+VITE_PLT_MINTER_ADDRESS=kQCTx3uopuVKTfSOqbtgQpJk18whlfPUyTVYYmwsIFASl0vj
+```
+
+## Features
+
+- Reads PPI / reserve / supply + on-chain basket (weights, prices, drift) + basket-implied PPI.
+- Connected-wallet balances: **Your PLT** (jetton wallet) and **Your TON**.
+- Mint (PlanetCore `Mint` 0x10000001) and Burn (TEP-74 `AskToBurn` 0x595f07bc).
+- Transaction feedback (submitted + explorer link), client-side guards (per-tx cap, PLT
+  balance), auto-refresh (60s).
+- RPC 429 retry with backoff; `Buffer` polyfill for `@ton/core` in the browser.
+
+## Security / release notes
+
+- **Non-custodial**: no keys in the app; the user signs in their own wallet.
+- **Host your own** TON Connect manifest before release (the default is the demo manifest).
+- Testnet only for now; public RPC is rate-limited — use a keyed/self-hosted RPC in production.

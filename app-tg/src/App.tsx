@@ -44,6 +44,16 @@ function mintBody(usdcAmount: bigint): Cell {
     .endCell();
 }
 
+const EXPLORER = "https://testnet.tonviewer.com";
+
+// Turn a TON Connect / RPC error into a human-readable message.
+function classifyTxError(e: unknown): string {
+  const m = String((e as Error)?.message ?? e);
+  if (/reject|denied|cancel|abort|user/i.test(m)) return "已取消：你在钱包里拒绝了交易";
+  if (/insufficient|not enough|balance/i.test(m)) return "余额不足（测试网 TON / USDC）";
+  return m;
+}
+
 export default function App() {
   const userAddress = useTonAddress();
   const [tonConnectUI] = useTonConnectUI();
@@ -68,6 +78,12 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
+  const [txUrl, setTxUrl] = useState("");
+  const [pltBalance, setPltBalance] = useState("—");
+  const [tonBalance, setTonBalance] = useState("—");
+  const [updatedAt, setUpdatedAt] = useState("");
+  const [maxMint, setMaxMint] = useState(0);
+  const [pltRaw, setPltRaw] = useState<bigint | null>(null);
 
   async function refresh() {
     if (!PLANET_ADDRESS) {
@@ -76,16 +92,45 @@ export default function App() {
     }
     try {
       const addr = Address.parse(PLANET_ADDRESS);
-      const [p, r, s] = await Promise.all([
+      const [p, r, s, mx] = await Promise.all([
         runMethodRetry(addr, "ppi"),
         runMethodRetry(addr, "reserve"),
         runMethodRetry(addr, "supply"),
+        runMethodRetry(addr, "maxPerTx"),
       ]);
       const ppiBig = p.stack.readBigNumber();
       setPpi(fmtFixed(ppiBig, 6));
       setPpiRaw(Number(ppiBig) / 10 ** USD_DECIMALS);
       setReserve(fmtFixed(r.stack.readBigNumber(), 6));
       setSupply(fmtFixed(s.stack.readBigNumber(), 6));
+      setMaxMint(Number(mx.stack.readBigNumber()));
+
+      // User balances: PLT via the jetton wallet, TON via the node.
+      if (userAddress) {
+        const user = Address.parse(userAddress);
+        try {
+          const bal = await client.getBalance(user);
+          setTonBalance((Number(bal) / 1e9).toFixed(3));
+        } catch {
+          /* ignore */
+        }
+        if (PLT_MINTER_ADDRESS) {
+          try {
+            const minter = Address.parse(PLT_MINTER_ADDRESS);
+            const wr = await runMethodRetry(minter, "get_wallet_address", [
+              { type: "slice", cell: beginCell().storeAddress(user).endCell() },
+            ]);
+            const walletAddr = wr.stack.readAddress();
+            const wd = await runMethodRetry(walletAddr, "get_wallet_data");
+            const pl = wd.stack.readBigNumber();
+            setPltBalance(fmtFixed(pl, USD_DECIMALS));
+            setPltRaw(pl);
+          } catch {
+            /* jetton wallet not deployed yet */
+          }
+        }
+      }
+      setUpdatedAt(new Date().toLocaleTimeString());
 
       // On-chain basket composition (owned by PlanetCore since A2)
       {
@@ -147,6 +192,15 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userAddress]);
 
+  // auto-refresh periodically (the index moves as the relayer pushes prices)
+  useEffect(() => {
+    const id = setInterval(() => {
+      void refresh();
+    }, 60000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userAddress]);
+
   async function onMint() {
     if (!PLANET_ADDRESS) return;
     const units = BigInt(Math.floor(Number(amount) * 10 ** USD_DECIMALS));
@@ -154,9 +208,14 @@ export default function App() {
       setError("Enter an amount");
       return;
     }
+    if (maxMint > 0 && Number(units) > maxMint) {
+      setError(`超过单笔限额（${maxMint / 10 ** USD_DECIMALS} USDC）`);
+      return;
+    }
     setBusy(true);
     setError("");
     setMsg("");
+    setTxUrl("");
     try {
       const boc = mintBody(units).toBoc().toString("base64");
       await tonConnectUI.sendTransaction({
@@ -169,11 +228,12 @@ export default function App() {
           },
         ],
       });
-      setMsg(`Sent mint of ${amount} USDC`);
+      setMsg(`已提交：mint ${amount} USDC（等待链上确认…）`);
       setAmount("");
-      await refresh();
+      if (userAddress) setTxUrl(`${EXPLORER}/${userAddress}`);
+      setTimeout(() => { void refresh(); }, 5000);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(classifyTxError(e));
     } finally {
       setBusy(false);
     }
@@ -186,9 +246,14 @@ export default function App() {
       setError("Enter an amount");
       return;
     }
+    if (pltRaw !== null && units > pltRaw) {
+      setError("超过你的 PLT 余额");
+      return;
+    }
     setBusy(true);
     setError("");
     setMsg("");
+    setTxUrl("");
     try {
       const minter = Address.parse(PLT_MINTER_ADDRESS);
       const res = await runMethodRetry(minter, "get_wallet_address", [
@@ -212,10 +277,12 @@ export default function App() {
           },
         ],
       });
-      setMsg(`Sent burn of ${burnAmount} PLT`);
+      setMsg(`已提交：burn ${burnAmount} PLT（等待链上确认…）`);
       setBurnAmount("");
+      if (userAddress) setTxUrl(`${EXPLORER}/${userAddress}`);
+      setTimeout(() => { void refresh(); }, 5000);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(classifyTxError(e));
     } finally {
       setBusy(false);
     }
@@ -243,7 +310,21 @@ export default function App() {
           <span className="k">PLT Supply</span>
           <span className="v">{supply}</span>
         </div>
+        {userAddress && (
+          <div className="card">
+            <span className="k">Your PLT</span>
+            <span className="v">{pltBalance}</span>
+          </div>
+        )}
+        {userAddress && (
+          <div className="card">
+            <span className="k">Your TON</span>
+            <span className="v">{tonBalance}</span>
+          </div>
+        )}
       </section>
+
+      {updatedAt && <p className="muted">Last updated: {updatedAt}</p>}
 
       {assets.length > 0 && (
         <section className="basket">
@@ -335,6 +416,13 @@ export default function App() {
           <p className="muted">Set VITE_PLT_MINTER_ADDRESS to enable burn.</p>
         )}
         {msg && <p className="ok">{msg}</p>}
+        {txUrl && (
+          <p className="muted">
+            <a href={txUrl} target="_blank" rel="noreferrer">
+              在区块浏览器查看该钱包 ↗
+            </a>
+          </p>
+        )}
       </section>
 
       <p className="muted">
