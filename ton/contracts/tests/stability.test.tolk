@@ -27,7 +27,7 @@ fun deployCoreStability(): (PlanetCore, Treasury, Treasury) {
         assetCount: 0,
         baseLocked: false,
         oracleState: OracleState { oracle: deployer.address, signerKey: 0, lastOracleUpdate: 0 }.toCell(),
-        limitsState: Limits { maxPerTx: 0, arbRebateBps: 0 }.toCell(),
+        limitsState: Limits { maxPerTx: 0, arbRebateBps: 0, riskFund: 0 }.toCell(),
     });
     expect(core.deploy(deployer.address, { value: ton("0.3") }))
         .toHaveSuccessfulDeploy({ to: core.address });
@@ -67,8 +67,9 @@ get fun `test band fee applies on mint off-peg`() {
     core.sendMint(alice.address, 0, 1000000, { value: ton("0.5") });
     // fee = 10000 -> 45/30/25 = 4500/3000/2500
     expect(core.feesBurn()).toEqual(4500);
-    expect(core.feesReserve()).toEqual(3000);
+    expect(core.feesReserve()).toEqual(2000);
     expect(core.feesStaking()).toEqual(2500);
+    expect(core.riskFund()).toEqual(1000);
 }
 
 get fun `test extreme deviation freezes mint`() {
@@ -107,5 +108,29 @@ get fun `test arbitrage rebate reduces mint fee when rich`() {
     core.sendMint(alice.address, 0, 1000000, { value: ton("0.5") });
     // effective 50 bps -> fee 5000 -> burn 2250
     expect(core.feesBurn()).toEqual(2250);
+}
+
+// ---------------- Risk fund (C3) ----------------
+
+get fun `test risk fund accrues from fees`() {
+    val (core, _, alice) = deployCoreStability();
+    core.sendMint(alice.address, 0, 1000000, { value: ton("0.5") });
+    expect(core.riskFund()).toEqual(500); // 10% of fee 5000
+}
+
+get fun `test owner can cover deficit from risk fund`() {
+    val (core, deployer, alice) = deployCoreStability();
+    core.sendMint(alice.address, 0, 1000000, { value: ton("0.5") }); // riskFund 500
+    expect(core.reserve()).toEqual(1000000);
+    core.sendCoverDeficit(deployer.address, 0, 300, { value: ton("0.05") });
+    expect(core.riskFund()).toEqual(200);
+    expect(core.reserve()).toEqual(1000300);
+}
+
+get fun `test cover deficit above risk fund fails`() {
+    val (core, deployer, alice) = deployCoreStability();
+    core.sendMint(alice.address, 0, 1000000, { value: ton("0.5") }); // riskFund 500
+    val res = core.sendCoverDeficit(deployer.address, 0, 1000, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: deployer.address, to: core.address, exitCode: 115 });
 }
 

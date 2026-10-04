@@ -22,6 +22,7 @@ const SLOPE_BPS = 1000;      // fee slope (bps per 100% deviation) beyond BAND_H
 const REDEEM_PENALTY_PPI = 970000; // below this PPI, redeem fee is penalised
 const REDEEM_PENALTY_BPS = 100;    // extra redeem fee (bps) below REDEEM_PENALTY_PPI
 const BAND_RICH = 1030000;         // PPI above this = index rich -> reward minting
+const RISK_SHARE_BPS = 1000;       // 10% of each fee -> risk fund
 
 const ERR_PAUSED = 100;
 const ERR_NOT_OWNER = 101;
@@ -38,6 +39,7 @@ const ERR_LIMIT = 111;
 const ERR_NOT_CAM = 112;
 const ERR_NO_SIGNER = 113;
 const ERR_BAD_SIG = 114;
+const ERR_RISK_FUND = 115;
 
 // Fee split (white paper §8.4): 45% buyback-burn / 30% reserve / 25% PLTG staking.
 const BURN_SHARE_BPS = 4500;
@@ -163,7 +165,12 @@ struct (0x1000000F) SetArb {
     rebateBps: int64   // mint-fee rebate when PPI > BAND_RICH (0 = off)
 }
 
-type AllowedMessage = Mint | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | BurnMirror | SetBasketAsset | OracleUpdateAssetPrice | LockBasePrices | SetLimits | SetCam | CamUpdate | SetArb | SetSigner | SignedPriceUpdate
+struct (0x10000012) CoverDeficit {
+    queryId: int64
+    amount: int64      // move this much from the risk fund into the reserve
+}
+
+type AllowedMessage = Mint | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | BurnMirror | SetBasketAsset | OracleUpdateAssetPrice | LockBasePrices | SetLimits | SetCam | CamUpdate | SetArb | SetSigner | SignedPriceUpdate | CoverDeficit
 
 // ---------------- Contract ABI ----------------
 
@@ -343,6 +350,7 @@ fun onInternalMessage(in: InMessage) {
         SetArb => { handleSetArb(in.senderAddress, msg); }
         SetSigner => { handleSetSigner(in.senderAddress, msg); }
         SignedPriceUpdate => { handleSignedPriceUpdate(msg); }
+        CoverDeficit => { handleCoverDeficit(in.senderAddress, msg); }
         else => { assert (in.body.isEmpty()) throw 0xFFFF; }
     }
 }
@@ -365,9 +373,16 @@ fun handleMint(sender: address, msgValue: coins, msg: Mint) {
     }
     val fee = ((msg.amount as int) * effBps / BPS_DENOM) as int64;
     val (feeBurn, feeReserve, feeStaking) = feeSplit(fee);
+    // divert part of the fee into the risk fund (from the reserve bucket)
+    val riskShare = ((fee as int) * RISK_SHARE_BPS / BPS_DENOM) as int64;
     storage.feesToBurn += feeBurn;
-    storage.feesToReserve += feeReserve;
+    storage.feesToReserve += (feeReserve - riskShare);
     storage.feesToStaking += feeStaking;
+    storage.limitsState = Limits {
+        maxPerTx: lim.maxPerTx,
+        arbRebateBps: lim.arbRebateBps,
+        riskFund: lim.riskFund + riskShare,
+    }.toCell();
     val net = (msg.amount as int) * (BPS_DENOM as int - effBps as int) / BPS_DENOM;
     val minted = (net * PPI_SCALE / (storage.currentPpi as int)) as int64;
     storage.totalReserve += msg.amount;
@@ -477,7 +492,8 @@ fun handleLockBasePrices(sender: address, msg: LockBasePrices) {
 fun handleSetLimits(sender: address, msg: SetLimits) {
     var storage = lazy Storage.load();
     assert (sender == storage.owner) throw ERR_NOT_OWNER;
-    storage.limitsState = Limits { maxPerTx: msg.maxPerTx, arbRebateBps: 0 }.toCell();
+    val lim = Limits.fromCell(storage.limitsState);
+    storage.limitsState = Limits { maxPerTx: msg.maxPerTx, arbRebateBps: lim.arbRebateBps, riskFund: lim.riskFund }.toCell();
     storage.save();
 }
 
@@ -489,6 +505,7 @@ fun handleSetArb(sender: address, msg: SetArb) {
     storage.limitsState = Limits {
         maxPerTx: lim.maxPerTx,
         arbRebateBps: msg.rebateBps,
+        riskFund: lim.riskFund,
     }.toCell();
     storage.save();
 }
@@ -533,6 +550,21 @@ fun handleSignedPriceUpdate(msg: SignedPriceUpdate) {
         lastOracleUpdate: p.timestamp,
     }.toCell();
     storage.currentPpi = computePpi(storage.assets, storage.assetCount);
+    storage.save();
+}
+
+// Owner uses the risk fund to top up the reserve (covers a deficit).
+fun handleCoverDeficit(sender: address, msg: CoverDeficit) {
+    var storage = lazy Storage.load();
+    assert (sender == storage.owner) throw ERR_NOT_OWNER;
+    val lim = Limits.fromCell(storage.limitsState);
+    assert (lim.riskFund >= msg.amount) throw ERR_RISK_FUND;
+    storage.limitsState = Limits {
+        maxPerTx: lim.maxPerTx,
+        arbRebateBps: lim.arbRebateBps,
+        riskFund: lim.riskFund - msg.amount,
+    }.toCell();
+    storage.totalReserve += msg.amount;
     storage.save();
 }
 
@@ -659,6 +691,11 @@ get fun arbRebateBps(): int64 {
 get fun signerKey(): uint256 {
     val storage = lazy Storage.load();
     return OracleState.fromCell(storage.oracleState).signerKey;
+}
+
+get fun riskFund(): int64 {
+    val storage = lazy Storage.load();
+    return Limits.fromCell(storage.limitsState).riskFund;
 }
 
 get fun feesBurn(): int64 {

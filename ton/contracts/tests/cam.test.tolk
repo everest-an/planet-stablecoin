@@ -28,7 +28,7 @@ fun deployCoreCam(): (PlanetCore, Treasury, Treasury, Treasury) {
         assetCount: 0,
         baseLocked: false,
         oracleState: OracleState { oracle: deployer.address, signerKey: 0, lastOracleUpdate: 0 }.toCell(),
-        limitsState: Limits { maxPerTx: 0, arbRebateBps: 0 }.toCell(),
+        limitsState: Limits { maxPerTx: 0, arbRebateBps: 0, riskFund: 0 }.toCell(),
     });
     expect(core.deploy(deployer.address, { value: ton("0.3") }))
         .toHaveSuccessfulDeploy({ to: core.address });

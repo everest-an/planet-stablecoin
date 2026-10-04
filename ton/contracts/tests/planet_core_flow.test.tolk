@@ -30,7 +30,7 @@ fun deployCore(): (PlanetCore, Treasury, Treasury) {
         assetCount: 0,
         baseLocked: false,
         oracleState: OracleState { oracle: deployer.address, signerKey: 0, lastOracleUpdate: 0 }.toCell(),
-        limitsState: Limits { maxPerTx: 0, arbRebateBps: 0 }.toCell(),
+        limitsState: Limits { maxPerTx: 0, arbRebateBps: 0, riskFund: 0 }.toCell(),
     });
     expect(core.deploy(deployer.address, { value: ton("0.3") }))
         .toHaveSuccessfulDeploy({ to: core.address });
@@ -93,10 +93,11 @@ get fun `test pause blocks mint and unpause restores it`() {
 get fun `test mint accrues fees split 45-30-25`() {
     val (core, _, alice) = deployCore();
     core.sendMint(alice.address, 0, 1000000, { value: ton("0.5") });
-    // fee = 5000 → burn 2250 / reserve 1500 / staking 1250
+    // fee = 5000 → burn 2250 / reserve 1000 / staking 1250 / risk fund 500
     expect(core.feesBurn()).toEqual(2250);
-    expect(core.feesReserve()).toEqual(1500);
+    expect(core.feesReserve()).toEqual(1000);
     expect(core.feesStaking()).toEqual(1250);
+    expect(core.riskFund()).toEqual(500);
 }
 
 // ---------------- Burn accounting (ERR_SUPPLY = 102) ----------------

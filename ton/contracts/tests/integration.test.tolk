@@ -24,7 +24,7 @@ get fun `test deploy PlanetCore sets initial ppi`() {
         assetCount: 0,
         baseLocked: false,
         oracleState: OracleState { oracle: deployer.address, signerKey: 0, lastOracleUpdate: 0 }.toCell(),
-        limitsState: Limits { maxPerTx: 0, arbRebateBps: 0 }.toCell(),
+        limitsState: Limits { maxPerTx: 0, arbRebateBps: 0, riskFund: 0 }.toCell(),
     });
     core.deploy(deployer.address, { value: ton("0.1") });
     expect(core.ppi()).toEqual(1000000);
