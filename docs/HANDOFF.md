@@ -209,7 +209,8 @@ cd app-tg && npm install && npm run build
 
 - **链上状态**：`assetCount=3`、`signerAt(0)=0x9471…0f8f`（relayer 公钥，`threshold=1`）、`ppi=1.0`（基准=建仓价）。
 - **mint/burn 端到端**：`.github/workflows/e2e-test.yml`（`gh workflow run e2e-test.yml`）→ 铸 1.0 USDC 得 0.995 PLT，`AskToBurn` 0.5 → Core `supply` 995000→495000，链上实测通过。
-- **时间锁**：`PlanetTimelock` 已部署（24h prod = `kQDc_iZ7...`，0s demo = `kQCMwDV...`）。链上验证 **propose→execute 投递成功**（`tl2.delay=777`）。`timelock-setowner.yml` 跑通 Core SetOwner 4 步（`core.owner` 最终=部署钱包）。**已知问题**：demo `hasPending` 残留 `true`（execute 未清 pending）→ **待排查**（疑似 `out.send` 回滚）；不阻塞其余功能。
+- **时间锁**：`PlanetTimelock` 已部署（24h prod = `kQDc_iZ7...`，0s demo = `kQCMwDV...`）。**合约逻辑已在模拟器端到端验证**（`timelock.test.tolk`：tl propose+execute `SetOwner(core, other)` → Core owner 变更 + pending 清零，108 测试全绿）。
+  - **已知问题（投递/脚本层，非合约）**：链上驱动 timelock 未生效——① Acton 脚本 `fromAddress` 发送产生的是**外部消息直发合约**（`in_msg.@type=ext.message`）；② 改 Node relayer（内部消息 + seqno 确认）后钱包交易 `out_msgs=0`（未产生出账）。→ **待排查发送层**；不阻塞其余功能。
 - **部署**：`.github/workflows/ton-deploy.yml`（`gh workflow run ton-deploy.yml`）。
 - **数据源**：`.github/workflows/relayer-push.yml`（`gh workflow run relayer-push.yml`）→ `relayer/` 取 **Yahoo Finance** 行情（`CL=F`/`GC=F`/`HG=F`）→ 签 `PricePayload` → 发 `SignedPriceUpdate`（Core 链上 `isSignatureValid` 验签）→ 重算 PPI。
 - **重要经验**：本机/公共 IP 对 toncenter 的 `sendBoc` 会被 **429 限流**；**部署与 relayer 都放在 CI 跑**（runner IP 不限），relayer 内置 429 重试即可。
