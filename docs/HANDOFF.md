@@ -198,6 +198,7 @@ cd app-tg && npm install && npm run build
 | **PlanetCore** | `kQAyzbletVLCFV7IsR1Vik6hxYVLIANZ7oBYE9wRJPGKnQBV` |
 | **PLT Minter** | `kQCTx3uopuVKTfSOqbtgQpJk18whlfPUyTVYYmwsIFASl0vj`（admin = Core） |
 | **PlanetBasket** | `kQAfGKn_UrUW8LQd92ZWy0h0BrCA_QTBhMqDA1M-PZtyv-r_` |
+| **PlanetBond**（稳定债券） | `kQDMxJXroCmuxBw9Sw7oj9LhO9Y0mLxdPS3Tr4vY-sdq65hz`（isOpen=false, premium=5%） |
 | 部署钱包 | `0QBW4GNM-XpAIuIzwrupQKqVOLILHfP6lnD_Xk04L9Yx6Qol`（v4r2；私钥 `ton/.secrets/`，已 gitignore） |
 
 - **链上状态**：`assetCount=3`、`signerKey=0x9471…0f8f`（relayer 公钥）、`ppi=1.0`（基准=建仓价）。
