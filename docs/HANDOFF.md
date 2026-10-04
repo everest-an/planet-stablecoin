@@ -199,11 +199,12 @@ cd app-tg && npm install && npm run build
 
 | 合约 | 地址 |
 |---|---|
-| **PlanetCore** | `kQAyzbletVLCFV7IsR1Vik6hxYVLIANZ7oBYE9wRJPGKnQBV` |
-| **PLT Minter** | `kQCTx3uopuVKTfSOqbtgQpJk18whlfPUyTVYYmwsIFASl0vj`（admin = Core） |
+| **PlanetCore** | `kQB_jRsajqfsRNI8Pp7pqr1zlAbBhIoMBzITYWEainyEm2bH`（v1.5 代码：SetOwner + M-of-N 签名集 + M>2） |
+| **PLT Minter** | `kQCBs5unYxUi2Ewlgor0vNBqLsWrdPHHiZ4WVouZ5--BEwN1`（admin = Core） |
 | **PlanetBasket** | `kQAfGKn_UrUW8LQd92ZWy0h0BrCA_QTBhMqDA1M-PZtyv-r_` |
 | **PlanetBond**（稳定债券） | `kQDMxJXroCmuxBw9Sw7oj9LhO9Y0mLxdPS3Tr4vY-sdq65hz`（isOpen=false, premium=5%） |
-| **PlanetTimelock**（时间锁） | 未部署（合约已就绪；部署后 `PlanetCore.SetOwner(<timelock>)`） |
+| **PlanetTimelock**（24h，生产用） | `kQDc_iZ7Y8lQ1r_TxXhOXrhKVrjShyyOgp5c2pUwtGGGJGDe`（delay=86400） |
+| **PlanetTimelock**（demo 0s / tl2） | `kQCMwDVPftkUbRWPMzJGCjoC4YXnFGfN3myTJ1rbeCuSdPAt` / `kQAwMedJ1wWbt-zKqw06Ssb7vdeLW_FIbAQd0NmAPjC5v2Mr` |
 | 部署钱包 | `0QBW4GNM-XpAIuIzwrupQKqVOLILHfP6lnD_Xk04L9Yx6Qol`（v4r2；私钥 `ton/.secrets/`，已 gitignore） |
 
 - **链上状态**：`assetCount=3`、`signerAt(0)=0x9471…0f8f`（relayer 公钥，`threshold=1`）、`ppi=1.0`（基准=建仓价）。
