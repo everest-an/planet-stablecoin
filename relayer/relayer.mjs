@@ -319,7 +319,7 @@ async function main() {
       .storeUint(sigS, 256)
       .storeRef(payload)
       .endCell();
-    console.log(`push #${a.index} ${a.name ?? a.symbol}: close=${close} -> price=${price}`);
+    console.log(`push #${a.index} ${a.name ?? a.symbol}: price=${price}`);
     await send(body);
   }
   console.log("done: pushed " + cfg.assets.length + " asset price(s)");
