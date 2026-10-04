@@ -66,7 +66,7 @@ get fun `test signed price update is verified and applied`() {
         riskState: 0,
         timestamp: 1000,
     }.toCell();
-    val sig = crypto.sign(kp.privateKey, payload);
+    var sig = crypto.sign(kp.privateKey, payload);
     val sigR = sig.loadUint(256);
     val sigS = sig.loadUint(256);
     core.sendSignedPriceUpdate(relayer.address, sigR, sigS, payload, { value: ton("0.05") });
@@ -83,7 +83,7 @@ get fun `test bad signature is rejected`() {
     val payload = PricePayload {
         queryId: 0, index: 0, price: 1100000, volatility: 0, liquidity: 1000000, riskState: 0, timestamp: 1000,
     }.toCell();
-    val sig = crypto.sign(other.privateKey, payload);
+    var sig = crypto.sign(other.privateKey, payload);
     val sigR = sig.loadUint(256);
     val sigS = sig.loadUint(256);
     val res = core.sendSignedPriceUpdate(relayer.address, sigR, sigS, payload, { value: ton("0.05") });
@@ -97,7 +97,7 @@ get fun `test signed update rejected when no signer set`() {
     val payload = PricePayload {
         queryId: 0, index: 0, price: 1100000, volatility: 0, liquidity: 1000000, riskState: 0, timestamp: 1000,
     }.toCell();
-    val sig = crypto.sign(kp.privateKey, payload);
+    var sig = crypto.sign(kp.privateKey, payload);
     val sigR = sig.loadUint(256);
     val sigS = sig.loadUint(256);
     val res = core.sendSignedPriceUpdate(relayer.address, sigR, sigS, payload, { value: ton("0.05") });
