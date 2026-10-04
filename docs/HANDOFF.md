@@ -132,7 +132,7 @@ cd app-tg && npm install && npm run build
 | P2 | **CAM 插件层**（每商品独立适配器 → 标准化 价格/波动率/流动性/风险；解耦+隔离） | 🟡 设计稿就绪 `docs/commodity-cam.md`；建议先做 **Phase A**（MockCam + 风险自适应 RTRA，纯代码可验证），**待批复** |
 | ✅ | **CAM 插件层（Phase A）** | ✅ 完成：`SetCam`/`CamUpdate` + 每资产风险数据 + 风险自适应 RTRA（`cam.test.tolk`）；真实 CAM 数据源仍待外部 |
 | P2 | **协议稳定机制** | A ✅ + C1 ✅ + C2 ✅ + **C3a 风险基金 ✅**；**C3b 稳定债券 待做**（需独立 `PlanetBond` 合约：Core 存储 ref 已用满 4/4 且无真实 USDC 托管） |
-| P2 | **测试网部署 + `acton verify`** | ❌ 阻塞：需 **有资金的 TON 钱包**（外部） |
+| ✅ | **测试网部署** | ✅ 已上线 TON testnet（`ton-deploy.yml`）；地址见 §11；数据源 `relayer-push.yml` |
 | P3 | 多签 + 时间锁迁移（owner 权限点：SetPaused/SetJettonMinter/SetAsset/UpdatePrice） | 部署后配置 |
 | P3 | 第三方审计（Halborn/Certora）、漏洞赏金、形式化验证 | 外部机构 |
 
@@ -183,3 +183,22 @@ cd app-tg && npm install && npm run build
 - **CI 日志用 grep 抓关键行**，别整段 dump。
 - **中间结果写进仓库文件**（`docs/*`），让持久状态在磁盘而非上下文。
 - 一次 2 万 token 的抓取 ≈ 几十轮对话；节流就是续命。
+
+---
+
+## 11. 测试网部署（LIVE，TON testnet）
+
+已在 TON 测试网部署并跑通「真实行情 → 链上验签 → 链上 PPI」：
+
+| 合约 | 地址 |
+|---|---|
+| **PlanetCore** | `kQAyzbletVLCFV7IsR1Vik6hxYVLIANZ7oBYE9wRJPGKnQBV` |
+| **PLT Minter** | `kQCTx3uopuVKTfSOqbtgQpJk18whlfPUyTVYYmwsIFASl0vj`（admin = Core） |
+| **PlanetBasket** | `kQAfGKn_UrUW8LQd92ZWy0h0BrCA_QTBhMqDA1M-PZtyv-r_` |
+| 部署钱包 | `0QBW4GNM-XpAIuIzwrupQKqVOLILHfP6lnD_Xk04L9Yx6Qol`（v4r2；私钥 `ton/.secrets/`，已 gitignore） |
+
+- **链上状态**：`assetCount=3`、`signerKey=0x9471…0f8f`（relayer 公钥）、`ppi=1.0`（基准=建仓价）。
+- **部署**：`.github/workflows/ton-deploy.yml`（`gh workflow run ton-deploy.yml`）。
+- **数据源**：`.github/workflows/relayer-push.yml`（`gh workflow run relayer-push.yml`）→ `relayer/` 取 **Yahoo Finance** 行情（`CL=F`/`GC=F`/`HG=F`）→ 签 `PricePayload` → 发 `SignedPriceUpdate`（Core 链上 `isSignatureValid` 验签）→ 重算 PPI。
+- **重要经验**：本机/公共 IP 对 toncenter 的 `sendBoc` 会被 **429 限流**；**部署与 relayer 都放在 CI 跑**（runner IP 不限），relayer 内置 429 重试即可。
+- **前端对接**：把 `app-tg` 的 `VITE_PLANET_ADDRESS` / `VITE_PLT_MINTER_ADDRESS` 设为上表地址即可读真实状态。
