@@ -25,6 +25,10 @@ src = "contracts/jetton/JettonWallet.tolk"
 display-name = "Planet Basket"
 src = "contracts/planet_basket.tolk"
 
+[contracts.PlanetBond]
+display-name = "Planet Bond"
+src = "contracts/planet_bond.tolk"
+
 [build]
 out-dir = "build"
 output-abi = "build/abi"
