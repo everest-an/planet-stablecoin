@@ -42,6 +42,9 @@ jobs:
       - name: Test (Tolk, with coverage)
         run: acton test --coverage
 
+      - name: Smoke-run deploy script (emulation)
+        run: acton script scripts/deploy.tolk
+
       - name: Upload build artifacts
         if: always()
         uses: actions/upload-artifact@v4

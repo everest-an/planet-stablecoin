@@ -70,3 +70,20 @@ get fun `test RTRA drift sign: underweight is positive`() {
     // target 50%, actual 60% -> negative drift (sell)
     expect(rebalanceDrift(500000, 600, 1000)).toEqual(-100000);
 }
+
+// ---------------- Large-value overflow regressions (int64 -> int) ----------------
+
+get fun `test mint handles large deposits without int64 overflow`() {
+    // $10M (1e13 in 6-dec): int64 would overflow in `net * PPI_SCALE`.
+    expect(mintAmount(10000000000000, 1000000)).toEqual(9950000000000);
+}
+
+get fun `test burn handles large amounts without int64 overflow`() {
+    // 1e13 PLT: int64 would overflow in `plt * ppi`.
+    expect(burnAmount(10000000000000, 1000000)).toEqual(9950000000000);
+}
+
+get fun `test rebalance drift handles large position values`() {
+    // positionValue 5e13 * WEIGHT_SCALE would overflow int64; at 50% of 1e14 drift is 0.
+    expect(rebalanceDrift(500000, 50000000000000, 100000000000000)).toEqual(0);
+}

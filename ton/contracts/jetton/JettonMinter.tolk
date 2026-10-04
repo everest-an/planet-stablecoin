@@ -3,6 +3,7 @@ import "jetton-utils"
 import "messages"
 import "storage"
 import "fees-management"
+import "../burn_mirror"
 
 contract JettonMinter {
     author: "The Tolk Team"
@@ -27,6 +28,20 @@ fun onInternalMessage(in: InMessage) {
 
             storage.totalSupply -= msg.jettonAmount;
             storage.save();
+
+            // Mirror the burn to PlanetCore (the minter admin) so core accounting
+            // stays in sync with the authoritative minter supply. TON has no
+            // cross-contract atomicity, so this is best-effort (NoBounce, carry TON).
+            val mirrorMsg = createMessage({
+                bounce: BounceMode.NoBounce,
+                dest: storage.adminAddress,
+                value: 0,
+                body: BurnMirror {
+                    queryId: msg.queryId as int64,
+                    jettonAmount: msg.jettonAmount as int64,
+                },
+            });
+            mirrorMsg.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
 
             if (msg.sendExcessesTo == null) {
                 return;

@@ -5,6 +5,8 @@
 // Fixed-point integers only (1e6). No floats.
 
 import "jetton/messages"
+import "oracle_state"
+import "burn_mirror"
 
 const FEE_BPS = 50;          // 0.5% = 50 bps
 const BPS_DENOM = 10000;
@@ -13,6 +15,13 @@ const PPI_SCALE = 1000000;   // 1.0 in 1e6 fixed point
 const ERR_PAUSED = 100;
 const ERR_NOT_OWNER = 101;
 const ERR_SUPPLY = 102;
+const ERR_NOT_ORACLE = 103;
+const ERR_STALE_PRICE = 104;
+const ERR_NOT_MINTER = 105;
+const ERR_BAD_BASE = 106;
+const ERR_BAD_WEIGHTS = 107;
+const ERR_BASE_LOCKED = 108;
+const ERR_BAD_INDEX = 109;
 
 // Fee split (white paper §8.4): 45% buyback-burn / 30% reserve / 25% PLTG staking.
 const BURN_SHARE_BPS = 4500;
@@ -22,8 +31,22 @@ const RESERVE_SHARE_BPS = 3000;
 const WEIGHT_SCALE = 1000000;
 const REBALANCE_THRESHOLD = 5000;
 
+// TON forwarded (through the minter) to the recipient's Jetton wallet so that the
+// auto-deployed wallet has gas to credit the minted PLT. Matches tolk-bench's
+// 0.05 TON mint forward used by the reference TEP-74 tests.
+const MINT_FORWARD_TON = ton("0.05");
+
 // ---------------- Storage ----------------
 
+// A basket asset for on-chain PPI computation (distinct from PlanetBasket's `Asset`).
+struct CoreAsset {
+    weight: int64       // ppm, 1e6 = 100%
+    basePrice: int64    // 1e6, immutable once baseLocked
+    currentPrice: int64 // 1e6
+}
+
+// Oracle state (OracleState, see oracle_state.tolk) lives in a ref cell so the main
+// storage stays within TON's 1023-bit cell limit. The asset map is also a ref.
 struct Storage {
     owner: address
     jettonMinter: address   // PLT Jetton minter (0 = unset)
@@ -34,6 +57,10 @@ struct Storage {
     feesToReserve: int64    // accrued 30% bucket
     feesToStaking: int64    // accrued 25% bucket
     paused: bool
+    assets: map<int64, CoreAsset>  // index -> asset (the basket)
+    assetCount: int64
+    baseLocked: bool               // base prices immutable once true
+    oracleState: cell       // ref: OracleState { oracle, lastOracleUpdate }
 }
 
 fun Storage.load() {
@@ -51,11 +78,6 @@ struct (0x10000001) Mint {
     amount: int64    // USDC (6 decimals)
 }
 
-struct (0x10000002) Burn {
-    queryId: int64
-    amount: int64    // PLT (6 decimals)
-}
-
 struct (0x10000003) UpdatePrice {
     queryId: int64
     price: int64     // 1e6 fixed point (Phase 0 placeholder; oracle TBD)
@@ -71,7 +93,30 @@ struct (0x10000005) SetJettonMinter {
     minter: address
 }
 
-type AllowedMessage = Mint | Burn | UpdatePrice | SetPaused | SetJettonMinter
+struct (0x10000006) SetOracle {
+    queryId: int64
+    oracle: address
+}
+
+struct (0x10000009) SetBasketAsset {
+    queryId: int64
+    index: int64
+    weight: int64     // ppm
+    basePrice: int64  // 1e6
+}
+
+struct (0x1000000A) OracleUpdateAssetPrice {
+    queryId: int64
+    index: int64
+    price: int64      // 1e6
+    timestamp: int64  // strictly newer than the last oracle push
+}
+
+struct (0x1000000B) LockBasePrices {
+    queryId: int64
+}
+
+type AllowedMessage = Mint | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | BurnMirror | SetBasketAsset | OracleUpdateAssetPrice | LockBasePrices
 
 // ---------------- Contract ABI ----------------
 
@@ -83,29 +128,29 @@ contract PlanetCore {
 // ---------------- Pure math ----------------
 
 // Minted = D * (1 - f) / PPI
-// NOTE: Phase 0 skeleton; 64-bit intermediates can overflow for very large inputs
-// (real implementation needs u128 / reordered math — tracked in docs/TON-MAPPING.md).
+// Intermediates widen to `int` (257-bit TVM) so large deposits don't overflow int64.
 fun mintAmount(deposit: int64, ppi: int64): int64 {
-    val net = deposit * (BPS_DENOM - FEE_BPS) / BPS_DENOM;
-    return net * PPI_SCALE / ppi;
+    val net = (deposit as int) * (BPS_DENOM - FEE_BPS) / BPS_DENOM;
+    return (net * PPI_SCALE / (ppi as int)) as int64;
 }
 
 // Received = B * PPI * (1 - f)
 fun burnAmount(plt: int64, ppi: int64): int64 {
-    val gross = plt * ppi / PPI_SCALE;
-    return gross * (BPS_DENOM - FEE_BPS) / BPS_DENOM;
+    val gross = (plt as int) * (ppi as int) / PPI_SCALE;
+    return (gross * (BPS_DENOM - FEE_BPS) / BPS_DENOM) as int64;
 }
 
 // fee = amount * 0.5%
 fun feeAmount(amount: int64): int64 {
-    return amount * FEE_BPS / BPS_DENOM;
+    return ((amount as int) * FEE_BPS / BPS_DENOM) as int64;
 }
 
 // Split a fee into (burn 45%, reserve 30%, staking 25%-remainder).
 // Remainder to staking avoids dust from integer division.
 fun feeSplit(fee: int64): (int64, int64, int64) {
-    val burn = fee * BURN_SHARE_BPS / BPS_DENOM;
-    val reserve = fee * RESERVE_SHARE_BPS / BPS_DENOM;
+    val f = fee as int;
+    val burn = (f * BURN_SHARE_BPS / BPS_DENOM) as int64;
+    val reserve = (f * RESERVE_SHARE_BPS / BPS_DENOM) as int64;
     val staking = fee - burn - reserve;
     return (burn, reserve, staking);
 }
@@ -116,7 +161,7 @@ fun rebalanceDrift(weight: int64, positionValue: int64, totalReserve: int64): in
     if (totalReserve == 0) {
         return weight;
     }
-    val actual = positionValue * WEIGHT_SCALE / totalReserve;
+    val actual = ((positionValue as int) * WEIGHT_SCALE / (totalReserve as int)) as int64;
     return weight - actual;
 }
 
@@ -126,16 +171,43 @@ fun shouldRebalance(weight: int64, positionValue: int64, totalReserve: int64): b
     return drift > REBALANCE_THRESHOLD || drift < -REBALANCE_THRESHOLD;
 }
 
+// Sum of all basket weights (ppm). Must equal WEIGHT_SCALE for a valid basket.
+fun weightsSum(assets: map<int64, CoreAsset>, assetCount: int64): int64 {
+    var sum: int = 0;
+    var i: int = 0;
+    while (i < assetCount as int) {
+        sum += assets.mustGet(i as int64).weight as int;
+        i += 1;
+    }
+    return sum as int64;
+}
+
+// On-chain PPI = Σ w_i · currentPrice_i / basePrice_i   (all 1e6 fixed point).
+fun computePpi(assets: map<int64, CoreAsset>, assetCount: int64): int64 {
+    var sum: int = 0;
+    var i: int = 0;
+    while (i < assetCount as int) {
+        val a = assets.mustGet(i as int64);
+        sum += (a.weight as int) * (a.currentPrice as int) / (a.basePrice as int);
+        i += 1;
+    }
+    return sum as int64;
+}
+
 // ---------------- Message handling ----------------
 
 fun onInternalMessage(in: InMessage) {
     val msg = lazy AllowedMessage.fromSlice(in.body);
     match (msg) {
         Mint => { handleMint(in.senderAddress, in.valueCoins, msg); }
-        Burn => { handleBurn(msg); }
         UpdatePrice => { handleUpdatePrice(in.senderAddress, msg); }
         SetPaused => { handleSetPaused(in.senderAddress, msg); }
         SetJettonMinter => { handleSetJettonMinter(in.senderAddress, msg); }
+        SetOracle => { handleSetOracle(in.senderAddress, msg); }
+        BurnMirror => { handleBurnMirror(in.senderAddress, msg); }
+        SetBasketAsset => { handleSetBasketAsset(in.senderAddress, msg); }
+        OracleUpdateAssetPrice => { handleOracleUpdateAssetPrice(in.senderAddress, msg); }
+        LockBasePrices => { handleLockBasePrices(in.senderAddress, msg); }
         else => { assert (in.body.isEmpty()) throw 0xFFFF; }
     }
 }
@@ -169,19 +241,22 @@ fun handleMint(sender: address, msgValue: coins, msg: Mint) {
         body: MintNewJettons {
             queryId: msg.queryId as uint64,
             mintRecipient: sender,
-            tonAmount: 0,
+            tonAmount: MINT_FORWARD_TON,
             internalTransferMsg: step.toCell(),
         },
     });
     mintMsg.send(SEND_MODE_PAY_FEES_SEPARATELY);
 }
 
-fun handleBurn(msg: Burn) {
+// Mirrored burn: the PLT Jetton minter already burned `jettonAmount` from supply
+// (via a wallet's AskToBurn). Core reduces its own accounting by the same amount and
+// by the USD actually paid out (net of fee), keeping core in sync with the minter.
+fun handleBurnMirror(sender: address, msg: BurnMirror) {
     var storage = lazy Storage.load();
-    assert (!storage.paused) throw ERR_PAUSED;
-    assert (storage.totalSupply >= msg.amount) throw ERR_SUPPLY;
-    val received = burnAmount(msg.amount, storage.currentPpi);
-    storage.totalSupply -= msg.amount;
+    assert (sender == storage.jettonMinter) throw ERR_NOT_MINTER;
+    assert (storage.totalSupply >= msg.jettonAmount) throw ERR_SUPPLY;
+    val received = burnAmount(msg.jettonAmount, storage.currentPpi);
+    storage.totalSupply -= msg.jettonAmount;
     storage.totalReserve -= received;
     storage.save();
 }
@@ -207,6 +282,67 @@ fun handleSetJettonMinter(sender: address, msg: SetJettonMinter) {
     storage.save();
 }
 
+// Owner designates the price oracle (e.g. the deployed RedStone adapter).
+fun handleSetOracle(sender: address, msg: SetOracle) {
+    var storage = lazy Storage.load();
+    assert (sender == storage.owner) throw ERR_NOT_OWNER;
+    val os = OracleState.fromCell(storage.oracleState);
+    storage.oracleState = OracleState {
+        oracle: msg.oracle,
+        lastOracleUpdate: os.lastOracleUpdate,
+    }.toCell();
+    storage.save();
+}
+
+// Owner configures one basket asset. The basket is frozen once base prices are locked.
+fun handleSetBasketAsset(sender: address, msg: SetBasketAsset) {
+    var storage = lazy Storage.load();
+    assert (sender == storage.owner) throw ERR_NOT_OWNER;
+    assert (!storage.baseLocked) throw ERR_BASE_LOCKED;
+    assert (msg.basePrice > 0) throw ERR_BAD_BASE;
+    val asset: CoreAsset = {
+        weight: msg.weight,
+        basePrice: msg.basePrice,
+        currentPrice: msg.basePrice,
+    };
+    storage.assets.set(msg.index, asset);
+    if (msg.index >= storage.assetCount) {
+        storage.assetCount = msg.index + 1;
+    }
+    storage.save();
+}
+
+// Owner freezes the basket (base prices become immutable).
+fun handleLockBasePrices(sender: address, msg: LockBasePrices) {
+    var storage = lazy Storage.load();
+    assert (sender == storage.owner) throw ERR_NOT_OWNER;
+    storage.baseLocked = true;
+    storage.save();
+}
+
+// Only the registered oracle may push an asset price, only forward in time, and only
+// when the basket is complete (weights sum to 100%). PPI is recomputed on-chain.
+fun handleOracleUpdateAssetPrice(sender: address, msg: OracleUpdateAssetPrice) {
+    var storage = lazy Storage.load();
+    val os = OracleState.fromCell(storage.oracleState);
+    assert (sender == os.oracle) throw ERR_NOT_ORACLE;
+    assert (msg.timestamp > os.lastOracleUpdate) throw ERR_STALE_PRICE;
+    assert (msg.index < storage.assetCount) throw ERR_BAD_INDEX;
+    assert (weightsSum(storage.assets, storage.assetCount) == WEIGHT_SCALE) throw ERR_BAD_WEIGHTS;
+    val a = storage.assets.mustGet(msg.index);
+    storage.assets.set(msg.index, CoreAsset {
+        weight: a.weight,
+        basePrice: a.basePrice,
+        currentPrice: msg.price,
+    });
+    storage.oracleState = OracleState {
+        oracle: os.oracle,
+        lastOracleUpdate: msg.timestamp,
+    }.toCell();
+    storage.currentPpi = computePpi(storage.assets, storage.assetCount);
+    storage.save();
+}
+
 // ---------------- Getters ----------------
 
 get fun reserve(): int64 {
@@ -227,6 +363,27 @@ get fun ppi(): int64 {
 get fun jettonMinter(): address {
     val storage = lazy Storage.load();
     return storage.jettonMinter;
+}
+
+get fun oracle(): address {
+    val storage = lazy Storage.load();
+    return OracleState.fromCell(storage.oracleState).oracle;
+}
+
+get fun lastOracleUpdate(): int64 {
+    val storage = lazy Storage.load();
+    return OracleState.fromCell(storage.oracleState).lastOracleUpdate;
+}
+
+get fun assetCount(): int64 {
+    val storage = lazy Storage.load();
+    return storage.assetCount;
+}
+
+// Throws if the index is not set.
+get fun assetAt(index: int64): CoreAsset {
+    val storage = lazy Storage.load();
+    return storage.assets.mustGet(index);
 }
 
 get fun feesBurn(): int64 {
