@@ -1,0 +1,34 @@
+name: Timelock SetOwner round-trip via wallet (testnet)
+
+# Deterministic timelocked SetOwner round-trip against the LIVE PlanetCore, sending
+# INTERNAL messages through the deployer wallet (seqno-confirmed => ordered):
+#   1) cancel leftover pending  2) SetOwner(Core, demo timelock)
+#   3) demo proposes SetOwner(Core, deployer)  4) demo executes it (restore)
+# Runs in CI (runner IP avoids local RPC rate limits). Requires TON_WALLET_MNEMONIC.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  roundtrip:
+    name: Timelocked SetOwner round-trip
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: relayer
+    env:
+      PLANET_CORE: kQB_jRsajqfsRNI8Pp7pqr1zlAbBhIoMBzITYWEainyEm2bH
+      DEMO_TIMELOCK: kQCMwDVPftkUbRWPMzJGCjoC4YXnFGfN3myTJ1rbeCuSdPAt
+      RELAYER_MNEMONIC: ${{ secrets.TON_WALLET_MNEMONIC }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install deps
+        run: npm install --no-audit --no-fund
+
+      - name: Timelock SetOwner round-trip
+        run: node relayer.mjs timelock

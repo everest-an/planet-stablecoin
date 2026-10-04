@@ -58,7 +58,7 @@ function payloadCell(p) {
 
 async function main() {
   const cmd = process.argv[2];
-  if (cmd !== "configure" && cmd !== "register" && cmd !== "push" && cmd !== "e2e") die("usage: node relayer.mjs configure|register|push|e2e");
+  if (cmd !== "configure" && cmd !== "register" && cmd !== "push" && cmd !== "e2e" && cmd !== "timelock") die("usage: node relayer.mjs configure|register|push|e2e|timelock");
   if (!CORE_RAW) die("PLANET_CORE not set");
   if (!MNEMONIC) die("RELAYER_MNEMONIC not set");
 
@@ -155,6 +155,42 @@ async function main() {
     console.log("setting threshold = 1...");
     await send(thr);
     console.log("done: signer registered + threshold set");
+    return;
+  }
+
+  if (cmd === "timelock") {
+    // Deterministic timelocked SetOwner round-trip on testnet, all via the deployer
+    // wallet (internal messages, seqno-confirmed => ordered). Steps:
+    //   1) cancel any leftover pending on the demo timelock
+    //   2) SetOwner(core, demo)                      [direct owner action]
+    //   3) demo proposes SetOwner(core, wallet)
+    //   4) demo executes it                          [timelocked owner action -> restore]
+    const DEMO_RAW = process.env.DEMO_TIMELOCK ?? "";
+    if (!DEMO_RAW) die("DEMO_TIMELOCK not set");
+    const demoTl = Address.parse(DEMO_RAW);
+
+    const cancel = beginCell().storeUint(0x20000003, 32).storeInt(0, 64).endCell();
+    console.log("step 1: cancel leftover pending...");
+    await send(cancel, demoTl, "0.05");
+    await sleep(2500);
+
+    const setDemo = beginCell().storeUint(0x10000014, 32).storeInt(0, 64).storeAddress(demoTl).endCell();
+    console.log("step 2: SetOwner(core, demo)...");
+    await send(setDemo, core, "0.05");
+    await sleep(2500);
+
+    const restore = beginCell().storeUint(0x10000014, 32).storeInt(0, 64).storeAddress(wallet.address).endCell();
+    const propose = beginCell().storeUint(0x20000001, 32).storeInt(0, 64).storeAddress(core).storeRef(restore).endCell();
+    console.log("step 3: propose SetOwner(core, wallet) via timelock...");
+    await send(propose, demoTl, "0.05");
+    await sleep(2500);
+
+    const execute = beginCell().storeUint(0x20000002, 32).storeInt(0, 64).endCell();
+    console.log("step 4: execute...");
+    await send(execute, demoTl, "0.2");
+    await sleep(4000);
+
+    console.log("done: timelock round-trip");
     return;
   }
 
