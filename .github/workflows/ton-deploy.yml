@@ -31,7 +31,7 @@ jobs:
           acton wrapper --all
 
       - name: Import deployer wallet (testnet)
-        run: acton wallet import --name deployer --version v4r2 --local "${{ secrets.TON_WALLET_MNEMONIC }}"
+        run: acton wallet import --name deployer --version v4r2 --secure false --local "${{ secrets.TON_WALLET_MNEMONIC }}"
 
       - name: Deploy to testnet
         run: acton script scripts/deploy.tolk --net testnet
