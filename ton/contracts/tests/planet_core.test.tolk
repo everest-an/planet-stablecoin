@@ -116,3 +116,29 @@ get fun `test diffAbs`() {
     expect(diffAbs(1100000, 1000000)).toEqual(100000);
     expect(diffAbs(1000000, 1000000)).toEqual(0);
 }
+
+// ---------------- Risk-aware RTRA (CAM inputs) ----------------
+
+get fun `test risk-aware rebalance freezes at riskState 2`() {
+    // large drift but frozen -> never rebalance
+    expect(shouldRebalanceRisk(500000, 400, 1000, 0, 1000000, 2)).toEqual(false);
+}
+
+get fun `test risk-aware rebalance when calm`() {
+    // 10% drift, zero vol, full liquidity, normal -> true
+    expect(shouldRebalanceRisk(500000, 400, 1000, 0, 1000000, 0)).toEqual(true);
+    // 0.5% drift is not > 0.5% -> false
+    expect(shouldRebalanceRisk(500000, 495, 1000, 0, 1000000, 0)).toEqual(false);
+}
+
+get fun `test high volatility widens the rebalance threshold`() {
+    // 1% drift (10000 ppm) > base threshold 5000 -> would trigger …
+    expect(shouldRebalanceRisk(500000, 490, 1000, 0, 1000000, 0)).toEqual(true);
+    // … but 100% volatility doubles the threshold to 10000 -> not strictly greater
+    expect(shouldRebalanceRisk(500000, 490, 1000, 1000000, 1000000, 0)).toEqual(false);
+}
+
+get fun `test caution widens the threshold further`() {
+    // 1% drift, calm inputs, but riskState=caution -> threshold doubled -> false
+    expect(shouldRebalanceRisk(500000, 490, 1000, 0, 1000000, 1)).toEqual(false);
+}

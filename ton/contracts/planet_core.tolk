@@ -30,6 +30,7 @@ const ERR_BASE_LOCKED = 108;
 const ERR_BAD_INDEX = 109;
 const ERR_DEVIATION = 110;
 const ERR_LIMIT = 111;
+const ERR_NOT_CAM = 112;
 
 // Fee split (white paper §8.4): 45% buyback-burn / 30% reserve / 25% PLTG staking.
 const BURN_SHARE_BPS = 4500;
@@ -51,6 +52,9 @@ struct CoreAsset {
     weight: int64       // ppm, 1e6 = 100%
     basePrice: int64    // 1e6, immutable once baseLocked
     currentPrice: int64 // 1e6
+    volatility: int64   // 1e6 (CAM), 0 = unset
+    liquidity: int64    // 0..1e6 (CAM), 0 = unset
+    riskState: int64    // 0 normal / 1 caution / 2 frozen (CAM)
 }
 
 // Oracle state (OracleState, see oracle_state.tolk) lives in a ref cell so the main
@@ -66,6 +70,7 @@ struct Storage {
     feesToStaking: int64    // accrued 25% bucket
     paused: bool
     assets: map<int64, CoreAsset>  // index -> asset (the basket)
+    cams: map<int64, address>      // index -> CAM adapter (0 = unset)
     assetCount: int64
     baseLocked: bool               // base prices immutable once true
     oracleState: cell       // ref: OracleState { oracle, lastOracleUpdate }
@@ -130,7 +135,23 @@ struct (0x1000000E) SetLimits {
     maxPerTx: int64   // 0 = unlimited
 }
 
-type AllowedMessage = Mint | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | BurnMirror | SetBasketAsset | OracleUpdateAssetPrice | LockBasePrices | SetLimits
+struct (0x1000000D) SetCam {
+    queryId: int64
+    index: int64
+    cam: address
+}
+
+struct (0x1000000C) CamUpdate {
+    queryId: int64
+    index: int64
+    price: int64       // 1e6
+    volatility: int64  // 1e6
+    liquidity: int64   // 0..1e6
+    riskState: int64   // 0/1/2
+    timestamp: int64
+}
+
+type AllowedMessage = Mint | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | BurnMirror | SetBasketAsset | OracleUpdateAssetPrice | LockBasePrices | SetLimits | SetCam | CamUpdate
 
 // ---------------- Contract ABI ----------------
 
@@ -222,6 +243,30 @@ fun shouldRebalance(weight: int64, positionValue: int64, totalReserve: int64): b
     return drift > REBALANCE_THRESHOLD || drift < -REBALANCE_THRESHOLD;
 }
 
+// Risk-aware rebalance trigger (CAM inputs). frozen -> never; volatility/illiquidity
+// widen the effective threshold; caution widens further.
+fun shouldRebalanceRisk(
+    weight: int64, positionValue: int64, totalReserve: int64,
+    volatility: int64, liquidity: int64, riskState: int64,
+): bool {
+    if (riskState == 2) {
+        return false;
+    }
+    val adrift = diffAbs(rebalanceDrift(weight, positionValue, totalReserve), 0);
+    var thresh: int = REBALANCE_THRESHOLD as int;
+    if (volatility > 0) {
+        thresh = thresh * (PPI_SCALE + volatility as int) / PPI_SCALE;
+    }
+    if (liquidity > 0 && liquidity < PPI_SCALE) {
+        thresh = thresh * PPI_SCALE / (liquidity as int);
+    }
+    if (riskState == 1) {
+        thresh = thresh * 2;
+    }
+    val t: int64 = thresh as int64;
+    return adrift > t;
+}
+
 // Sum of all basket weights (ppm). Must equal WEIGHT_SCALE for a valid basket.
 fun weightsSum(assets: map<int64, CoreAsset>, assetCount: int64): int64 {
     var sum: int = 0;
@@ -260,6 +305,8 @@ fun onInternalMessage(in: InMessage) {
         OracleUpdateAssetPrice => { handleOracleUpdateAssetPrice(in.senderAddress, msg); }
         LockBasePrices => { handleLockBasePrices(in.senderAddress, msg); }
         SetLimits => { handleSetLimits(in.senderAddress, msg); }
+        SetCam => { handleSetCam(in.senderAddress, msg); }
+        CamUpdate => { handleCamUpdate(in.senderAddress, msg); }
         else => { assert (in.body.isEmpty()) throw 0xFFFF; }
     }
 }
@@ -360,6 +407,9 @@ fun handleSetBasketAsset(sender: address, msg: SetBasketAsset) {
         weight: msg.weight,
         basePrice: msg.basePrice,
         currentPrice: msg.basePrice,
+        volatility: 0,
+        liquidity: 0,
+        riskState: 0,
     };
     storage.assets.set(msg.index, asset);
     if (msg.index >= storage.assetCount) {
@@ -384,6 +434,40 @@ fun handleSetLimits(sender: address, msg: SetLimits) {
     storage.save();
 }
 
+// Owner registers the CAM adapter for a basket index.
+fun handleSetCam(sender: address, msg: SetCam) {
+    var storage = lazy Storage.load();
+    assert (sender == storage.owner) throw ERR_NOT_OWNER;
+    storage.cams.set(msg.index, msg.cam);
+    storage.save();
+}
+
+// A registered CAM pushes standardized data (price/volatility/liquidity/risk).
+// Timestamp is monotonic; the basket must be complete. PPI is recomputed on-chain.
+fun handleCamUpdate(sender: address, msg: CamUpdate) {
+    var storage = lazy Storage.load();
+    val os = OracleState.fromCell(storage.oracleState);
+    assert (sender == storage.cams.mustGet(msg.index)) throw ERR_NOT_CAM;
+    assert (msg.timestamp > os.lastOracleUpdate) throw ERR_STALE_PRICE;
+    assert (msg.index < storage.assetCount) throw ERR_BAD_INDEX;
+    assert (weightsSum(storage.assets, storage.assetCount) == WEIGHT_SCALE) throw ERR_BAD_WEIGHTS;
+    val a = storage.assets.mustGet(msg.index);
+    storage.assets.set(msg.index, CoreAsset {
+        weight: a.weight,
+        basePrice: a.basePrice,
+        currentPrice: msg.price,
+        volatility: msg.volatility,
+        liquidity: msg.liquidity,
+        riskState: msg.riskState,
+    });
+    storage.oracleState = OracleState {
+        oracle: os.oracle,
+        lastOracleUpdate: msg.timestamp,
+    }.toCell();
+    storage.currentPpi = computePpi(storage.assets, storage.assetCount);
+    storage.save();
+}
+
 // Only the registered oracle may push an asset price, only forward in time, and only
 // when the basket is complete (weights sum to 100%). PPI is recomputed on-chain.
 fun handleOracleUpdateAssetPrice(sender: address, msg: OracleUpdateAssetPrice) {
@@ -398,6 +482,9 @@ fun handleOracleUpdateAssetPrice(sender: address, msg: OracleUpdateAssetPrice) {
         weight: a.weight,
         basePrice: a.basePrice,
         currentPrice: msg.price,
+        volatility: a.volatility,
+        liquidity: a.liquidity,
+        riskState: a.riskState,
     });
     storage.oracleState = OracleState {
         oracle: os.oracle,
@@ -448,6 +535,11 @@ get fun assetCount(): int64 {
 get fun assetAt(index: int64): CoreAsset {
     val storage = lazy Storage.load();
     return storage.assets.mustGet(index);
+}
+
+get fun camAt(index: int64): address {
+    val storage = lazy Storage.load();
+    return storage.cams.mustGet(index);
 }
 
 get fun maxPerTx(): int64 {

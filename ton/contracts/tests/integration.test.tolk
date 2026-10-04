@@ -20,6 +20,7 @@ get fun `test deploy PlanetCore sets initial ppi`() {
         feesToStaking: 0,
         paused: false,
         assets: [],
+        cams: [],
         assetCount: 0,
         baseLocked: false,
         oracleState: OracleState { oracle: deployer.address, lastOracleUpdate: 0 }.toCell(),
