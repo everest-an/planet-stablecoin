@@ -208,7 +208,8 @@ cd app-tg && npm install && npm run build
 | **PlanetTimelock**（demo 0s / tl2） | `kQCMwDVPftkUbRWPMzJGCjoC4YXnFGfN3myTJ1rbeCuSdPAt` / `kQAwMedJ1wWbt-zKqw06Ssb7vdeLW_FIbAQd0NmAPjC5v2Mr` |
 | 部署钱包 | `0QBW4GNM-XpAIuIzwrupQKqVOLILHfP6lnD_Xk04L9Yx6Qol`（v4r2；私钥 `ton/.secrets/`，已 gitignore） |
 
-- **链上状态**：`assetCount=3`、`signerAt(0)=0x9471…0f8f`（relayer 公钥，`threshold=1`）、`ppi=1.0`（基准=建仓价）。
+- **链上状态**：`assetCount=3`、`signerAt(0)=0x9471…0f8f`（relayer 公钥，`threshold=1`）、`lastOracleUpdate` 持续更新、**`ppi≈1.003`（随行情动态变化；基准=建仓价）**。
+- **真实推价已上链（含 bug 修复）**：relayer 双源（Yahoo+Sina）**中位数** → `SignedPriceUpdate` → Core 重算 PPI。**修复**：push body 此前仍是旧内联 `(sigR,sigS,payload)` 格式，而合约已改为 `SignedPriceUpdate{sig1: cell, sig2: cell, payload: cell}` → 推价从未生效（`lastOracleUpdate` 恒 0、PPI 恒 1.0、前端把 base 当 Now）。现 `lastOracleUpdate>0`、`assetAt(i).current` = 中位数、`risk=0`。
 - **mint/burn 端到端**：`.github/workflows/e2e-test.yml`（`gh workflow run e2e-test.yml`）→ 铸 1.0 USDC 得 0.995 PLT，`AskToBurn` 0.5 → Core `supply` 995000→495000，链上实测通过。
 - **时间锁**：`PlanetTimelock` 已部署（24h prod = `kQDc_iZ7...`，0s demo = `kQCMwDV...`）。
   - ✅ **propose→execute 投递** 链上验证（`tl2.delay=777`）；模拟器端到端亦有测试（`timelock.test.tolk`）。
