@@ -44,6 +44,54 @@ async function yahooPrice(symbol) {
   return price;
 }
 
+// Sina international-futures quote: `var hq_str_<code>="<current>,,<bid>,<ask>,..."`
+async function sinaPrice(code) {
+  const res = await fetch(`https://hq.sinajs.cn/list=${encodeURIComponent(code)}`, {
+    headers: { Referer: "https://finance.sina.com.cn", "User-Agent": "Mozilla/5.0" },
+  });
+  if (!res.ok) die(`sina ${code}: HTTP ${res.status}`);
+  const m = (await res.text()).match(/"([^"]*)"/);
+  if (!m || !m[1]) die(`sina ${code}: no data`);
+  const price = Number(m[1].split(",")[0]);
+  if (!Number.isFinite(price) || price <= 0) die(`sina ${code}: bad price`);
+  return price;
+}
+
+// Multi-source cross-validation (S3): each asset can be quoted by >=2 independent
+// sources (Yahoo + Sina). We push the MEDIAN and FREEZE the asset (riskState=1, which
+// excludes it from `computePpi`) if the sources diverge beyond MAX_SOURCE_SPREAD.
+const MAX_SOURCE_SPREAD = Number(process.env.MAX_SOURCE_SPREAD ?? "0.02"); // 2%
+const MULTI_SOURCE = process.env.MULTI_SOURCE !== "0";
+
+async function sourcePrices(asset) {
+  const out = [];
+  try {
+    out.push({ src: "yahoo", price: await yahooPrice(asset.symbol) });
+  } catch (e) {
+    console.log("warn: yahoo failed: " + String(e?.message ?? e).slice(0, 100));
+  }
+  if (MULTI_SOURCE && asset.sina) {
+    try {
+      out.push({ src: "sina", price: (await sinaPrice(asset.sina)) * (asset.sinaScale ?? 1) });
+    } catch (e) {
+      console.log("warn: sina failed: " + String(e?.message ?? e).slice(0, 100));
+    }
+  }
+  return out;
+}
+
+function aggregate(prices) {
+  if (prices.length === 0) die("no price source returned a value");
+  const vals = prices.map((p) => p.price).sort((a, b) => a - b);
+  const median =
+    vals.length % 2 === 1
+      ? vals[(vals.length - 1) / 2]
+      : (vals[vals.length / 2 - 1] + vals[vals.length / 2]) / 2;
+  const spread = prices.length >= 2 ? (vals[vals.length - 1] - vals[0]) / median : 0;
+  const frozen = prices.length >= 2 && spread > MAX_SOURCE_SPREAD ? 1 : 0;
+  return { median, spread, frozen, prices };
+}
+
 function payloadCell(p) {
   return beginCell()
     .storeInt(p.queryId, 64)
@@ -244,8 +292,14 @@ async function main() {
   const cfg = JSON.parse(readFileSync(ASSETS_JSON, "utf8"));
   let ts = Math.floor(Date.now() / 1000);
   for (const a of cfg.assets) {
-    const close = await yahooPrice(a.symbol);
-    const price = BigInt(Math.round(close * 1e6));
+    const agg = aggregate(await sourcePrices(a));
+    console.log(
+      `source #${a.index} ${a.name ?? a.symbol}: ` +
+        agg.prices.map((p) => `${p.src}=${p.price.toFixed(4)}`).join(" ") +
+        ` | median=${agg.median.toFixed(4)} spread=${(agg.spread * 100).toFixed(2)}%` +
+        (agg.frozen ? " -> FROZEN (sources diverge)" : "")
+    );
+    const price = BigInt(Math.round(agg.median * 1e6));
     ts += 1; // strictly increasing timestamp (replay protection)
     const payload = payloadCell({
       queryId: 0n,
@@ -253,7 +307,7 @@ async function main() {
       price,
       volatility: 0n,
       liquidity: PPI_SCALE,
-      riskState: 0n,
+      riskState: BigInt(agg.frozen),
       timestamp: BigInt(ts),
     });
     const sig = sign(payload.hash(), kp.secretKey); // 64 bytes (R||S)
