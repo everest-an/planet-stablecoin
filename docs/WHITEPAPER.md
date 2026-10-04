@@ -69,7 +69,8 @@ Received = B · PPI · (1 − f)
   `price / volatility / liquidity / riskState`。
 - 核心据此：**风险自适应再平衡**（frozen 不调仓、高波动/低流动性抬阈值）、分级熔断/限额。
 - 收益：新增/下线商品不改核心；**单一商品故障被隔离**。详见 `docs/commodity-cam.md`。
-- **接入方式**：注册 CAM/适配器地址（`SetCam`）或**签名更新**（`SetSigner` + `SignedPriceUpdate`，链上 ed25519 验签）——接真实数据源只需**一个公钥**或 adapter 地址。
+- **接入方式**：注册 CAM/适配器地址（`SetCam`）或**签名更新**（阈值签名集 `SetSigner{index,key}` + `SetThreshold{m}` + `SignedPriceUpdate`，链上 ed25519 验签；**2-of-N 多源**，需 M 个不同来源签名）。接真实数据源只需公开公钥。
+- **价格护栏与密钥治理**：单次推价跳变 >50% 即拒（防单次篡改）；`SetOwner` 可把 owner 迁移到 **TON 多签钱包**。详见 `docs/security.md`。
 
 ### 3.5 个体隔离与风险传导（**核心安全设计**）
 - **逻辑 / 合约层解耦，不改链下托管**：底层期货 / ETF 仍在经纪商；解耦发生在**合约层**——CAM 作为每类

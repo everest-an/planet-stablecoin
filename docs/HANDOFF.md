@@ -9,7 +9,7 @@
 
 Planet（PLT）= 全球大宗商品购买力指数协议；当前实现为 **TON 上的合成指数代币 + TEP-74 代币 + 铸赎骨架**。
 仓库：`github.com/everest-an/planet-stablecoin`（**private**），分支 `main`。
-最后验证：`main`（PR #1 + 稳定机制 A/C1/C2/C3a+C3b + CAM + 签名预言机（含双签）+ 价格跳变护栏 + 测试网 live），CI 全绿（95 测试，覆盖率 90.6%）。
+最后验证：`main`（PR #1 + 稳定机制 A/C1/C2/C3a+C3b + CAM + 签名预言机（多源 2-of-N）+ 价格护栏 + SetOwner + 测试网 live），CI 全绿（97 测试，覆盖率 90.4%）。
 
 ---
 
@@ -77,9 +77,9 @@ legacy-solana/              Solana/Anchor 遗留实现 + 原 README（算法参�
 ## 3. 当前验证状态（可核对）
 
 - **CI 3 job 全绿**：`Tolk (Acton)`（build + wrapper + test --coverage + **deploy 脚本 emulation 冒烟**）、`TG Mini App`（vite build）、`Tact PoC`。
-- **95 个测试（11 文件）**：纯数学/不变量 + 大额溢出 + 分档费 + 费率斜率/非对称赎回 + 套利返利 + 风险自适应 RTRA + 集成 + 全链路（mint/burn/transfer）+ 赎回镜像 + 链上多资产 PPI + CAM（+frozen 隔离）+ **签名预言机（含双签 2-of-2）** + **价格跳变护栏** + 风险基金 + 稳定债券 + 限额/熔断 + minter 管理/TEP-89 + PlanetBasket。
+- **97 个测试（11 文件）**：纯数学/不变量 + 大额溢出 + 分档费 + 费率斜率/非对称赎回 + 套利返利 + 风险自适应 RTRA + 集成 + 全链路（mint/burn/transfer）+ 赎回镜像 + 链上多资产 PPI + CAM（+frozen 隔离）+ **多源预言机（阈值签名 2-of-N）** + **价格跳变护栏** + 风险基金 + 稳定债券 + **owner 迁移（SetOwner）** + 限额/熔断 + minter 管理/TEP-89 + PlanetBasket。
 - **触发路径**：`.github/workflows/ton-build.yml` 监听 `ton/**` 与 `app-tg/**`。
-- **覆盖率（基线棘轮）**：All files **90.6% score**（行 96.5% / 分支 78.7%）；`planet_core.tolk` 92.5%、`planet_bond.tolk` 92.6%、`planet_basket.tolk` 90.9%。门禁 `ton/Acton.toml [test.coverage] minimum-percent = 90`，**只升不降**。
+- **覆盖率（基线棘轮）**：All files **90.4% score**（行 96.5% / 分支 78.9%）；`planet_core.tolk` 92.4%、`planet_bond.tolk` 92.6%、`planet_basket.tolk` 90.9%。门禁 `ton/Acton.toml [test.coverage] minimum-percent = 90`，**只升不降**。
 - 近期提交：见分支 `feat/ton-coverage-gate-and-jetton-mint`（仓库整理 · 覆盖率棘轮 29→47→73→80 · mint tonAmount 修复 + 全链路/预言机测试）。
 
 ---
@@ -112,7 +112,7 @@ cd app-tg && npm install && npm run build
 - **CAM 适配层（Phase A）**：每 index 注册 CAM（`SetCam`）；CAM 推标准化 `price/volatility/liquidity/riskState`（`CamUpdate`，时间戳单调）入 `CoreAsset`；**frozen 资产被排除出 PPI**（`computePpi` 按活跃资产重归一化）；新增**风险自适应 RTRA** `shouldRebalanceRisk`（frozen 不调仓、高波动/低流动性抬阈值）。
 - **签名预言机接缝**：owner 设 ed25519 公钥（`SetSigner`）；relayer 发 `SignedPriceUpdate`（签名 R‖S + payload），Core 链上 `isSignatureValid` 验签 → 接真实数据源只需**一个公钥**。
 - **风险基金（C3a）**：每笔手续费 10%（`RISK_SHARE_BPS`）从储备桶划入 `riskFund`；owner 可 `CoverDeficit` 回补储备（不足则拒绝）。
-- **安全加固**：**价格跳变护栏**（单次 >50% 拒绝，`116`）+ **预言机双签**（配置 `signerKey2` 后需两把钥的签名，`117`）+ 安全性文档 `docs/security.md`。
+- **安全加固**：**价格跳变护栏**（>50% 拒，`116`）+ **多源预言机（阈值签名 2-of-N）**（`SetSigner`/`SetThreshold`；需 M 个不同来源签名，`117`）+ **`SetOwner`**（owner 迁移到多签钱包）+ `docs/security.md`。
 - **稳定债券（C3b）**：独立 `PlanetBond` 合约（Core 存储 ref 已满）——`SetOpen`/`SetPremium`/`Subscribe`（face=principal×(1+premium)）/`Redeem`；mock 记账。
 - **稳定机制**：A（分档费 / 单笔限额 / >15% 冻结铸币）；**C1**（>5% 费率斜率 + 非对称赎回费）；**C2**（套利返利）；**C3a**（风险基金）。
 - **链上多资产 PPI**：Core 存篮子（`map<int64,CoreAsset>`），oracle 推单资产价 → 链上 `computePpi`；`SetBasketAsset`/`OracleUpdateAssetPrice`/`LockBasePrices`；删 `OracleUpdatePrice`。
@@ -120,7 +120,7 @@ cd app-tg && npm install && npm run build
 - `PlanetBasket`：链上组合注册表 + getter。
 - **PLT TEP-74 Jetton**（minter + wallet，vendored）。
 - TG 小程序：读 PPI/储备/供应 + **链上篮子**（权重条 + vs base 涨跌 + **篮子隐含 PPI 与链上 PPI 对照**）+ **mint UI** + **burn UI**（TEP-74 AskToBurn）。
-- 95 测试 + 覆盖率（90.6% score，门禁 90）+ CI 门禁（棘轮，只升不降）。
+- 97 测试 + 覆盖率（90.4% score，门禁 90）+ CI 门禁（棘轮，只升不降）。
 - 文档：GTM / PLAN-TON / TON-MAPPING / AUDIT。
 
 ---
@@ -131,8 +131,8 @@ cd app-tg && npm install && npm run build
 |---|---|---|
 | ✅ | **Mint→Jetton 全链路集成测试**（emulator 部署 Minter+Wallet，发 Mint，断言 PLT 余额） | ✅ 完成（`contracts/tests/jetton_mint.test.tolk`，CI 绿） |
 | ✅ | **覆盖率门禁（目标 80%）** | ✅ 超额达成：All files **90.6%**，门禁 `minimum-percent = 90`（起点 29.8% → 90.6%） |
-| P1 | **安全：owner 多签 + 时间锁**（S2，`docs/security.md`） | ⬜ 待做（把 owner 设为 TON 多签钱包；关键动作 Propose/Execute）；**最高优先级** |
-| P2 | **安全：多源 oracle 交叉验证**（S3） | ⬜ 待做（≥2 独立源一致；现为单签名源 + 双签） |
+| P1 | **安全：owner 多签 + 时间锁**（S2，`docs/security.md`） | 🟡 **`SetOwner` 已就绪**（可迁移到 TON 多签钱包）；**时间锁（Propose/Execute）待做** |
+| 🟡 | **多源预言机**（S1） | ✅ **阈值签名集 2-of-N 已实现**（`SetSigner`/`SetThreshold`）；M>2 待做 |
 | P2 | **真实数据源接入**（RedStone/DIA） | 🟡 两条接缝**已就绪并测试**：①注册 CAM/报告者地址（`SetCam`）；②**签名更新**（`SetSigner`+`SignedPriceUpdate`，链上 ed25519 验签）。外部只需**一个公钥**或 adapter 地址 + feed_id |
 | ✅ | **赎回链路打通**（Core 与钱包 burn 脱节） | ✅ 完成：minter 镜像 `BurnMirror` → Core（`docs/burn-linkage.md` 方案 A）；旧 `core.Burn` 已移除 |
 | ✅ | **多资产 PPI 计算**（按篮子权重链上算，替代单值 `currentPpi`） | ✅ 完成（`docs/ppi-multiasset.md` 方案 (i)；前端读 Core；未做 Basket 镜像） |

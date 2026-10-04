@@ -19,6 +19,7 @@
 |---|---|
 | **预言机重放** | `OracleState.lastOracleUpdate`，推价 `timestamp` 必须**严格递增** |
 | **单次价格篡改** | **价格跳变护栏**：单次更新相对现价跳变 >50%（`MAX_PRICE_JUMP_PPM`）即拒绝（`116`） |
+| **预言机密钥被窃** | **阈值签名集（2-of-N）**：需 M 个**不同**来源的有效签名（`117`） |
 | **单商品坏数据** | CAM `riskState=frozen` → **不进 PPI**（按活跃资产重归一化）+ RTRA 不调仓 |
 | **极端偏离** | `|PPI-1|>15%` → **冻结铸币**（`ERR_DEVIATION`） |
 | **越权** | 所有 owner 动作 `assert(sender==owner)`；oracle 动作 `assert(sender==oracle/cam)` |
@@ -32,17 +33,15 @@
 ### S0 ✅ 价格跳变护栏（本轮已实现）
 单次推价跳变上限 50%，限制"一次篡改把 PPI 打飞"。**注意**：真实重建仓/reset 需 owner 分批推价。
 
-### S1 ✅ 预言机**双签**（2-of-2，本轮已实现）
-`OracleState.signerKey2`：若配置了第二签名公钥，`SignedPriceUpdate` 必须携带**两个**有效签名
-（`sigR/sigS` + `sig2R/sig2S`），任一无效即拒（`ERR_BAD_SIG`/`ERR_BAD_SIG2`）。
-→ 单把签名钥被窃**不足以**篡改价格。**计划**：扩展为 **M-of-N**（阈值签名集）。
+### S1 ✅ 预言机**阈值签名集（2-of-N 多源）**（已实现）
+`SetSigner{index,key}` 注册 N 个来源公钥；`SetThreshold{m}` 设阈值。`SignedPriceUpdate` 携带两个签名，
+链上在集合里找**两个不同的、各自有效的**签名者；不足 M 即拒（`ERR_BAD_SIG`/`ERR_BAD_SIG2`，`ERR_NO_SIGNER`）。
+→ **单把钥被窃不足以篡改价格**；2 个独立来源（如两家预言机）即可满足。**计划**：支持 M>2（消息带更多签名槽）。
 
-### S2 ⬜ owner 多签 + 时间锁（**最高优先级**）
-- **推荐做法**：把 `owner` 设为一个 **TON 多签钱包地址**（v4 多签/标准 multisig）——**不改合约**，
-  所有 owner 动作经 M-of-N 多签。
-- 关键动作（`SetJettonMinter`/`SetOracle`/`SetSigner`/`SetLimits`/篮子）**两步 + 时间锁**：
-  `Propose → (延迟 T) → Execute`，给社区退出/反应窗口。
-- **计划**：实现 `Propose/Execute` 两阶段（或直接用外部 timelock 钱包作 owner）。
+### S2 🟡 owner 多签（**`SetOwner` 已就绪**）+ 时间锁（待做）
+- **已实现 `SetOwner`**：owner 可把所有权**迁移到 TON 多签钱包**，此后所有 owner 动作经 M-of-N 多签。
+- **推荐**：部署一个 TON 多签钱包 → `SetOwner` 指向它。
+- **待做**：链上 `Propose→(延迟 T)→Execute` 时间锁（或用外部 timelock 钱包作 owner）。
 
 ### S3 ⬜ 多源 oracle 交叉验证
 - 现有两条路：**注册式 CAM** + **签名式**。**计划**：要求 **≥2 个独立源**对同一资产一致（或取中位），
