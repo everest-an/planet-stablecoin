@@ -55,7 +55,7 @@ fun main() {
     // then a TIMELOCKED owner action: demo proposes+executes SetOwner(Core, deployer)
     //     SetOwner { queryId: 0, newOwner: deployer }  (op 0x10000014)
     val restoreBody = beginCell().storeUint(0x10000014, 32).storeInt(0, 64).storeAddress(deployer.address).endCell();
-    demo.sendTlPropose(deployer.address, 0, core, restoreBody, { value: ton("0.05") });
+    demo.sendTlPropose(deployer.address, 0, core.address, restoreBody, { value: ton("0.05") });
     demo.sendTlExecute(deployer.address, 0, { value: ton("0.15") });
 
     println("Timelock deploy + flow done.");
