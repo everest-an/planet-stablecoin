@@ -11,6 +11,8 @@ app/node_modules/
 
 # Env / keys（切勿提交私钥）
 .env
+.env.local
+app-tg/.env.local
 *.json.key
 id.json
 **/target/deploy/*-keypair.json

@@ -15,6 +15,21 @@ const USD_DECIMALS = 6;
 
 const client = new TonClient({ endpoint: ENDPOINT });
 
+// The public testnet RPC is rate-limited (HTTP 429); retry with backoff so the UI
+// still loads its state instead of erroring out.
+async function runMethodRetry(addr: Address, method: string, args?: any[], tries = 6) {
+  for (let i = 0; i < tries; i++) {
+    try {
+      return await client.runMethod(addr, method, args);
+    } catch (e) {
+      const m = String((e as Error)?.message ?? e);
+      if (!/429|Too Many|rate/i.test(m)) throw e;
+      await new Promise((r) => setTimeout(r, 1500 * (i + 1)));
+    }
+  }
+  throw new Error("RPC throttled: " + method);
+}
+
 function fmtFixed(raw: bigint, decimals = 6): string {
   return (Number(raw) / 10 ** decimals).toLocaleString(undefined, {
     maximumFractionDigits: 6,
@@ -62,9 +77,9 @@ export default function App() {
     try {
       const addr = Address.parse(PLANET_ADDRESS);
       const [p, r, s] = await Promise.all([
-        client.runMethod(addr, "ppi"),
-        client.runMethod(addr, "reserve"),
-        client.runMethod(addr, "supply"),
+        runMethodRetry(addr, "ppi"),
+        runMethodRetry(addr, "reserve"),
+        runMethodRetry(addr, "supply"),
       ]);
       const ppiBig = p.stack.readBigNumber();
       setPpi(fmtFixed(ppiBig, 6));
@@ -75,7 +90,7 @@ export default function App() {
       // On-chain basket composition (owned by PlanetCore since A2)
       {
         const basket = addr;
-        const cnt = await client.runMethod(basket, "assetCount");
+        const cnt = await runMethodRetry(basket, "assetCount");
         const n = Number(cnt.stack.readBigNumber());
         const rows: {
           i: number;
@@ -90,7 +105,7 @@ export default function App() {
         let hasAsset = false;
         for (let i = 0; i < n; i++) {
           try {
-            const a = await client.runMethod(basket, "assetAt", [
+            const a = await runMethodRetry(basket, "assetAt", [
               { type: "int", value: BigInt(i) },
             ]);
             const weight = a.stack.readBigNumber();
@@ -176,7 +191,7 @@ export default function App() {
     setMsg("");
     try {
       const minter = Address.parse(PLT_MINTER_ADDRESS);
-      const res = await client.runMethod(minter, "get_wallet_address", [
+      const res = await runMethodRetry(minter, "get_wallet_address", [
         { type: "slice", cell: beginCell().storeAddress(Address.parse(userAddress)).endCell() },
       ]);
       const walletAddr = res.stack.readAddress();
