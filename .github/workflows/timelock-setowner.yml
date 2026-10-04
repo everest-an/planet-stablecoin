@@ -1,0 +1,55 @@
+name: Timelock SetOwner round-trip (testnet)
+
+# Deterministic on-chain proof of the delayed-owner flow on the LIVE PlanetCore,
+# one message per step (sleeps between) to avoid same-run message reordering:
+#   1) cancel any leftover pending on the demo timelock
+#   2) SetOwner(Core, demo timelock)          [direct owner action]
+#   3) demo timelock proposes SetOwner(Core, deployer)
+#   4) demo timelock executes it              [timelocked owner action -> restore]
+# Requires the TON_WALLET_MNEMONIC secret.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  roundtrip:
+    name: Timelocked SetOwner round-trip
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ton
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Acton
+        run: |
+          curl -LsSf https://github.com/ton-blockchain/acton/releases/latest/download/acton-installer.sh | sh
+          echo "$HOME/.acton/bin" >> "$GITHUB_PATH"
+
+      - name: Build + wrappers
+        run: |
+          acton build
+          acton wrapper --all
+
+      - name: Import deployer wallet (testnet)
+        run: acton wallet import --name deployer --version v4r2 --secure false --local "${{ secrets.TON_WALLET_MNEMONIC }}"
+
+      - name: Step 1 - cancel leftover pending
+        run: acton script scripts/tl_cancel.tolk --net testnet || true
+
+      - run: sleep 20
+
+      - name: Step 2 - SetOwner(Core, demo timelock)
+        run: acton script scripts/tl_setowner_demo.tolk --net testnet
+
+      - run: sleep 20
+
+      - name: Step 3 - propose SetOwner(Core, deployer) via timelock
+        run: acton script scripts/tl_propose_restore.tolk --net testnet
+
+      - run: sleep 20
+
+      - name: Step 4 - execute (restore owner)
+        run: acton script scripts/tl_execute.tolk --net testnet
+
+      - run: sleep 20
