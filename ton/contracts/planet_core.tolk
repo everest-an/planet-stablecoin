@@ -622,7 +622,7 @@ fun handleSignedPriceUpdateN(msg: SignedPriceUpdateN) {
     val os = OracleState.fromCell(storage.oracleState);
     assert (os.signerCount > 0) throw ERR_NO_SIGNER;
     val hash = msg.payload.hash();
-    val sp = msg.sigs.beginParse();
+    var sp = msg.sigs.beginParse();
     val n = sp.loadUint(8);
     var usedMask: int = 0;
     var matched: int = 0;
