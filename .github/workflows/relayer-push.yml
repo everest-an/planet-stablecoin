@@ -1,0 +1,37 @@
+name: Relayer push (testnet)
+
+# Runs the off-chain relayer in CI (the runner IP is not subject to the public RPC
+# rate limits that a local run hits). Fetches live commodity prices, configures the
+# basket, registers the signer, and pushes SignPriceUpdate(s) to PlanetCore.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  push:
+    name: Configure + push prices
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: relayer
+    env:
+      PLANET_CORE: kQAyzbletVLCFV7IsR1Vik6hxYVLIANZ7oBYE9wRJPGKnQBV
+      RELAYER_MNEMONIC: ${{ secrets.TON_WALLET_MNEMONIC }}
+      ASSETS_JSON: assets.example.json
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install deps
+        run: npm install --no-audit --no-fund
+
+      - name: Configure basket + register signer
+        run: |
+          node relayer.mjs configure
+          node relayer.mjs register
+
+      - name: Push live prices
+        run: node relayer.mjs push

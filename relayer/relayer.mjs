@@ -14,6 +14,8 @@ const CORE_RAW = process.env.PLANET_CORE ?? "";
 const MNEMONIC = process.env.RELAYER_MNEMONIC ?? "";
 const ASSETS_JSON = process.env.ASSETS_JSON ?? "assets.json";
 
+const OP_SET_BASKET = 0x10000009;
+const OP_LOCK_BASE = 0x1000000B;
 const OP_SET_SIGNER = 0x10000011;
 const OP_SIGNED_PRICE = 0x10000010;
 const PPI_SCALE = 1000000n; // 1.0 fixed point
@@ -26,6 +28,8 @@ function die(msg) {
 function bigFromBuf(buf) {
   return BigInt("0x" + buf.toString("hex"));
 }
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function yahooPrice(symbol) {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1d&interval=1d`;
@@ -51,7 +55,7 @@ function payloadCell(p) {
 
 async function main() {
   const cmd = process.argv[2];
-  if (cmd !== "register" && cmd !== "push") die("usage: node relayer.mjs register|push");
+  if (cmd !== "configure" && cmd !== "register" && cmd !== "push") die("usage: node relayer.mjs configure|register|push");
   if (!CORE_RAW) die("PLANET_CORE not set");
   if (!MNEMONIC) die("RELAYER_MNEMONIC not set");
 
@@ -65,19 +69,61 @@ async function main() {
   console.log("relayer wallet: " + wallet.address.toString({ bounceable: false, testOnly: true }));
   console.log("relayer pubkey: " + kp.publicKey.toString("hex"));
 
-  async function send(body) {
-    const seqno = await contract.getSeqno();
-    await contract.sendTransfer({
-      seqno,
-      secretKey: kp.secretKey,
-      messages: [internal({ to: core, value: toNano("0.05"), bounce: true, body })],
-    });
-    // wait until the seqno advances (tx accepted)
-    for (let i = 0; i < 10; i++) {
-      await new Promise((r) => setTimeout(r, 1500));
-      if ((await contract.getSeqno()) > seqno) return;
+  async function rpcRetry(label, fn) {
+    for (let a = 0; a < 8; a++) {
+      try {
+        return await fn();
+      } catch (e) {
+        const msg = String(e?.message ?? e);
+        if (a === 7) die(label + " failed: " + msg.slice(0, 120));
+        const w = 2500 * (a + 1);
+        console.log(`retry ${label}(${a + 1}) in ${w}ms: ${msg.slice(0, 80)}`);
+        await sleep(w);
+      }
     }
-    die("timeout waiting for seqno increment");
+  }
+
+  // Broadcast once (retry only the broadcast itself, never after it may have landed).
+  async function send(body) {
+    const seqno = await rpcRetry("getSeqno", () => contract.getSeqno());
+    await rpcRetry("sendBoc", () =>
+      contract.sendTransfer({
+        seqno,
+        secretKey: kp.secretKey,
+        messages: [internal({ to: core, value: toNano("0.05"), bounce: true, body })],
+      })
+    );
+    // best-effort confirmation
+    for (let i = 0; i < 12; i++) {
+      await sleep(1500);
+      try {
+        if ((await contract.getSeqno()) > seqno) return;
+      } catch (_) {
+        /* ignore transient RPC errors during confirmation */
+      }
+    }
+    console.log("warn: no seqno confirmation (assuming broadcast)");
+  }
+
+  if (cmd === "configure") {
+    const cfg = JSON.parse(readFileSync(ASSETS_JSON, "utf8"));
+    for (const a of cfg.assets) {
+      const close = await yahooPrice(a.symbol);
+      const base = BigInt(Math.round(close * 1e6));
+      const body = beginCell()
+        .storeUint(OP_SET_BASKET, 32)
+        .storeInt(0, 64)
+        .storeInt(BigInt(a.index), 64)
+        .storeInt(BigInt(a.weight), 64)
+        .storeInt(base, 64)
+        .endCell();
+      console.log(`basket #${a.index} ${a.name ?? a.symbol}: weight=${a.weight} base=${base} (from ${close})`);
+      await send(body);
+    }
+    const lock = beginCell().storeUint(OP_LOCK_BASE, 32).storeInt(0, 64).endCell();
+    await send(lock);
+    console.log("done: basket configured + base prices locked");
+    return;
   }
 
   if (cmd === "register") {
