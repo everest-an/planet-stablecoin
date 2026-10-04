@@ -17,6 +17,9 @@ const PPI_SCALE = 1000000;   // 1.0 in 1e6 fixed point
 const BAND_LOW = 30000;      // 3%  deviation (ppm)
 const BAND_HIGH = 50000;     // 5%  deviation
 const BAND_FREEZE = 150000;  // 15% deviation -> hard mint freeze
+const SLOPE_BPS = 1000;      // fee slope (bps per 100% deviation) beyond BAND_HIGH
+const REDEEM_PENALTY_PPI = 970000; // below this PPI, redeem fee is penalised
+const REDEEM_PENALTY_BPS = 100;    // extra redeem fee (bps) below REDEEM_PENALTY_PPI
 
 const ERR_PAUSED = 100;
 const ERR_NOT_OWNER = 101;
@@ -199,7 +202,7 @@ fun diffAbs(a: int64, b: int64): int64 {
     return -d;
 }
 
-// Band-based fee (stability): low friction near the peg, penalising away from it.
+// Band-based fee (stability): low friction near the peg, steepening beyond BAND_HIGH.
 fun feeBpsForPpi(ppi: int64): int64 {
     val dev = diffAbs(ppi, PPI_SCALE);
     if (dev <= BAND_LOW) {
@@ -208,7 +211,18 @@ fun feeBpsForPpi(ppi: int64): int64 {
     if (dev <= BAND_HIGH) {
         return FEE_BPS_ELEVATED;
     }
-    return FEE_BPS_HIGH;
+    val extra = (dev as int - BAND_HIGH as int) * SLOPE_BPS / PPI_SCALE;
+    return (FEE_BPS_HIGH as int + extra) as int64;
+}
+
+// Redeem fee is asymmetric: penalised when PPI is far below peg (discourages exit
+// during a down-depeg), on top of the band/slope fee.
+fun burnFeeBpsForPpi(ppi: int64): int64 {
+    var f = feeBpsForPpi(ppi) as int;
+    if (ppi < REDEEM_PENALTY_PPI) {
+        f += REDEEM_PENALTY_BPS;
+    }
+    return f as int64;
 }
 
 fun feeAmountAtPpi(amount: int64, ppi: int64): int64 {
@@ -221,10 +235,10 @@ fun mintAmountAtPpi(deposit: int64, ppi: int64): int64 {
     return (net * PPI_SCALE / (ppi as int)) as int64;
 }
 
-// Received = B * PPI * (1 - f(PPI))   (band fee)
+// Received = B * PPI * (1 - f(PPI))   (band + asymmetric redeem fee)
 fun burnAmountAtPpi(plt: int64, ppi: int64): int64 {
     val gross = (plt as int) * (ppi as int) / PPI_SCALE;
-    return (gross * (BPS_DENOM - feeBpsForPpi(ppi)) / BPS_DENOM) as int64;
+    return (gross * (BPS_DENOM - burnFeeBpsForPpi(ppi)) / BPS_DENOM) as int64;
 }
 
 // RTRA (real-time rebalancing algorithm) drift: ΔA_i = (w_i − V_i/ΣV) × T

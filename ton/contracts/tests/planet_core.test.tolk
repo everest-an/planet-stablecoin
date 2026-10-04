@@ -95,13 +95,27 @@ get fun `test fee bps bands`() {
     expect(feeBpsForPpi(1020000)).toEqual(50);   // 2% dev  -> base
     expect(feeBpsForPpi(1040000)).toEqual(100);  // 4% dev  -> elevated
     expect(feeBpsForPpi(950000)).toEqual(100);   // 5% dev  -> elevated (boundary)
-    expect(feeBpsForPpi(1100000)).toEqual(200);  // 10% dev -> high
+    expect(feeBpsForPpi(1100000)).toEqual(250);  // 10% dev -> 200 + slope 50
 }
 
 get fun `test band fee amount`() {
     expect(feeAmountAtPpi(1000000, 1000000)).toEqual(5000);  // 0.5%
     expect(feeAmountAtPpi(1000000, 1040000)).toEqual(10000); // 1.0%
-    expect(feeAmountAtPpi(1000000, 1100000)).toEqual(20000); // 2.0%
+    expect(feeAmountAtPpi(1000000, 1100000)).toEqual(25000); // 2.5% (200 + slope 50)
+}
+
+get fun `test fee slope beyond 5%`() {
+    expect(feeBpsForPpi(1050000)).toEqual(200);  // 5% boundary, no slope
+    expect(feeBpsForPpi(1100000)).toEqual(250);  // 10%: 200 + 50
+    expect(feeBpsForPpi(1200000)).toEqual(350);  // 20%: 200 + 150
+}
+
+get fun `test burn fee asymmetry`() {
+    expect(burnFeeBpsForPpi(1000000)).toEqual(50);  // peg
+    expect(burnFeeBpsForPpi(1040000)).toEqual(100); // 4% up, no penalty
+    expect(burnFeeBpsForPpi(960000)).toEqual(200);  // 4% down + penalty 100
+    // received at PPI 0.96 with 2% redeem fee: gross 0.96 -> 0.96*0.98 = 0.9408
+    expect(burnAmountAtPpi(1000000, 960000)).toEqual(940800);
 }
 
 get fun `test band mint amount off-peg`() {
