@@ -67,7 +67,9 @@ get fun `test signed price update is verified and applied`() {
         timestamp: 1000,
     }.toCell();
     val sig = crypto.sign(kp.privateKey, payload);
-    core.sendSignedPriceUpdate(relayer.address, sig, payload, { value: ton("0.05") });
+    val sigR = sig.loadUint(256);
+    val sigS = sig.loadUint(256);
+    core.sendSignedPriceUpdate(relayer.address, sigR, sigS, payload, { value: ton("0.05") });
     expect(core.ppi()).toEqual(1100000);
     expect(core.lastOracleUpdate()).toEqual(1000);
 }
@@ -82,7 +84,9 @@ get fun `test bad signature is rejected`() {
         queryId: 0, index: 0, price: 1100000, volatility: 0, liquidity: 1000000, riskState: 0, timestamp: 1000,
     }.toCell();
     val sig = crypto.sign(other.privateKey, payload);
-    val res = core.sendSignedPriceUpdate(relayer.address, sig, payload, { value: ton("0.05") });
+    val sigR = sig.loadUint(256);
+    val sigS = sig.loadUint(256);
+    val res = core.sendSignedPriceUpdate(relayer.address, sigR, sigS, payload, { value: ton("0.05") });
     expect(res).toHaveFailedTx({ from: relayer.address, to: core.address, exitCode: 114 });
 }
 
@@ -94,6 +98,8 @@ get fun `test signed update rejected when no signer set`() {
         queryId: 0, index: 0, price: 1100000, volatility: 0, liquidity: 1000000, riskState: 0, timestamp: 1000,
     }.toCell();
     val sig = crypto.sign(kp.privateKey, payload);
-    val res = core.sendSignedPriceUpdate(relayer.address, sig, payload, { value: ton("0.05") });
+    val sigR = sig.loadUint(256);
+    val sigS = sig.loadUint(256);
+    val res = core.sendSignedPriceUpdate(relayer.address, sigR, sigS, payload, { value: ton("0.05") });
     expect(res).toHaveFailedTx({ from: relayer.address, to: core.address, exitCode: 113 });
 }

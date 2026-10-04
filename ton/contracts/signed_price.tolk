@@ -17,7 +17,10 @@ struct (0x10000011) SetSigner {
     key: uint256       // ed25519 public key
 }
 
+// Ed25519 signatures are 64 bytes; message fields must be fixed-width, so the
+// signature is split into two 256-bit halves (R || S) and rebuilt on-chain.
 struct (0x10000010) SignedPriceUpdate {
-    signature: slice   // ed25519 signature over payload.hash()
+    sigR: uint256
+    sigS: uint256
     payload: cell      // PricePayload
 }

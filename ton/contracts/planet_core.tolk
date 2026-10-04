@@ -500,7 +500,7 @@ fun handleSetSigner(sender: address, msg: SetSigner) {
     val os = OracleState.fromCell(storage.oracleState);
     storage.oracleState = OracleState {
         oracle: os.oracle,
-        signerKey: msg.key as int,
+        signerKey: msg.key,
         lastOracleUpdate: os.lastOracleUpdate,
     }.toCell();
     storage.save();
@@ -512,7 +512,8 @@ fun handleSignedPriceUpdate(msg: SignedPriceUpdate) {
     var storage = lazy Storage.load();
     val os = OracleState.fromCell(storage.oracleState);
     assert (os.signerKey != 0) throw ERR_NO_SIGNER;
-    assert (isSignatureValid(msg.payload.hash(), msg.signature, os.signerKey as uint256)) throw ERR_BAD_SIG;
+    val sig = beginCell().storeUint(msg.sigR, 256).storeUint(msg.sigS, 256).endCell().beginParse();
+    assert (isSignatureValid(msg.payload.hash(), sig, os.signerKey)) throw ERR_BAD_SIG;
     val p = PricePayload.fromCell(msg.payload);
     assert (p.timestamp > os.lastOracleUpdate) throw ERR_STALE_PRICE;
     assert (p.index < storage.assetCount) throw ERR_BAD_INDEX;
@@ -655,7 +656,7 @@ get fun arbRebateBps(): int64 {
     return Limits.fromCell(storage.limitsState).arbRebateBps;
 }
 
-get fun signerKey(): int {
+get fun signerKey(): uint256 {
     val storage = lazy Storage.load();
     return OracleState.fromCell(storage.oracleState).signerKey;
 }
