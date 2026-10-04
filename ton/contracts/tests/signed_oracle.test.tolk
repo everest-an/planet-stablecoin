@@ -40,6 +40,15 @@ fun sigCell(sig: slice): cell {
     return beginCell().storeSlice(sig).endCell();
 }
 
+// `sigs` layout for SignedPriceUpdateN: uint8 count + count refs (one sig each).
+fun sigsCell2(a: cell, b: cell): cell {
+    return beginCell().storeUint(2, 8).storeRef(a).storeRef(b).endCell();
+}
+
+fun sigsCell3(a: cell, b: cell, c: cell): cell {
+    return beginCell().storeUint(3, 8).storeRef(a).storeRef(b).storeRef(c).endCell();
+}
+
 fun samplePayload(): cell {
     return PricePayload {
         queryId: 0,
@@ -137,5 +146,53 @@ get fun `test 2-of-3 rejects when both signatures are from the same signer`() {
     val sa1 = crypto.sign(a.privateKey, payload);
     val sa2 = crypto.sign(a.privateKey, payload);
     val res = core.sendSignedPriceUpdate(relayer.address, sigCell(sa1), sigCell(sa2), payload, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: relayer.address, to: core.address, exitCode: 117 });
+}
+
+get fun `test N-signature update: 3-of-3 distinct signers applied`() {
+    val (core, deployer, relayer) = deployCoreSigned();
+    val a = crypto.createMnemonic().toKeyPair();
+    val b = crypto.createMnemonic().toKeyPair();
+    val c = crypto.createMnemonic().toKeyPair();
+    core.sendSetSigner(deployer.address, 0, 0, a.publicKey as uint256, { value: ton("0.05") });
+    core.sendSetSigner(deployer.address, 0, 1, b.publicKey as uint256, { value: ton("0.05") });
+    core.sendSetSigner(deployer.address, 0, 2, c.publicKey as uint256, { value: ton("0.05") });
+    core.sendSetThreshold(deployer.address, 0, 3, { value: ton("0.05") });
+    core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
+    val payload = samplePayload();
+    val sigs = sigsCell3(sigCell(crypto.sign(a.privateKey, payload)), sigCell(crypto.sign(b.privateKey, payload)), sigCell(crypto.sign(c.privateKey, payload)));
+    core.sendSignedPriceUpdateN(relayer.address, sigs, payload, { value: ton("0.05") });
+    expect(core.ppi()).toEqual(1100000);
+}
+
+get fun `test N-signature update: too few signatures rejected`() {
+    val (core, deployer, relayer) = deployCoreSigned();
+    val a = crypto.createMnemonic().toKeyPair();
+    val b = crypto.createMnemonic().toKeyPair();
+    val c = crypto.createMnemonic().toKeyPair();
+    core.sendSetSigner(deployer.address, 0, 0, a.publicKey as uint256, { value: ton("0.05") });
+    core.sendSetSigner(deployer.address, 0, 1, b.publicKey as uint256, { value: ton("0.05") });
+    core.sendSetSigner(deployer.address, 0, 2, c.publicKey as uint256, { value: ton("0.05") });
+    core.sendSetThreshold(deployer.address, 0, 3, { value: ton("0.05") });
+    core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
+    val payload = samplePayload();
+    // only 2 signatures for a 3-of-3 threshold -> matched(2) < 3 -> rejected
+    val sigs = sigsCell2(sigCell(crypto.sign(a.privateKey, payload)), sigCell(crypto.sign(b.privateKey, payload)));
+    val res = core.sendSignedPriceUpdateN(relayer.address, sigs, payload, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: relayer.address, to: core.address, exitCode: 117 });
+}
+
+get fun `test N-signature update: duplicate signer does not count twice`() {
+    val (core, deployer, relayer) = deployCoreSigned();
+    val a = crypto.createMnemonic().toKeyPair();
+    val b = crypto.createMnemonic().toKeyPair();
+    core.sendSetSigner(deployer.address, 0, 0, a.publicKey as uint256, { value: ton("0.05") });
+    core.sendSetSigner(deployer.address, 0, 1, b.publicKey as uint256, { value: ton("0.05") });
+    core.sendSetThreshold(deployer.address, 0, 2, { value: ton("0.05") });
+    core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
+    val payload = samplePayload();
+    // two copies of `a`'s signature -> only one distinct signer -> rejected
+    val sigs = sigsCell2(sigCell(crypto.sign(a.privateKey, payload)), sigCell(crypto.sign(a.privateKey, payload)));
+    val res = core.sendSignedPriceUpdateN(relayer.address, sigs, payload, { value: ton("0.05") });
     expect(res).toHaveFailedTx({ from: relayer.address, to: core.address, exitCode: 117 });
 }

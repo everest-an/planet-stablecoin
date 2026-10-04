@@ -178,7 +178,7 @@ struct (0x10000014) SetOwner {
     newOwner: address  // e.g. migrate to a TON multisig wallet
 }
 
-type AllowedMessage = Mint | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | BurnMirror | SetBasketAsset | OracleUpdateAssetPrice | LockBasePrices | SetLimits | SetCam | CamUpdate | SetArb | SetSigner | SignedPriceUpdate | CoverDeficit | SetThreshold | SetOwner
+type AllowedMessage = Mint | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | BurnMirror | SetBasketAsset | OracleUpdateAssetPrice | LockBasePrices | SetLimits | SetCam | CamUpdate | SetArb | SetSigner | SignedPriceUpdate | SignedPriceUpdateN | CoverDeficit | SetThreshold | SetOwner
 
 // ---------------- Contract ABI ----------------
 
@@ -368,6 +368,7 @@ fun onInternalMessage(in: InMessage) {
         SetArb => { handleSetArb(in.senderAddress, msg); }
         SetSigner => { handleSetSigner(in.senderAddress, msg); }
         SignedPriceUpdate => { handleSignedPriceUpdate(msg); }
+        SignedPriceUpdateN => { handleSignedPriceUpdateN(msg); }
         CoverDeficit => { handleCoverDeficit(in.senderAddress, msg); }
         SetThreshold => { handleSetThreshold(in.senderAddress, msg); }
         SetOwner => { handleSetOwner(in.senderAddress, msg); }
@@ -560,9 +561,34 @@ fun handleSetOwner(sender: address, msg: SetOwner) {
 
 // Anyone may relay a signed price update; authenticity comes from the signature
 // (verified against the registered signer key), not from the sender.
-fun handleSignedPriceUpdate(msg: SignedPriceUpdate) {
+// Applies a verified price payload: staleness / index / weights / price-jump checks,
+// then updates the asset, the last-update timestamp and the recomputed PPI.
+fun applyOraclePayload(payload: cell) {
     var storage = lazy Storage.load();
     var os = OracleState.fromCell(storage.oracleState);
+    val p = PricePayload.fromCell(payload);
+    assert (p.timestamp > os.lastOracleUpdate) throw ERR_STALE_PRICE;
+    assert (p.index < storage.assetCount) throw ERR_BAD_INDEX;
+    assert (weightsSum(storage.assets, storage.assetCount) == WEIGHT_SCALE) throw ERR_BAD_WEIGHTS;
+    val a = storage.assets.mustGet(p.index);
+    assert (priceJumpOk(a.currentPrice, p.price)) throw ERR_PRICE_JUMP;
+    storage.assets.set(p.index, CoreAsset {
+        weight: a.weight,
+        basePrice: a.basePrice,
+        currentPrice: p.price,
+        volatility: p.volatility,
+        liquidity: p.liquidity,
+        riskState: p.riskState,
+    });
+    os.lastOracleUpdate = p.timestamp;
+    storage.oracleState = os.toCell();
+    storage.currentPpi = computePpi(storage.assets, storage.assetCount);
+    storage.save();
+}
+
+fun handleSignedPriceUpdate(msg: SignedPriceUpdate) {
+    var storage = lazy Storage.load();
+    val os = OracleState.fromCell(storage.oracleState);
     assert (os.signerCount > 0) throw ERR_NO_SIGNER;
     val hash = msg.payload.hash();
     var matched1: int = -1;
@@ -585,24 +611,41 @@ fun handleSignedPriceUpdate(msg: SignedPriceUpdate) {
         }
         assert (matched2 >= 0) throw ERR_BAD_SIG2;
     }
-    val p = PricePayload.fromCell(msg.payload);
-    assert (p.timestamp > os.lastOracleUpdate) throw ERR_STALE_PRICE;
-    assert (p.index < storage.assetCount) throw ERR_BAD_INDEX;
-    assert (weightsSum(storage.assets, storage.assetCount) == WEIGHT_SCALE) throw ERR_BAD_WEIGHTS;
-    val a = storage.assets.mustGet(p.index);
-    assert (priceJumpOk(a.currentPrice, p.price)) throw ERR_PRICE_JUMP;
-    storage.assets.set(p.index, CoreAsset {
-        weight: a.weight,
-        basePrice: a.basePrice,
-        currentPrice: p.price,
-        volatility: p.volatility,
-        liquidity: p.liquidity,
-        riskState: p.riskState,
-    });
-    os.lastOracleUpdate = p.timestamp;
-    storage.oracleState = os.toCell();
-    storage.currentPpi = computePpi(storage.assets, storage.assetCount);
-    storage.save();
+    applyOraclePayload(msg.payload);
+}
+
+// N-signature update (M>2): `sigs` carries a uint8 count followed by that many refs,
+// each holding a 512-bit signature. Requires >= threshold DISTINCT valid signers — a
+// signer that signs twice only counts once (bitmask of already-used signer indices).
+fun handleSignedPriceUpdateN(msg: SignedPriceUpdateN) {
+    var storage = lazy Storage.load();
+    val os = OracleState.fromCell(storage.oracleState);
+    assert (os.signerCount > 0) throw ERR_NO_SIGNER;
+    val hash = msg.payload.hash();
+    val sp = msg.sigs.beginParse();
+    val n = sp.loadUint(8);
+    var usedMask: int = 0;
+    var matched: int = 0;
+    var k: int = 0;
+    while (k < n) {
+        val sig = sp.loadRef().beginParse();
+        var j: int = 0;
+        var found: bool = false;
+        while (j < os.signerCount as int && !found) {
+            if (((usedMask >> j) & 1) == 0 && isSignatureValid(hash, sig, os.signers.mustGet(j as int64))) {
+                usedMask = usedMask | (1 << j);
+                matched += 1;
+                found = true;
+            }
+            j += 1;
+        }
+        k += 1;
+    }
+    if (matched < os.threshold as int) {
+        if (matched == 0) { throw ERR_BAD_SIG; }
+        throw ERR_BAD_SIG2;
+    }
+    applyOraclePayload(msg.payload);
 }
 
 // Owner uses the risk fund to top up the reserve (covers a deficit).

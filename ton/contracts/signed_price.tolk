@@ -29,3 +29,10 @@ struct (0x10000010) SignedPriceUpdate {
     sig2: cell         // second signer's 512-bit signature (required only if signerKey2 set)
     payload: cell      // PricePayload
 }
+
+// M>2 variant: `sigs` data = uint8 count, followed by `count` refs, each a cell
+// holding one 512-bit signature over payload.hash(). Needed when threshold > 2.
+struct (0x10000016) SignedPriceUpdateN {
+    sigs: cell         // uint8 count + count refs (one 512-bit sig each)
+    payload: cell      // PricePayload
+}
