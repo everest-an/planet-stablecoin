@@ -45,3 +45,6 @@ global.wallets.toml
 # relayer local config
 relayer/assets.json
 relayer/.env
+
+# vite dev log
+app-tg/dev.log
