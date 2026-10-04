@@ -9,7 +9,7 @@
 
 Planet（PLT）= 全球大宗商品购买力指数协议；当前实现为 **TON 上的合成指数代币 + TEP-74 代币 + 铸赎骨架**。
 仓库：`github.com/everest-an/planet-stablecoin`（**private**），分支 `main`。
-最后验证：分支 `feat/ton-coverage-gate-and-jetton-mint`，CI 全绿（52 测试，覆盖率 90.0%）。合并进 `main` 后此处改为 `main` HEAD。
+最后验证：HEAD `c82a566`（`main`，PR #1 已合并），CI 全绿（52 测试，覆盖率 90.0%）。
 
 ---
 
@@ -38,6 +38,7 @@ docs/
   oracle-ton.md             RedStone/DIA TON 接入调研 + oracle seam 设计
   burn-linkage.md           赎回链路（Core.Burn 与钱包 AskToBurn 脱节）设计方案
   ppi-multiasset.md         多资产 PPI 链上计算设计方案
+  commodity-cam.md          Commodity Adapter Module（解耦 + 多维风控）设计稿
   HANDOFF.md                本文档
 ton/
   Acton.toml                项目清单（[package]/[toolchain]/[contracts]/[import-mappings]/[wrappers.tolk]）
@@ -117,6 +118,7 @@ cd app-tg && npm install && npm run build
 | P2 | **RedStone 预言机接入** | 🟡 接缝已就绪并测试（`planet_core.tolk` + `oracle.test.tolk`，见 `docs/oracle-ton.md`）；仅剩外部：**已部署 adapter 地址 + feed_id 清单**。注：RedStone TON connector 为 legacy/unmaintained（FunC），需评估 DIA 备选 |
 | ✅ | **赎回链路打通**（Core 与钱包 burn 脱节） | ✅ 完成：minter 镜像 `BurnMirror` → Core（`docs/burn-linkage.md` 方案 A）；旧 `core.Burn` 已移除 |
 | ✅ | **多资产 PPI 计算**（按篮子权重链上算，替代单值 `currentPpi`） | ✅ 完成（`docs/ppi-multiasset.md` 方案 (i)；前端读 Core；未做 Basket 镜像） |
+| P2 | **CAM 插件层**（每商品独立适配器 → 标准化 价格/波动率/流动性/风险；解耦+隔离） | 🟡 设计稿就绪 `docs/commodity-cam.md`；建议先做 **Phase A**（MockCam + 风险自适应 RTRA，纯代码可验证），**待批复** |
 | P2 | **测试网部署 + `acton verify`** | ❌ 阻塞：需 **有资金的 TON 钱包**（外部） |
 | P3 | 多签 + 时间锁迁移（owner 权限点：SetPaused/SetJettonMinter/SetAsset/UpdatePrice） | 部署后配置 |
 | P3 | 第三方审计（Halborn/Certora）、漏洞赏金、形式化验证 | 外部机构 |
@@ -158,7 +160,7 @@ cd app-tg && npm install && npm run build
 
 ## 9. 下一次开局的推荐指令
 
-> "读 `docs/HANDOFF.md`。仓库已整理（主线 `ton/`+`app-tg/`，Solana 归档 `legacy-solana/`）。52 测试全绿，覆盖率 90.0%（门禁 89，只升不降）；链上多资产 PPI、赎回镜像、预言机接缝均已就绪。下一步：接入 RedStone/DIA（需 adapter 地址 + feed_id）或测试网部署（需有资金钱包）。改动保持 CI 绿。"
+> "读 `docs/HANDOFF.md`。仓库已整理（主线 `ton/`+`app-tg/`，Solana 归档 `legacy-solana/`）。52 测试全绿，覆盖率 90.0%（门禁 89，只升不降）；链上多资产 PPI、赎回镜像、预言机接缝均已就绪；CAM 插件层设计稿在 `docs/commodity-cam.md`。下一步：接 RedStone/DIA（需 adapter 地址 + feed_id）或测试网部署（需有资金钱包），或实施 CAM Phase A。改动保持 CI 绿。"
 
 ---
 
