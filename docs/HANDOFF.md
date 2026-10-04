@@ -9,7 +9,7 @@
 
 Planet（PLT）= 全球大宗商品购买力指数协议；当前实现为 **TON 上的合成指数代币 + TEP-74 代币 + 铸赎骨架**。
 仓库：`github.com/everest-an/planet-stablecoin`（**private**），分支 `main`。
-最后验证：`main`（含 PR #1 + 稳定机制批次 A + CAM Phase A），CI 全绿（70 测试，覆盖率 90.2%）。
+最后验证：`main`（含 PR #1 + 稳定机制批次 A + CAM Phase A + frozen 隔离），CI 全绿（71 测试，覆盖率 90.1%）。
 
 ---
 
@@ -73,9 +73,9 @@ legacy-solana/              Solana/Anchor 遗留实现 + 原 README（算法参�
 ## 3. 当前验证状态（可核对）
 
 - **CI 3 job 全绿**：`Tolk (Acton)`（build + wrapper + test --coverage + **deploy 脚本 emulation 冒烟**）、`TG Mini App`（vite build）、`Tact PoC`。
-- **70 个测试（9 文件）**：纯数学/不变量 + 大额溢出回归 + 分档费 + **风险自适应 RTRA** + 集成 + 全链路（mint/burn/transfer）+ 赎回镜像 + 链上多资产 PPI + **CAM（SetCam/CamUpdate）** + 稳定机制（限额/熔断）+ minter 管理/TEP-89 + PlanetBasket。
+- **71 个测试（9 文件）**：纯数学/不变量 + 大额溢出回归 + 分档费 + **风险自适应 RTRA** + 集成 + 全链路（mint/burn/transfer）+ 赎回镜像 + 链上多资产 PPI + **CAM（SetCam/CamUpdate + frozen 隔离）** + 稳定机制（限额/熔断）+ minter 管理/TEP-89 + PlanetBasket。
 - **触发路径**：`.github/workflows/ton-build.yml` 监听 `ton/**` 与 `app-tg/**`。
-- **覆盖率（基线棘轮）**：All files **90.2% score**（行 95.8% / 分支 78.8%）；`planet_core.tolk` **93.2%**、`planet_basket.tolk` 90.9%、JettonWallet 85.5%、JettonMinter 84.3%。门禁 `ton/Acton.toml [test.coverage] minimum-percent = 90`，**只升不降**（门禁已实证生效：测试编译失败时曾以 70.4% 拦下 CI）。
+- **覆盖率（基线棘轮）**：All files **90.1% score**（行 95.6% / 分支 79.0%）；`planet_core.tolk` **93.1%**、`planet_basket.tolk` 90.9%、JettonWallet 85.5%、JettonMinter 84.3%。门禁 `ton/Acton.toml [test.coverage] minimum-percent = 90`，**只升不降**（门禁已实证生效：测试编译失败时曾以 70.4% 拦下 CI）。
 - 近期提交：见分支 `feat/ton-coverage-gate-and-jetton-mint`（仓库整理 · 覆盖率棘轮 29→47→73→80 · mint tonAmount 修复 + 全链路/预言机测试）。
 
 ---
@@ -112,7 +112,7 @@ cd app-tg && npm install && npm run build
 - `PlanetBasket`：链上组合注册表 + getter。
 - **PLT TEP-74 Jetton**（minter + wallet，vendored）。
 - TG 小程序：读 PPI/储备/供应 + **链上篮子**（权重条 + vs base 涨跌 + **篮子隐含 PPI 与链上 PPI 对照**）+ **mint UI** + **burn UI**（TEP-74 AskToBurn）。
-- 70 测试 + 覆盖率（90.2% score，门禁 90）+ CI 门禁（棘轮，只升不降）。
+- 71 测试 + 覆盖率（90.1% score，门禁 90）+ CI 门禁（棘轮，只升不降）。
 - 文档：GTM / PLAN-TON / TON-MAPPING / AUDIT。
 
 ---
@@ -122,7 +122,7 @@ cd app-tg && npm install && npm run build
 | 优先级 | 任务 | 状态 / 阻塞 |
 |---|---|---|
 | ✅ | **Mint→Jetton 全链路集成测试**（emulator 部署 Minter+Wallet，发 Mint，断言 PLT 余额） | ✅ 完成（`contracts/tests/jetton_mint.test.tolk`，CI 绿） |
-| ✅ | **覆盖率门禁（目标 80%）** | ✅ 超额达成：All files **90.2%**，门禁 `minimum-percent = 90`（起点 29.8% → 90.2%） |
+| ✅ | **覆盖率门禁（目标 80%）** | ✅ 超额达成：All files **90.1%**，门禁 `minimum-percent = 90`（起点 29.8% → 90.1%） |
 | P2 | **RedStone 预言机接入** | 🟡 接缝已就绪并测试（`planet_core.tolk` + `oracle.test.tolk`，见 `docs/oracle-ton.md`）；仅剩外部：**已部署 adapter 地址 + feed_id 清单**。注：RedStone TON connector 为 legacy/unmaintained（FunC），需评估 DIA 备选 |
 | ✅ | **赎回链路打通**（Core 与钱包 burn 脱节） | ✅ 完成：minter 镜像 `BurnMirror` → Core（`docs/burn-linkage.md` 方案 A）；旧 `core.Burn` 已移除 |
 | ✅ | **多资产 PPI 计算**（按篮子权重链上算，替代单值 `currentPpi`） | ✅ 完成（`docs/ppi-multiasset.md` 方案 (i)；前端读 Core；未做 Basket 镜像） |
@@ -170,7 +170,7 @@ cd app-tg && npm install && npm run build
 
 ## 9. 下一次开局的推荐指令
 
-> "读 `docs/HANDOFF.md`。仓库已整理（主线 `ton/`+`app-tg/`，Solana 归档 `legacy-solana/`）。70 测试全绿，覆盖率 90.2%（门禁 90，只升不降）；链上多资产 PPI、赎回镜像、稳定机制批次 A、CAM Phase A 均已就绪。下一步：稳定机制后续批次（弹性铸赎曲线/套利入口/债券）或接真实数据源（RedStone/DIA，需外部）。改动保持 CI 绿。"
+> "读 `docs/HANDOFF.md`。仓库已整理（主线 `ton/`+`app-tg/`，Solana 归档 `legacy-solana/`）。71 测试全绿，覆盖率 90.1%（门禁 90，只升不降）；链上多资产 PPI、赎回镜像、稳定机制批次 A、CAM Phase A + frozen 隔离均已就绪；白皮书 v1.5 见 `docs/WHITEPAPER.md`。下一步：稳定机制 C1/C2（费率斜率/套利入口）或接真实数据源（RedStone/DIA，需外部）。改动保持 CI 绿。"
 
 ---
 
