@@ -6,7 +6,7 @@
 | 文档版本 | **v0.2（TON 主线）** |
 | 状态 | 草稿 · 待评审 |
 | 更新日期 | 2026-10-04 |
-| 参考 | 《Planet Stablecoin White Paper》、`docs/PRODUCT-DESIGN.md`（架构）、`docs/dl-amm.md`、`docs/commodity-cam.md`、`docs/ppi-multiasset.md` |
+| 参考 | 《Planet Stablecoin White Paper》、`docs/PRODUCT-DESIGN.md`（架构）、`docs/peg-stability.md`、`docs/commodity-cam.md`、`docs/ppi-multiasset.md` |
 
 > **v0.2 修订**：产品主线已由 Solana/Pyth 迁至 **TON/Tolk**（原因见 `docs/GTM.md`：Telegram Mini App 只允许 TON）。
 > 旧 v0.1 的 Solana 实现已归档到 `legacy-solana/`，旧 `PLAN.md` 作为历史保留。预言机由 Pyth 改为 **RedStone/DIA**。
@@ -83,10 +83,10 @@ L2 CAM 适配层（设计）· L3 DL-AMM 市场层（设计）· L4 稳定机制
 |------|------|--------|
 | F2.1 | **CAM 适配层**：每商品独立合约，输出标准化 价格/波动率/流动性/风险 | `commodity-cam.md` |
 | F2.2 | **风险自适应 RTRA**：按 CAM 波动率/流动性调再平衡阈值；frozen 摘除 | `commodity-cam.md` |
-| F2.3 | **DL-AMM 市场层**：离散 tick + 常数和 + 集中流动性（目标 PPI 附近） | `dl-amm.md` |
-| F2.4 | **LiquidBox 式区间激励**：只奖励覆盖当前 tick 的 LP | `dl-amm.md` |
-| F2.5 | **稳定工具**：tick 限价套利入口 + 稳定债券（PPI<0.95 折价发行） | `dl-amm.md` |
-| F2.6 | **储备再平衡路由**：调仓优先经离散池分批降滑点 | `dl-amm.md` |
+| F2.3 | **协议稳定机制**：分档费 + 弹性铸赎曲线 + 免许可套利入口（借 AMM 思想，**不自建 DEX**） | `peg-stability.md` |
+| F2.4 | **分级熔断 / 限额**：按 CAM 风险分级暂停 / 限额 | `peg-stability.md` |
+| F2.5 | **稳定债券 + 风险基金**（PPI<0.95 折价发行，吸收抛压） | `peg-stability.md` |
+| F2.6 | **再平衡路由**：调仓走**外部** DEX/场所分批降滑点 | `peg-stability.md` |
 | F2.7 | 风控：单笔/窗口限额、多签 + 时间锁迁移 | PRODUCT-DESIGN §6 |
 
 ### 5.3 未来（完整版，需外部资源）
@@ -120,7 +120,7 @@ L2 CAM 适配层（设计）· L3 DL-AMM 市场层（设计）· L4 稳定机制
 2. **合规**：开真实铸赎将构成金融产品，需牌照/托管；当前刻意规避。
 3. **预言机**：TON 上 RedStone/DIA 覆盖与可用性需评估（见 `oracle-ton.md`）；已有时间戳单调 + 范围校验。
 4. **流动性**：冷启动深度不足，价格易被操纵。
-5. **自研市场层风险**：DL-AMM 为重大自研，安全/审计成本极高；**不建议早期上主网**（见 PRODUCT-DESIGN §6.2）。
+5. **市场层边界**：Planet **不自建 DEX**；交易走外部场所，协议只做发行/赎回/费/激励/熔断。风险主要来自外部场所深度与被操纵。
 6. **免责声明**：技术提案，不构成投资建议。
 
 ---
@@ -142,4 +142,4 @@ L2 CAM 适配层（设计）· L3 DL-AMM 市场层（设计）· L4 稳定机制
 - 早期冲 CEX 上币。
 - 购买虚假社群 / 刷虚假交易量。
 - 任何「足额抵押稳定币」的虚假宣传。
-- **P1 阶段自研 DL-AMM 上主网**（应先用现成 DEX 验证需求）。
+- **自建 DEX/AMM/订单簿**（交易交给外部场所）。

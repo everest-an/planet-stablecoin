@@ -33,7 +33,7 @@ docs/
   whitepaper-extracted.md   白皮书全文（18页，Node pdf-parse 抽取，v1）
   PRODUCT-DESIGN.md         产品设计 v2（分层架构 L0–L4 + 架构稳健性分析）
   PRD.md                    产品需求 v0.2（TON 主线）
-  dl-amm.md                 DL-AMM 离散流动性二级市场设计稿
+  peg-stability.md          稳定机制（借 AMM 设计，不自建 DEX）
   GTM.md                    定位/获客/Telegram 链限制/多链
   PLAN-TON.md               TON 迁移计划（Tolk/Acton/预言机/组件）
   TON-MAPPING.md            Solana→TON 映射 + 设计决策
@@ -122,7 +122,7 @@ cd app-tg && npm install && npm run build
 | ✅ | **赎回链路打通**（Core 与钱包 burn 脱节） | ✅ 完成：minter 镜像 `BurnMirror` → Core（`docs/burn-linkage.md` 方案 A）；旧 `core.Burn` 已移除 |
 | ✅ | **多资产 PPI 计算**（按篮子权重链上算，替代单值 `currentPpi`） | ✅ 完成（`docs/ppi-multiasset.md` 方案 (i)；前端读 Core；未做 Basket 镜像） |
 | P2 | **CAM 插件层**（每商品独立适配器 → 标准化 价格/波动率/流动性/风险；解耦+隔离） | 🟡 设计稿就绪 `docs/commodity-cam.md`；建议先做 **Phase A**（MockCam + 风险自适应 RTRA，纯代码可验证），**待批复** |
-| P2 | **DL-AMM 市场层**（离散 tick + 常数和 + 集中流动性 + 区间激励 + 稳定债券 + 再平衡路由） | 🟡 设计稿就绪 `docs/dl-amm.md`；**建议先用现成 DEX 验证需求，自研延后**（见 `PRODUCT-DESIGN.md` §6.2） |
+| P2 | **协议稳定机制**（分档费 / 弹性铸赎曲线 / 套利入口 / 稳定债券 / 风险基金 / 分级熔断） | 🟡 设计稿就绪 `docs/peg-stability.md`；**Planet 不自建 DEX**，交易走外部场所；建议先做纯代码可测部分（分档费/限额/熔断） |
 | P2 | **测试网部署 + `acton verify`** | ❌ 阻塞：需 **有资金的 TON 钱包**（外部） |
 | P3 | 多签 + 时间锁迁移（owner 权限点：SetPaused/SetJettonMinter/SetAsset/UpdatePrice） | 部署后配置 |
 | P3 | 第三方审计（Halborn/Certora）、漏洞赏金、形式化验证 | 外部机构 |

@@ -16,11 +16,11 @@ Planet（PLT）把一篮子全球大宗商品（能源/金属/农产品/工业�
 > 仅 **L1 核心已实现**；L2/L3/L4 为**设计**（详见 [`docs/PRODUCT-DESIGN.md`](docs/PRODUCT-DESIGN.md)）。
 
 ```
-L4 稳定机制   套利入口(tick 限价单) · 稳定债券 · 风险基金 · 分级暂停      [设计]
-L3 市场层     DL-AMM：离散 tick + 常数和 + 集中流动性 + 区间激励         [设计]
-L2 适配层     CAM：每商品标准化 价格/波动率/流动性/风险                   [设计]
-L1 核心       PlanetCore：篮子 / 链上 PPI / 铸赎 / 费率 / RTRA / 赎回镜像  [已实现]
-L0 储备/RWA   实物/ETF 储备 + 托管 + 储备证明                             [未来]
+L3 稳定/风控   分档费 · 弹性铸赎曲线 · 套利入口 · 稳定债券 · 风险基金 · 熔断   [设计]
+L2 适配层      CAM：每商品标准化 价格/波动率/流动性/风险                     [设计]
+L1 核心        PlanetCore：篮子 / 链上 PPI / 铸赎 / 费率 / RTRA / 赎回镜像    [已实现]
+L0 储备/RWA    实物/ETF 储备 + 托管 + 储备证明                               [未来]
+（不自建 DEX/AMM；交易走外部场所）
 ```
 
 ## 主线（TON）
@@ -49,7 +49,7 @@ cd app-tg && npm install && npm run build
 
 - **状态/交接**：`docs/HANDOFF.md`（唯一可信状态）
 - **产品/架构**：`PRODUCT-DESIGN.md`（v2 分层架构 + 稳健性）、`PRD.md`、`GTM.md`、`PLAN-TON.md`、`TON-MAPPING.md`
-- **机制设计**：`ppi-multiasset.md`（链上 PPI）、`commodity-cam.md`（CAM）、`dl-amm.md`（DL-AMM 市场层）、`burn-linkage.md`（赎回）
+- **机制设计**：`ppi-multiasset.md`（链上 PPI）、`commodity-cam.md`（CAM）、`peg-stability.md`（稳定机制，借 AMM 设计，不自建 DEX）、`burn-linkage.md`（赎回）
 - **调研/审计**：`oracle-ton.md`（RedStone/DIA）、`AUDIT.md`
 - **白皮书**：`whitepaper-extracted.md`（v1 抽取）
 
