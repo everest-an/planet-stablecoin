@@ -18,6 +18,10 @@ const ERR_SUPPLY = 102;
 const ERR_NOT_ORACLE = 103;
 const ERR_STALE_PRICE = 104;
 const ERR_NOT_MINTER = 105;
+const ERR_BAD_BASE = 106;
+const ERR_BAD_WEIGHTS = 107;
+const ERR_BASE_LOCKED = 108;
+const ERR_BAD_INDEX = 109;
 
 // Fee split (white paper §8.4): 45% buyback-burn / 30% reserve / 25% PLTG staking.
 const BURN_SHARE_BPS = 4500;
@@ -34,9 +38,15 @@ const MINT_FORWARD_TON = ton("0.05");
 
 // ---------------- Storage ----------------
 
-// Oracle state (OracleState, see oracle_state.tolk) lives in a ref cell so the
-// main storage stays within TON's 1023-bit cell limit (~919 bits used already).
+// A basket asset for on-chain PPI computation (distinct from PlanetBasket's `Asset`).
+struct CoreAsset {
+    weight: int64       // ppm, 1e6 = 100%
+    basePrice: int64    // 1e6, immutable once baseLocked
+    currentPrice: int64 // 1e6
+}
 
+// Oracle state (OracleState, see oracle_state.tolk) lives in a ref cell so the main
+// storage stays within TON's 1023-bit cell limit. The asset map is also a ref.
 struct Storage {
     owner: address
     jettonMinter: address   // PLT Jetton minter (0 = unset)
@@ -47,6 +57,9 @@ struct Storage {
     feesToReserve: int64    // accrued 30% bucket
     feesToStaking: int64    // accrued 25% bucket
     paused: bool
+    assets: map<int64, CoreAsset>  // index -> asset (the basket)
+    assetCount: int64
+    baseLocked: bool               // base prices immutable once true
     oracleState: cell       // ref: OracleState { oracle, lastOracleUpdate }
 }
 
@@ -85,13 +98,25 @@ struct (0x10000006) SetOracle {
     oracle: address
 }
 
-struct (0x10000007) OracleUpdatePrice {
+struct (0x10000009) SetBasketAsset {
     queryId: int64
-    price: int64     // 1e6 fixed point
-    timestamp: int64 // must be strictly newer than the last oracle push
+    index: int64
+    weight: int64     // ppm
+    basePrice: int64  // 1e6
 }
 
-type AllowedMessage = Mint | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | OracleUpdatePrice | BurnMirror
+struct (0x1000000A) OracleUpdateAssetPrice {
+    queryId: int64
+    index: int64
+    price: int64      // 1e6
+    timestamp: int64  // strictly newer than the last oracle push
+}
+
+struct (0x1000000B) LockBasePrices {
+    queryId: int64
+}
+
+type AllowedMessage = Mint | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | BurnMirror | SetBasketAsset | OracleUpdateAssetPrice | LockBasePrices
 
 // ---------------- Contract ABI ----------------
 
@@ -146,6 +171,29 @@ fun shouldRebalance(weight: int64, positionValue: int64, totalReserve: int64): b
     return drift > REBALANCE_THRESHOLD || drift < -REBALANCE_THRESHOLD;
 }
 
+// Sum of all basket weights (ppm). Must equal WEIGHT_SCALE for a valid basket.
+fun weightsSum(assets: map<int64, CoreAsset>, assetCount: int64): int64 {
+    var sum: int = 0;
+    var i: int = 0;
+    while (i < assetCount as int) {
+        sum += assets.mustGet(i as int64).weight as int;
+        i += 1;
+    }
+    return sum as int64;
+}
+
+// On-chain PPI = Σ w_i · currentPrice_i / basePrice_i   (all 1e6 fixed point).
+fun computePpi(assets: map<int64, CoreAsset>, assetCount: int64): int64 {
+    var sum: int = 0;
+    var i: int = 0;
+    while (i < assetCount as int) {
+        val a = assets.mustGet(i as int64);
+        sum += (a.weight as int) * (a.currentPrice as int) / (a.basePrice as int);
+        i += 1;
+    }
+    return sum as int64;
+}
+
 // ---------------- Message handling ----------------
 
 fun onInternalMessage(in: InMessage) {
@@ -156,8 +204,10 @@ fun onInternalMessage(in: InMessage) {
         SetPaused => { handleSetPaused(in.senderAddress, msg); }
         SetJettonMinter => { handleSetJettonMinter(in.senderAddress, msg); }
         SetOracle => { handleSetOracle(in.senderAddress, msg); }
-        OracleUpdatePrice => { handleOracleUpdatePrice(in.senderAddress, msg); }
         BurnMirror => { handleBurnMirror(in.senderAddress, msg); }
+        SetBasketAsset => { handleSetBasketAsset(in.senderAddress, msg); }
+        OracleUpdateAssetPrice => { handleOracleUpdateAssetPrice(in.senderAddress, msg); }
+        LockBasePrices => { handleLockBasePrices(in.senderAddress, msg); }
         else => { assert (in.body.isEmpty()) throw 0xFFFF; }
     }
 }
@@ -244,18 +294,52 @@ fun handleSetOracle(sender: address, msg: SetOracle) {
     storage.save();
 }
 
-// Only the registered oracle may push a price, and only forward in time
-// (strictly increasing timestamp) to block replay of an old signed payload.
-fun handleOracleUpdatePrice(sender: address, msg: OracleUpdatePrice) {
+// Owner configures one basket asset. The basket is frozen once base prices are locked.
+fun handleSetBasketAsset(sender: address, msg: SetBasketAsset) {
+    var storage = lazy Storage.load();
+    assert (sender == storage.owner) throw ERR_NOT_OWNER;
+    assert (!storage.baseLocked) throw ERR_BASE_LOCKED;
+    assert (msg.basePrice > 0) throw ERR_BAD_BASE;
+    val asset: CoreAsset = {
+        weight: msg.weight,
+        basePrice: msg.basePrice,
+        currentPrice: msg.basePrice,
+    };
+    storage.assets.set(msg.index, asset);
+    if (msg.index >= storage.assetCount) {
+        storage.assetCount = msg.index + 1;
+    }
+    storage.save();
+}
+
+// Owner freezes the basket (base prices become immutable).
+fun handleLockBasePrices(sender: address, msg: LockBasePrices) {
+    var storage = lazy Storage.load();
+    assert (sender == storage.owner) throw ERR_NOT_OWNER;
+    storage.baseLocked = true;
+    storage.save();
+}
+
+// Only the registered oracle may push an asset price, only forward in time, and only
+// when the basket is complete (weights sum to 100%). PPI is recomputed on-chain.
+fun handleOracleUpdateAssetPrice(sender: address, msg: OracleUpdateAssetPrice) {
     var storage = lazy Storage.load();
     val os = OracleState.fromCell(storage.oracleState);
     assert (sender == os.oracle) throw ERR_NOT_ORACLE;
     assert (msg.timestamp > os.lastOracleUpdate) throw ERR_STALE_PRICE;
+    assert (msg.index < storage.assetCount) throw ERR_BAD_INDEX;
+    assert (weightsSum(storage.assets, storage.assetCount) == WEIGHT_SCALE) throw ERR_BAD_WEIGHTS;
+    val a = storage.assets.mustGet(msg.index);
+    storage.assets.set(msg.index, CoreAsset {
+        weight: a.weight,
+        basePrice: a.basePrice,
+        currentPrice: msg.price,
+    });
     storage.oracleState = OracleState {
         oracle: os.oracle,
         lastOracleUpdate: msg.timestamp,
     }.toCell();
-    storage.currentPpi = msg.price;
+    storage.currentPpi = computePpi(storage.assets, storage.assetCount);
     storage.save();
 }
 
@@ -289,6 +373,17 @@ get fun oracle(): address {
 get fun lastOracleUpdate(): int64 {
     val storage = lazy Storage.load();
     return OracleState.fromCell(storage.oracleState).lastOracleUpdate;
+}
+
+get fun assetCount(): int64 {
+    val storage = lazy Storage.load();
+    return storage.assetCount;
+}
+
+// Throws if the index is not set.
+get fun assetAt(index: int64): CoreAsset {
+    val storage = lazy Storage.load();
+    return storage.assets.mustGet(index);
 }
 
 get fun feesBurn(): int64 {

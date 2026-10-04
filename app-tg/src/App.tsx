@@ -7,7 +7,7 @@ const ENDPOINT =
   import.meta.env.VITE_TON_ENDPOINT ?? "https://testnet.toncenter.com/api/v2/jsonRPC";
 const PLANET_ADDRESS = import.meta.env.VITE_PLANET_ADDRESS ?? "";
 const PLT_MINTER_ADDRESS = import.meta.env.VITE_PLT_MINTER_ADDRESS ?? "";
-const BASKET_ADDRESS = import.meta.env.VITE_BASKET_ADDRESS ?? "";
+// Since A2, PlanetCore owns the commodity basket; the app reads assets from it directly.
 
 const OP_MINT = 0x10000001; // PlanetCore Mint message opcode
 const OP_ASK_TO_BURN = 0x595f07bc; // TEP-74 AskToBurn (sent to the user's jetton wallet)
@@ -72,9 +72,9 @@ export default function App() {
       setReserve(fmtFixed(r.stack.readBigNumber(), 6));
       setSupply(fmtFixed(s.stack.readBigNumber(), 6));
 
-      // On-chain basket composition (PlanetBasket registry)
-      if (BASKET_ADDRESS) {
-        const basket = Address.parse(BASKET_ADDRESS);
+      // On-chain basket composition (owned by PlanetCore since A2)
+      {
+        const basket = addr;
         const cnt = await client.runMethod(basket, "assetCount");
         const n = Number(cnt.stack.readBigNumber());
         const rows: {

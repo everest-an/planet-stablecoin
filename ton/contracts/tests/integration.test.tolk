@@ -18,6 +18,9 @@ get fun `test deploy PlanetCore sets initial ppi`() {
         feesToReserve: 0,
         feesToStaking: 0,
         paused: false,
+        assets: [],
+        assetCount: 0,
+        baseLocked: false,
         oracleState: OracleState { oracle: deployer.address, lastOracleUpdate: 0 }.toCell(),
     });
     core.deploy(deployer.address, { value: ton("0.1") });
