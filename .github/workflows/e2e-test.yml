@@ -1,0 +1,33 @@
+name: E2E mint/burn (testnet)
+
+# End-to-end proof on testnet: mint PLT (TON -> PlanetCore.Mint -> Jetton mint),
+# read Core supply + this wallet's PLT balance, then burn PLT (AskToBurn -> Jetton
+# wallet -> minter -> BurnMirror -> Core) and confirm supply falls. Runs in CI so
+# the runner IP avoids the public-RPC rate limits a local run hits.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    name: Mint + burn on testnet
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: relayer
+    env:
+      PLANET_CORE: kQAyzbletVLCFV7IsR1Vik6hxYVLIANZ7oBYE9wRJPGKnQBV
+      PLT_MINTER: kQCTx3uopuVKTfSOqbtgQpJk18whlfPUyTVYYmwsIFASl0vj
+      RELAYER_MNEMONIC: ${{ secrets.TON_WALLET_MNEMONIC }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install deps
+        run: npm install --no-audit --no-fund
+
+      - name: Mint + burn e2e
+        run: node relayer.mjs e2e

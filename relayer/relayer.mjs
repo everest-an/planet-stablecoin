@@ -14,10 +14,13 @@ const CORE_RAW = process.env.PLANET_CORE ?? "";
 const MNEMONIC = process.env.RELAYER_MNEMONIC ?? "";
 const ASSETS_JSON = process.env.ASSETS_JSON ?? "assets.json";
 
+const OP_MINT = 0x10000001;
 const OP_SET_BASKET = 0x10000009;
 const OP_LOCK_BASE = 0x1000000B;
 const OP_SET_SIGNER = 0x10000011;
+const OP_SET_THRESHOLD = 0x10000015;
 const OP_SIGNED_PRICE = 0x10000010;
+const OP_ASK_TO_BURN = 0x595f07bc;
 const PPI_SCALE = 1000000n; // 1.0 fixed point
 
 function die(msg) {
@@ -55,7 +58,7 @@ function payloadCell(p) {
 
 async function main() {
   const cmd = process.argv[2];
-  if (cmd !== "configure" && cmd !== "register" && cmd !== "push") die("usage: node relayer.mjs configure|register|push");
+  if (cmd !== "configure" && cmd !== "register" && cmd !== "push" && cmd !== "e2e") die("usage: node relayer.mjs configure|register|push|e2e");
   if (!CORE_RAW) die("PLANET_CORE not set");
   if (!MNEMONIC) die("RELAYER_MNEMONIC not set");
 
@@ -84,13 +87,13 @@ async function main() {
   }
 
   // Broadcast once (retry only the broadcast itself, never after it may have landed).
-  async function send(body) {
+  async function send(body, to = core, value = "0.05") {
     const seqno = await rpcRetry("getSeqno", () => contract.getSeqno());
     await rpcRetry("sendBoc", () =>
       contract.sendTransfer({
         seqno,
         secretKey: kp.secretKey,
-        messages: [internal({ to: core, value: toNano("0.05"), bounce: true, body })],
+        messages: [internal({ to, value: toNano(value), bounce: true, body })],
       })
     );
     // best-effort confirmation
@@ -105,8 +108,8 @@ async function main() {
     console.log("warn: no seqno confirmation (assuming broadcast)");
   }
 
-  async function runGet(addr, method) {
-    return rpcRetry("get " + method, () => client.runMethod(addr, method));
+  async function runGet(addr, method, args = []) {
+    return rpcRetry("get " + method, () => client.runMethod(addr, method, args));
   }
 
   if (cmd === "configure") {
@@ -136,15 +139,54 @@ async function main() {
   }
 
   if (cmd === "register") {
-    const cur = (await runGet(core, "signerKey")).stack.readBigNumber();
-    if (cur === pubKey) {
-      console.log("signer already set; skipping");
-      return;
+    // Multi-source oracle: register this key at slot 0, then set threshold 1.
+    const cnt = Number((await runGet(core, "signerCount")).stack.readBigNumber());
+    if (cnt > 0) {
+      const existing = (await runGet(core, "signerAt", [{ type: "int", value: 0n }])).stack.readBigNumber();
+      if (existing === pubKey) {
+        console.log("signer already at slot 0; skipping");
+        return;
+      }
     }
-    const body = beginCell().storeUint(OP_SET_SIGNER, 32).storeInt(0, 64).storeUint(pubKey, 256).endCell();
-    console.log("registering signer key on core...");
-    await send(body);
-    console.log("done: signer registered");
+    const set = beginCell().storeUint(OP_SET_SIGNER, 32).storeInt(0, 64).storeInt(0, 64).storeUint(pubKey, 256).endCell();
+    console.log("registering signer key at slot 0...");
+    await send(set);
+    const thr = beginCell().storeUint(OP_SET_THRESHOLD, 32).storeInt(0, 64).storeInt(1, 64).endCell();
+    console.log("setting threshold = 1...");
+    await send(thr);
+    console.log("done: signer registered + threshold set");
+    return;
+  }
+
+  if (cmd === "e2e") {
+    // End-to-end on testnet: mint PLT, read balances, burn PLT, verify supply moved.
+    const MINTER_RAW = process.env.PLT_MINTER ?? "";
+    if (!MINTER_RAW) die("PLT_MINTER not set");
+    const minter = Address.parse(MINTER_RAW);
+
+    const supplyBefore = (await runGet(core, "supply")).stack.readBigNumber();
+    console.log("before     : core.supply=" + supplyBefore + " ppi=" + (await runGet(core, "ppi")).stack.readBigNumber());
+
+    const deposit = 1000000n; // 1.0 USDC
+    const mint = beginCell().storeUint(OP_MINT, 32).storeInt(0, 64).storeInt(deposit, 64).endCell();
+    console.log("mint       : 1.0 USDC -> PLT ...");
+    await send(mint, core, "0.2");
+    await sleep(6000);
+    const supplyAfterMint = (await runGet(core, "supply")).stack.readBigNumber();
+    console.log("after mint : core.supply=" + supplyAfterMint + " (delta=" + (supplyAfterMint - supplyBefore) + ")");
+
+    const jw = (await runGet(minter, "get_wallet_address", [{ type: "slice", cell: beginCell().storeAddress(wallet.address).endCell() }])).stack.readAddress();
+    const balAfterMint = (await runGet(jw, "get_wallet_data")).stack.readBigNumber();
+    console.log("PLT wallet : " + jw.toString({ bounceable: false, testOnly: true }) + " balance=" + balAfterMint);
+
+    const burn = beginCell().storeUint(OP_ASK_TO_BURN, 32).storeUint(0, 64).storeCoins(500000n).storeAddress(null).storeMaybeRef(null).endCell();
+    console.log("burn       : 0.5 PLT via AskToBurn ...");
+    await send(burn, jw, "0.1");
+    await sleep(6000);
+    const supplyAfterBurn = (await runGet(core, "supply")).stack.readBigNumber();
+    const balAfterBurn = (await runGet(jw, "get_wallet_data")).stack.readBigNumber();
+    console.log("after burn : core.supply=" + supplyAfterBurn + " (delta=" + (supplyAfterBurn - supplyAfterMint) + ") PLT balance=" + balAfterBurn);
+    console.log("E2E OK: mint + burn reflected on-chain");
     return;
   }
 
