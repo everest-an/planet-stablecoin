@@ -24,10 +24,9 @@ struct (0x10000013) SetSigner2 {
     key: uint256       // second signer key (0 = disable dual-sign)
 }
 
+// Signatures are 512-bit (R||S) — too wide to inline twice, so each is carried in a ref.
 struct (0x10000010) SignedPriceUpdate {
-    sigR: uint256
-    sigS: uint256
-    sig2R: uint256     // second signer's signature (required only if signerKey2 is set)
-    sig2S: uint256
+    sig1: cell         // 512-bit ed25519 signature over payload.hash()
+    sig2: cell         // second signer's 512-bit signature (required only if signerKey2 set)
     payload: cell      // PricePayload
 }

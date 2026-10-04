@@ -559,11 +559,9 @@ fun handleSignedPriceUpdate(msg: SignedPriceUpdate) {
     var storage = lazy Storage.load();
     val os = OracleState.fromCell(storage.oracleState);
     assert (os.signerKey != 0) throw ERR_NO_SIGNER;
-    val sig = beginCell().storeUint(msg.sigR, 256).storeUint(msg.sigS, 256).endCell().beginParse();
-    assert (isSignatureValid(msg.payload.hash(), sig, os.signerKey)) throw ERR_BAD_SIG;
+    assert (isSignatureValid(msg.payload.hash(), msg.sig1.beginParse(), os.signerKey)) throw ERR_BAD_SIG;
     if (os.signerKey2 != 0) {
-        val sig2 = beginCell().storeUint(msg.sig2R, 256).storeUint(msg.sig2S, 256).endCell().beginParse();
-        assert (isSignatureValid(msg.payload.hash(), sig2, os.signerKey2)) throw ERR_BAD_SIG2;
+        assert (isSignatureValid(msg.payload.hash(), msg.sig2.beginParse(), os.signerKey2)) throw ERR_BAD_SIG2;
     }
     val p = PricePayload.fromCell(msg.payload);
     assert (p.timestamp > os.lastOracleUpdate) throw ERR_STALE_PRICE;

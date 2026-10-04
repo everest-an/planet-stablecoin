@@ -8,9 +8,8 @@ import "@contracts/limits"
 import "@contracts/signed_price"
 
 // Signed price updates: an off-chain relayer/adapter signs a PricePayload; PlanetCore
-// verifies it on-chain (isSignatureValid) against the registered signer key. This is
-// how a real data source (RedStone/DIA bridge) plugs in — only a public key is needed.
-// See docs/oracle-ton.md.
+// verifies it on-chain (isSignatureValid) against the registered signer key(s). A second
+// signer key enables dual-sign (2-of-2). See docs/oracle-ton.md, docs/security.md.
 
 fun deployCoreSigned(): (PlanetCore, Treasury, Treasury) {
     val deployer = testing.treasury("deployer");
@@ -37,6 +36,23 @@ fun deployCoreSigned(): (PlanetCore, Treasury, Treasury) {
     return (core, deployer, relayer);
 }
 
+// Wrap a 512-bit signature slice into a cell for the message.
+fun sigCell(sig: slice): cell {
+    return beginCell().storeSlice(sig).endCell();
+}
+
+fun samplePayload(): cell {
+    return PricePayload {
+        queryId: 0,
+        index: 0,
+        price: 1100000,
+        volatility: 0,
+        liquidity: 1000000,
+        riskState: 0,
+        timestamp: 1000,
+    }.toCell();
+}
+
 get fun `test owner can set signer key`() {
     val (core, deployer, _) = deployCoreSigned();
     val kp = crypto.createMnemonic().toKeyPair();
@@ -56,20 +72,9 @@ get fun `test signed price update is verified and applied`() {
     val kp = crypto.createMnemonic().toKeyPair();
     core.sendSetSigner(deployer.address, 0, kp.publicKey as uint256, { value: ton("0.05") });
     core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
-
-    val payload = PricePayload {
-        queryId: 0,
-        index: 0,
-        price: 1100000,
-        volatility: 0,
-        liquidity: 1000000,
-        riskState: 0,
-        timestamp: 1000,
-    }.toCell();
-    var sig = crypto.sign(kp.privateKey, payload);
-    val sigR = sig.loadUint(256);
-    val sigS = sig.loadUint(256);
-    core.sendSignedPriceUpdate(relayer.address, sigR, sigS, 0, 0, payload, { value: ton("0.05") });
+    val payload = samplePayload();
+    val sig = crypto.sign(kp.privateKey, payload);
+    core.sendSignedPriceUpdate(relayer.address, sigCell(sig), beginCell().endCell(), payload, { value: ton("0.05") });
     expect(core.ppi()).toEqual(1100000);
     expect(core.lastOracleUpdate()).toEqual(1000);
 }
@@ -80,13 +85,9 @@ get fun `test bad signature is rejected`() {
     val other = crypto.createMnemonic().toKeyPair();
     core.sendSetSigner(deployer.address, 0, kp.publicKey as uint256, { value: ton("0.05") });
     core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
-    val payload = PricePayload {
-        queryId: 0, index: 0, price: 1100000, volatility: 0, liquidity: 1000000, riskState: 0, timestamp: 1000,
-    }.toCell();
-    var sig = crypto.sign(other.privateKey, payload);
-    val sigR = sig.loadUint(256);
-    val sigS = sig.loadUint(256);
-    val res = core.sendSignedPriceUpdate(relayer.address, sigR, sigS, 0, 0, payload, { value: ton("0.05") });
+    val payload = samplePayload();
+    val sig = crypto.sign(other.privateKey, payload);
+    val res = core.sendSignedPriceUpdate(relayer.address, sigCell(sig), beginCell().endCell(), payload, { value: ton("0.05") });
     expect(res).toHaveFailedTx({ from: relayer.address, to: core.address, exitCode: 114 });
 }
 
@@ -94,13 +95,9 @@ get fun `test signed update rejected when no signer set`() {
     val (core, deployer, relayer) = deployCoreSigned();
     val kp = crypto.createMnemonic().toKeyPair();
     core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
-    val payload = PricePayload {
-        queryId: 0, index: 0, price: 1100000, volatility: 0, liquidity: 1000000, riskState: 0, timestamp: 1000,
-    }.toCell();
-    var sig = crypto.sign(kp.privateKey, payload);
-    val sigR = sig.loadUint(256);
-    val sigS = sig.loadUint(256);
-    val res = core.sendSignedPriceUpdate(relayer.address, sigR, sigS, 0, 0, payload, { value: ton("0.05") });
+    val payload = samplePayload();
+    val sig = crypto.sign(kp.privateKey, payload);
+    val res = core.sendSignedPriceUpdate(relayer.address, sigCell(sig), beginCell().endCell(), payload, { value: ton("0.05") });
     expect(res).toHaveFailedTx({ from: relayer.address, to: core.address, exitCode: 113 });
 }
 
@@ -110,17 +107,12 @@ get fun `test dual-sign requires both signatures`() {
     val kp2 = crypto.createMnemonic().toKeyPair();
     core.sendSetSigner(deployer.address, 0, kp1.publicKey as uint256, { value: ton("0.05") });
     core.sendSetSigner2(deployer.address, 0, kp2.publicKey as uint256, { value: ton("0.05") });
+    expect(core.signerKey2()).toEqual(kp2.publicKey);
     core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
-    val payload = PricePayload {
-        queryId: 0, index: 0, price: 1100000, volatility: 0, liquidity: 1000000, riskState: 0, timestamp: 1000,
-    }.toCell();
-    var s1 = crypto.sign(kp1.privateKey, payload);
-    var s2 = crypto.sign(kp2.privateKey, payload);
-    val r1 = s1.loadUint(256);
-    val t1 = s1.loadUint(256);
-    val r2 = s2.loadUint(256);
-    val t2 = s2.loadUint(256);
-    core.sendSignedPriceUpdate(relayer.address, r1, t1, r2, t2, payload, { value: ton("0.05") });
+    val payload = samplePayload();
+    val s1 = crypto.sign(kp1.privateKey, payload);
+    val s2 = crypto.sign(kp2.privateKey, payload);
+    core.sendSignedPriceUpdate(relayer.address, sigCell(s1), sigCell(s2), payload, { value: ton("0.05") });
     expect(core.ppi()).toEqual(1100000);
 }
 
@@ -132,15 +124,9 @@ get fun `test dual-sign rejects a bad second signature`() {
     core.sendSetSigner(deployer.address, 0, kp1.publicKey as uint256, { value: ton("0.05") });
     core.sendSetSigner2(deployer.address, 0, kp2.publicKey as uint256, { value: ton("0.05") });
     core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
-    val payload = PricePayload {
-        queryId: 0, index: 0, price: 1100000, volatility: 0, liquidity: 1000000, riskState: 0, timestamp: 1000,
-    }.toCell();
-    var s1 = crypto.sign(kp1.privateKey, payload);
-    var bad = crypto.sign(wrong.privateKey, payload);
-    val r1 = s1.loadUint(256);
-    val t1 = s1.loadUint(256);
-    val r2 = bad.loadUint(256);
-    val t2 = bad.loadUint(256);
-    val res = core.sendSignedPriceUpdate(relayer.address, r1, t1, r2, t2, payload, { value: ton("0.05") });
+    val payload = samplePayload();
+    val s1 = crypto.sign(kp1.privateKey, payload);
+    val bad = crypto.sign(wrong.privateKey, payload);
+    val res = core.sendSignedPriceUpdate(relayer.address, sigCell(s1), sigCell(bad), payload, { value: ton("0.05") });
     expect(res).toHaveFailedTx({ from: relayer.address, to: core.address, exitCode: 117 });
 }
