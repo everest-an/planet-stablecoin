@@ -70,7 +70,9 @@ export default function App() {
       base: string;
       cur: string;
       drift: number;
-      value: string;
+      risk: number;
+      vol: number;
+      liq: number;
     }[]
   >([]);
   const [amount, setAmount] = useState("");
@@ -144,7 +146,9 @@ export default function App() {
           base: string;
           cur: string;
           drift: number;
-          value: string;
+          risk: number;
+          vol: number;
+          liq: number;
         }[] = [];
         let impliedSum = 0;
         let hasAsset = false;
@@ -156,7 +160,9 @@ export default function App() {
             const weight = a.stack.readBigNumber();
             const base = a.stack.readBigNumber();
             const cur = a.stack.readBigNumber();
-            const value = a.stack.readBigNumber();
+            const volatility = a.stack.readBigNumber();
+            const liquidity = a.stack.readBigNumber();
+            const riskState = a.stack.readBigNumber();
             const w = Number(weight) / 1e6;
             const b = Number(base) / 1e6;
             const c = Number(cur) / 1e6;
@@ -172,7 +178,9 @@ export default function App() {
               base: "$" + b.toFixed(2),
               cur: "$" + c.toFixed(2),
               drift,
-              value: "$" + (Number(value) / 1e6).toLocaleString(),
+              risk: Number(riskState),
+              vol: Number(volatility) / 1e6,
+              liq: Number(liquidity) / 1e6,
             });
           } catch {
             // asset index not set
@@ -348,7 +356,7 @@ export default function App() {
                 <th>Base</th>
                 <th>Now</th>
                 <th>vs base</th>
-                <th>Value</th>
+                <th>Risk</th>
               </tr>
             </thead>
             <tbody>
@@ -367,7 +375,15 @@ export default function App() {
                     {a.drift >= 0 ? "+" : ""}
                     {a.drift.toFixed(1)}%
                   </td>
-                  <td>{a.value}</td>
+                  <td>
+                    {a.risk !== 0 ? (
+                      <span className="drift down" title={`riskState=${a.risk}`}>
+                        frozen
+                      </span>
+                    ) : (
+                      "ok"
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
