@@ -39,3 +39,7 @@ wallets.toml
 global.wallets.toml
 *secret*.json
 *.mnemonic
+
+# relayer local config
+relayer/assets.json
+relayer/.env

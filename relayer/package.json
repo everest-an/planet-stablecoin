@@ -1,0 +1,16 @@
+{
+  "name": "planet-relayer",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Planet off-chain price relayer: fetch commodity/ETF prices, sign PricePayload, push SignedPriceUpdate to PlanetCore",
+  "scripts": {
+    "register": "node relayer.mjs register",
+    "push": "node relayer.mjs push"
+  },
+  "dependencies": {
+    "@ton/core": "^0.63.1",
+    "@ton/crypto": "^3.3.0",
+    "@ton/ton": "^15.1.1"
+  }
+}
