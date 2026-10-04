@@ -14,14 +14,13 @@ struct PricePayload {
 
 struct (0x10000011) SetSigner {
     queryId: int64
+    index: int64       // signer slot to register/replace
     key: uint256       // ed25519 public key
 }
 
-// Ed25519 signatures are 64 bytes; message fields must be fixed-width, so the
-// signature is split into two 256-bit halves (R || S) and rebuilt on-chain.
-struct (0x10000013) SetSigner2 {
+struct (0x10000015) SetThreshold {
     queryId: int64
-    key: uint256       // second signer key (0 = disable dual-sign)
+    m: int64           // required distinct valid signatures (1 = single-signer)
 }
 
 // Signatures are 512-bit (R||S) — too wide to inline twice, so each is carried in a ref.

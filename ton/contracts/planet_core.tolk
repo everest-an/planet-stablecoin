@@ -178,7 +178,7 @@ struct (0x10000014) SetOwner {
     newOwner: address  // e.g. migrate to a TON multisig wallet
 }
 
-type AllowedMessage = Mint | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | BurnMirror | SetBasketAsset | OracleUpdateAssetPrice | LockBasePrices | SetLimits | SetCam | CamUpdate | SetArb | SetSigner | SignedPriceUpdate | CoverDeficit | SetSigner2 | SetOwner
+type AllowedMessage = Mint | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | BurnMirror | SetBasketAsset | OracleUpdateAssetPrice | LockBasePrices | SetLimits | SetCam | CamUpdate | SetArb | SetSigner | SignedPriceUpdate | CoverDeficit | SetThreshold | SetOwner
 
 // ---------------- Contract ABI ----------------
 
@@ -369,7 +369,7 @@ fun onInternalMessage(in: InMessage) {
         SetSigner => { handleSetSigner(in.senderAddress, msg); }
         SignedPriceUpdate => { handleSignedPriceUpdate(msg); }
         CoverDeficit => { handleCoverDeficit(in.senderAddress, msg); }
-        SetSigner2 => { handleSetSigner2(in.senderAddress, msg); }
+        SetThreshold => { handleSetThreshold(in.senderAddress, msg); }
         SetOwner => { handleSetOwner(in.senderAddress, msg); }
         else => { assert (in.body.isEmpty()) throw 0xFFFF; }
     }
@@ -470,13 +470,9 @@ fun handleSetJettonMinter(sender: address, msg: SetJettonMinter) {
 fun handleSetOracle(sender: address, msg: SetOracle) {
     var storage = lazy Storage.load();
     assert (sender == storage.owner) throw ERR_NOT_OWNER;
-    val os = OracleState.fromCell(storage.oracleState);
-    storage.oracleState = OracleState {
-        oracle: msg.oracle,
-        signerKey: os.signerKey,
-        signerKey2: os.signerKey2,
-        lastOracleUpdate: os.lastOracleUpdate,
-    }.toCell();
+    var os = OracleState.fromCell(storage.oracleState);
+    os.oracle = msg.oracle;
+    storage.oracleState = os.toCell();
     storage.save();
 }
 
@@ -535,27 +531,22 @@ fun handleSetArb(sender: address, msg: SetArb) {
 fun handleSetSigner(sender: address, msg: SetSigner) {
     var storage = lazy Storage.load();
     assert (sender == storage.owner) throw ERR_NOT_OWNER;
-    val os = OracleState.fromCell(storage.oracleState);
-    storage.oracleState = OracleState {
-        oracle: os.oracle,
-        signerKey: msg.key,
-        signerKey2: os.signerKey2,
-        lastOracleUpdate: os.lastOracleUpdate,
-    }.toCell();
+    var os = OracleState.fromCell(storage.oracleState);
+    os.signers.set(msg.index, msg.key);
+    if (msg.index >= os.signerCount) {
+        os.signerCount = msg.index + 1;
+    }
+    storage.oracleState = os.toCell();
     storage.save();
 }
 
-// Owner sets the optional SECOND signer key; while set, signed updates need both.
-fun handleSetSigner2(sender: address, msg: SetSigner2) {
+// Owner sets the required number of distinct signatures (1 = single; >=2 = multi-source).
+fun handleSetThreshold(sender: address, msg: SetThreshold) {
     var storage = lazy Storage.load();
     assert (sender == storage.owner) throw ERR_NOT_OWNER;
-    val os = OracleState.fromCell(storage.oracleState);
-    storage.oracleState = OracleState {
-        oracle: os.oracle,
-        signerKey: os.signerKey,
-        signerKey2: msg.key,
-        lastOracleUpdate: os.lastOracleUpdate,
-    }.toCell();
+    var os = OracleState.fromCell(storage.oracleState);
+    os.threshold = msg.m;
+    storage.oracleState = os.toCell();
     storage.save();
 }
 
@@ -571,11 +562,28 @@ fun handleSetOwner(sender: address, msg: SetOwner) {
 // (verified against the registered signer key), not from the sender.
 fun handleSignedPriceUpdate(msg: SignedPriceUpdate) {
     var storage = lazy Storage.load();
-    val os = OracleState.fromCell(storage.oracleState);
-    assert (os.signerKey != 0) throw ERR_NO_SIGNER;
-    assert (isSignatureValid(msg.payload.hash(), msg.sig1.beginParse(), os.signerKey)) throw ERR_BAD_SIG;
-    if (os.signerKey2 != 0) {
-        assert (isSignatureValid(msg.payload.hash(), msg.sig2.beginParse(), os.signerKey2)) throw ERR_BAD_SIG2;
+    var os = OracleState.fromCell(storage.oracleState);
+    assert (os.signerCount > 0) throw ERR_NO_SIGNER;
+    val hash = msg.payload.hash();
+    var matched1: int = -1;
+    var si: int = 0;
+    while (si < os.signerCount as int && matched1 < 0) {
+        if (isSignatureValid(hash, msg.sig1.beginParse(), os.signers.mustGet(si as int64))) {
+            matched1 = si;
+        }
+        si += 1;
+    }
+    assert (matched1 >= 0) throw ERR_BAD_SIG;
+    if (os.threshold > 1) {
+        var matched2: int = -1;
+        var sj: int = 0;
+        while (sj < os.signerCount as int && matched2 < 0) {
+            if (sj != matched1 && isSignatureValid(hash, msg.sig2.beginParse(), os.signers.mustGet(sj as int64))) {
+                matched2 = sj;
+            }
+            sj += 1;
+        }
+        assert (matched2 >= 0) throw ERR_BAD_SIG2;
     }
     val p = PricePayload.fromCell(msg.payload);
     assert (p.timestamp > os.lastOracleUpdate) throw ERR_STALE_PRICE;
@@ -591,12 +599,8 @@ fun handleSignedPriceUpdate(msg: SignedPriceUpdate) {
         liquidity: p.liquidity,
         riskState: p.riskState,
     });
-    storage.oracleState = OracleState {
-        oracle: os.oracle,
-        signerKey: os.signerKey,
-        signerKey2: os.signerKey2,
-        lastOracleUpdate: p.timestamp,
-    }.toCell();
+    os.lastOracleUpdate = p.timestamp;
+    storage.oracleState = os.toCell();
     storage.currentPpi = computePpi(storage.assets, storage.assetCount);
     storage.save();
 }
@@ -628,7 +632,7 @@ fun handleSetCam(sender: address, msg: SetCam) {
 // Timestamp is monotonic; the basket must be complete. PPI is recomputed on-chain.
 fun handleCamUpdate(sender: address, msg: CamUpdate) {
     var storage = lazy Storage.load();
-    val os = OracleState.fromCell(storage.oracleState);
+    var os = OracleState.fromCell(storage.oracleState);
     assert (sender == storage.cams.mustGet(msg.index)) throw ERR_NOT_CAM;
     assert (msg.timestamp > os.lastOracleUpdate) throw ERR_STALE_PRICE;
     assert (msg.index < storage.assetCount) throw ERR_BAD_INDEX;
@@ -643,12 +647,8 @@ fun handleCamUpdate(sender: address, msg: CamUpdate) {
         liquidity: msg.liquidity,
         riskState: msg.riskState,
     });
-    storage.oracleState = OracleState {
-        oracle: os.oracle,
-        signerKey: os.signerKey,
-        signerKey2: os.signerKey2,
-        lastOracleUpdate: msg.timestamp,
-    }.toCell();
+    os.lastOracleUpdate = msg.timestamp;
+    storage.oracleState = os.toCell();
     storage.currentPpi = computePpi(storage.assets, storage.assetCount);
     storage.save();
 }
@@ -657,7 +657,7 @@ fun handleCamUpdate(sender: address, msg: CamUpdate) {
 // when the basket is complete (weights sum to 100%). PPI is recomputed on-chain.
 fun handleOracleUpdateAssetPrice(sender: address, msg: OracleUpdateAssetPrice) {
     var storage = lazy Storage.load();
-    val os = OracleState.fromCell(storage.oracleState);
+    var os = OracleState.fromCell(storage.oracleState);
     assert (sender == os.oracle) throw ERR_NOT_ORACLE;
     assert (msg.timestamp > os.lastOracleUpdate) throw ERR_STALE_PRICE;
     assert (msg.index < storage.assetCount) throw ERR_BAD_INDEX;
@@ -672,12 +672,8 @@ fun handleOracleUpdateAssetPrice(sender: address, msg: OracleUpdateAssetPrice) {
         liquidity: a.liquidity,
         riskState: a.riskState,
     });
-    storage.oracleState = OracleState {
-        oracle: os.oracle,
-        signerKey: os.signerKey,
-        signerKey2: os.signerKey2,
-        lastOracleUpdate: msg.timestamp,
-    }.toCell();
+    os.lastOracleUpdate = msg.timestamp;
+    storage.oracleState = os.toCell();
     storage.currentPpi = computePpi(storage.assets, storage.assetCount);
     storage.save();
 }
@@ -745,14 +741,19 @@ get fun arbRebateBps(): int64 {
     return Limits.fromCell(storage.limitsState).arbRebateBps;
 }
 
-get fun signerKey(): uint256 {
+get fun signerCount(): int64 {
     val storage = lazy Storage.load();
-    return OracleState.fromCell(storage.oracleState).signerKey;
+    return OracleState.fromCell(storage.oracleState).signerCount;
 }
 
-get fun signerKey2(): uint256 {
+get fun threshold(): int64 {
     val storage = lazy Storage.load();
-    return OracleState.fromCell(storage.oracleState).signerKey2;
+    return OracleState.fromCell(storage.oracleState).threshold;
+}
+
+get fun signerAt(index: int64): uint256 {
+    val storage = lazy Storage.load();
+    return OracleState.fromCell(storage.oracleState).signers.mustGet(index);
 }
 
 get fun riskFund(): int64 {

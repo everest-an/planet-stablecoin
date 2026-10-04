@@ -40,7 +40,7 @@ fun main() {
         cams: [],
         assetCount: 0,
         baseLocked: false,
-        oracleState: OracleState { oracle: deployer.address, signerKey: 0, signerKey2: 0, lastOracleUpdate: 0 }.toCell(),
+        oracleState: OracleState { oracle: deployer.address, signerCount: 0, threshold: 0, signers: [], lastOracleUpdate: 0 }.toCell(),
         limitsState: Limits { maxPerTx: 0, arbRebateBps: 0, riskFund: 0 }.toCell(),
     });
     core.deploy(deployer.address, { value: ton("0.2") });
