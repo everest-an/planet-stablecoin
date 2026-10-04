@@ -105,7 +105,8 @@ get fun `test band fee amount`() {
 }
 
 get fun `test fee slope beyond 5%`() {
-    expect(feeBpsForPpi(1050000)).toEqual(200);  // 5% boundary, no slope
+    expect(feeBpsForPpi(1050000)).toEqual(100);  // 5% boundary -> still elevated band
+    expect(feeBpsForPpi(1060000)).toEqual(210);  // 6%: 200 + (60000-50000)*1000/1e6
     expect(feeBpsForPpi(1100000)).toEqual(250);  // 10%: 200 + 50
     expect(feeBpsForPpi(1200000)).toEqual(350);  // 20%: 200 + 150
 }
