@@ -20,6 +20,7 @@ const BAND_FREEZE = 150000;  // 15% deviation -> hard mint freeze
 const SLOPE_BPS = 1000;      // fee slope (bps per 100% deviation) beyond BAND_HIGH
 const REDEEM_PENALTY_PPI = 970000; // below this PPI, redeem fee is penalised
 const REDEEM_PENALTY_BPS = 100;    // extra redeem fee (bps) below REDEEM_PENALTY_PPI
+const BAND_RICH = 1030000;         // PPI above this = index rich -> reward minting
 
 const ERR_PAUSED = 100;
 const ERR_NOT_OWNER = 101;
@@ -154,7 +155,12 @@ struct (0x1000000C) CamUpdate {
     timestamp: int64
 }
 
-type AllowedMessage = Mint | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | BurnMirror | SetBasketAsset | OracleUpdateAssetPrice | LockBasePrices | SetLimits | SetCam | CamUpdate
+struct (0x1000000F) SetArb {
+    queryId: int64
+    rebateBps: int64   // mint-fee rebate when PPI > BAND_RICH (0 = off)
+}
+
+type AllowedMessage = Mint | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | BurnMirror | SetBasketAsset | OracleUpdateAssetPrice | LockBasePrices | SetLimits | SetCam | CamUpdate | SetArb
 
 // ---------------- Contract ABI ----------------
 
@@ -331,6 +337,7 @@ fun onInternalMessage(in: InMessage) {
         SetLimits => { handleSetLimits(in.senderAddress, msg); }
         SetCam => { handleSetCam(in.senderAddress, msg); }
         CamUpdate => { handleCamUpdate(in.senderAddress, msg); }
+        SetArb => { handleSetArb(in.senderAddress, msg); }
         else => { assert (in.body.isEmpty()) throw 0xFFFF; }
     }
 }
@@ -342,12 +349,22 @@ fun handleMint(sender: address, msgValue: coins, msg: Mint) {
     assert (diffAbs(storage.currentPpi, PPI_SCALE) <= BAND_FREEZE) throw ERR_DEVIATION;
     val lim = Limits.fromCell(storage.limitsState);
     assert (lim.maxPerTx == 0 || msg.amount <= lim.maxPerTx) throw ERR_LIMIT;
-    val fee = feeAmountAtPpi(msg.amount, storage.currentPpi);
+    // arbitrage incentive: rebate the mint fee when the index is rich (PPI > BAND_RICH)
+    var rebate: int64 = 0;
+    if (lim.arbRebateBps > 0 && storage.currentPpi > BAND_RICH) {
+        rebate = lim.arbRebateBps;
+    }
+    var effBps: int64 = feeBpsForPpi(storage.currentPpi) - rebate;
+    if (effBps < 0) {
+        effBps = 0;
+    }
+    val fee = ((msg.amount as int) * effBps / BPS_DENOM) as int64;
     val (feeBurn, feeReserve, feeStaking) = feeSplit(fee);
     storage.feesToBurn += feeBurn;
     storage.feesToReserve += feeReserve;
     storage.feesToStaking += feeStaking;
-    val minted = mintAmountAtPpi(msg.amount, storage.currentPpi);
+    val net = (msg.amount as int) * (BPS_DENOM as int - effBps as int) / BPS_DENOM;
+    val minted = (net * PPI_SCALE / (storage.currentPpi as int)) as int64;
     storage.totalReserve += msg.amount;
     storage.totalSupply += minted;
     storage.save();
@@ -454,7 +471,19 @@ fun handleLockBasePrices(sender: address, msg: LockBasePrices) {
 fun handleSetLimits(sender: address, msg: SetLimits) {
     var storage = lazy Storage.load();
     assert (sender == storage.owner) throw ERR_NOT_OWNER;
-    storage.limitsState = Limits { maxPerTx: msg.maxPerTx }.toCell();
+    storage.limitsState = Limits { maxPerTx: msg.maxPerTx, arbRebateBps: 0 }.toCell();
+    storage.save();
+}
+
+// Owner sets the arbitrage mint-fee rebate (0 = off).
+fun handleSetArb(sender: address, msg: SetArb) {
+    var storage = lazy Storage.load();
+    assert (sender == storage.owner) throw ERR_NOT_OWNER;
+    val lim = Limits.fromCell(storage.limitsState);
+    storage.limitsState = Limits {
+        maxPerTx: lim.maxPerTx,
+        arbRebateBps: msg.rebateBps,
+    }.toCell();
     storage.save();
 }
 
@@ -569,6 +598,11 @@ get fun camAt(index: int64): address {
 get fun maxPerTx(): int64 {
     val storage = lazy Storage.load();
     return Limits.fromCell(storage.limitsState).maxPerTx;
+}
+
+get fun arbRebateBps(): int64 {
+    val storage = lazy Storage.load();
+    return Limits.fromCell(storage.limitsState).arbRebateBps;
 }
 
 get fun feesBurn(): int64 {

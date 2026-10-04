@@ -27,7 +27,7 @@ fun deployCoreStability(): (PlanetCore, Treasury, Treasury) {
         assetCount: 0,
         baseLocked: false,
         oracleState: OracleState { oracle: deployer.address, lastOracleUpdate: 0 }.toCell(),
-        limitsState: Limits { maxPerTx: 0 }.toCell(),
+        limitsState: Limits { maxPerTx: 0, arbRebateBps: 0 }.toCell(),
     });
     expect(core.deploy(deployer.address, { value: ton("0.3") }))
         .toHaveSuccessfulDeploy({ to: core.address });
@@ -77,3 +77,33 @@ get fun `test extreme deviation freezes mint`() {
     val res = core.sendMint(alice.address, 0, 1000000, { value: ton("0.5") });
     expect(res).toHaveFailedTx({ from: alice.address, to: core.address, exitCode: 110 });
 }
+
+// ---------------- Arbitrage incentive (C2) ----------------
+
+get fun `test owner can set arbitrage rebate`() {
+    val (core, deployer, _) = deployCoreStability();
+    core.sendSetArb(deployer.address, 0, 50, { value: ton("0.05") });
+    expect(core.arbRebateBps()).toEqual(50);
+}
+
+get fun `test non-owner cannot set arbitrage rebate`() {
+    val (core, _, alice) = deployCoreStability();
+    val res = core.sendSetArb(alice.address, 0, 50, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: alice.address, to: core.address, exitCode: 101 });
+}
+
+get fun `test arbitrage rebate reduces mint fee when rich`() {
+    // without rebate: PPI 1.05 -> band fee 100 bps -> fee 10000 -> burn 4500
+    val (coreNo, depNo, aliceNo) = deployCoreStability();
+    coreNo.sendUpdatePrice(depNo.address, 0, 1050000, { value: ton("0.05") });
+    coreNo.sendMint(aliceNo.address, 0, 1000000, { value: ton("0.5") });
+    expect(coreNo.feesBurn()).toEqual(4500);
+
+    // with rebate 50: effective 50 bps -> fee 5000 -> burn 2250
+    val (coreArb, depArb, aliceArb) = deployCoreStability();
+    coreArb.sendSetArb(depArb.address, 0, 50, { value: ton("0.05") });
+    coreArb.sendUpdatePrice(depArb.address, 0, 1050000, { value: ton("0.05") });
+    coreArb.sendMint(aliceArb.address, 0, 1000000, { value: ton("0.5") });
+    expect(coreArb.feesBurn()).toEqual(2250);
+}
+
