@@ -311,12 +311,11 @@ async function main() {
       timestamp: BigInt(ts),
     });
     const sig = sign(payload.hash(), kp.secretKey); // 64 bytes (R||S)
-    const sigR = bigFromBuf(sig.subarray(0, 32));
-    const sigS = bigFromBuf(sig.subarray(32, 64));
+    // SignedPriceUpdate { sig1: cell, sig2: cell, payload: cell } — each carried in a ref.
     const body = beginCell()
       .storeUint(OP_SIGNED_PRICE, 32)
-      .storeUint(sigR, 256)
-      .storeUint(sigS, 256)
+      .storeRef(beginCell().storeBuffer(sig).endCell())
+      .storeRef(beginCell().endCell()) // sig2 unused while threshold <= 1
       .storeRef(payload)
       .endCell();
     console.log(`push #${a.index} ${a.name ?? a.symbol}: price=${price}`);
