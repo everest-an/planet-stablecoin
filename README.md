@@ -11,10 +11,22 @@ Planet（PLT）把一篮子全球大宗商品（能源/金属/农产品/工业�
 > **不含真实链下大宗商品储备，不是足额抵押稳定币**。白皮书完整版「1:1 大宗商品储备算法稳定币」
 > 需对接 RWA 托管方 + 合规背书后方可实现。
 
+## 产品架构（分层）
+
+> 仅 **L1 核心已实现**；L2/L3/L4 为**设计**（详见 [`docs/PRODUCT-DESIGN.md`](docs/PRODUCT-DESIGN.md)）。
+
+```
+L4 稳定机制   套利入口(tick 限价单) · 稳定债券 · 风险基金 · 分级暂停      [设计]
+L3 市场层     DL-AMM：离散 tick + 常数和 + 集中流动性 + 区间激励         [设计]
+L2 适配层     CAM：每商品标准化 价格/波动率/流动性/风险                   [设计]
+L1 核心       PlanetCore：篮子 / 链上 PPI / 铸赎 / 费率 / RTRA / 赎回镜像  [已实现]
+L0 储备/RWA   实物/ETF 储备 + 托管 + 储备证明                             [未来]
+```
+
 ## 主线（TON）
 
 - **合约**：`ton/contracts/`（Tolk，Acton 工具链）
-  - `planet_core.tolk` — PPI / 铸赎 / 风控 / 暂停 / 费率 45-30-25 / RTRA 再平衡 / Jetton 接线
+  - `planet_core.tolk` — **链上多资产 PPI**（篮子 + `computePpi`）/ 铸赎 / **赎回镜像** / 风控 / 费率 45-30-25 / RTRA / Jetton 接线
   - `planet_basket.tolk` — 链上组合注册表（`assetCount()` / `assetAt(i)`）
   - `jetton/*.tolk` — PLT TEP-74（minter + wallet，vendored 自 `ton-blockchain/tolk-bench`）
 - **前端**：`app-tg/`（Telegram Mini App，Vite + React + TON Connect）
@@ -35,7 +47,11 @@ cd app-tg && npm install && npm run build
 
 ## 文档（唯一可信来源）
 
-`docs/HANDOFF.md`（交接）· `GTM.md` · `PLAN-TON.md` · `TON-MAPPING.md` · `AUDIT.md` · `whitepaper-extracted.md`
+- **状态/交接**：`docs/HANDOFF.md`（唯一可信状态）
+- **产品/架构**：`PRODUCT-DESIGN.md`（v2 分层架构 + 稳健性）、`PRD.md`、`GTM.md`、`PLAN-TON.md`、`TON-MAPPING.md`
+- **机制设计**：`ppi-multiasset.md`（链上 PPI）、`commodity-cam.md`（CAM）、`dl-amm.md`（DL-AMM 市场层）、`burn-linkage.md`（赎回）
+- **调研/审计**：`oracle-ton.md`（RedStone/DIA）、`AUDIT.md`
+- **白皮书**：`whitepaper-extracted.md`（v1 抽取）
 
 ## 仓库结构
 
@@ -56,3 +72,4 @@ legacy-solana/  Solana / Anchor 遗留实现（算法参考，非主线）
 
 本协议为技术提案，不构成投资建议。大宗商品价格波动可能导致 PLT 短期偏离锚定。
 早期 PLT-index 无底层实物兜底，市场价可能大幅偏离理论 PPI。
+二级市场层（DL-AMM）与 CAM 适配层仅为**设计**，尚未实现；切勿据此预期已具备稳定机制。
