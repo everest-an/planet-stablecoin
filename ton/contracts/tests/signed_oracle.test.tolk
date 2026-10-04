@@ -29,7 +29,7 @@ fun deployCoreSigned(): (PlanetCore, Treasury, Treasury) {
         cams: [],
         assetCount: 0,
         baseLocked: false,
-        oracleState: OracleState { oracle: deployer.address, signerKey: 0, lastOracleUpdate: 0 }.toCell(),
+        oracleState: OracleState { oracle: deployer.address, signerKey: 0, signerKey2: 0, lastOracleUpdate: 0 }.toCell(),
         limitsState: Limits { maxPerTx: 0, arbRebateBps: 0, riskFund: 0 }.toCell(),
     });
     expect(core.deploy(deployer.address, { value: ton("0.3") }))
@@ -69,7 +69,7 @@ get fun `test signed price update is verified and applied`() {
     var sig = crypto.sign(kp.privateKey, payload);
     val sigR = sig.loadUint(256);
     val sigS = sig.loadUint(256);
-    core.sendSignedPriceUpdate(relayer.address, sigR, sigS, payload, { value: ton("0.05") });
+    core.sendSignedPriceUpdate(relayer.address, sigR, sigS, 0, 0, payload, { value: ton("0.05") });
     expect(core.ppi()).toEqual(1100000);
     expect(core.lastOracleUpdate()).toEqual(1000);
 }
@@ -86,7 +86,7 @@ get fun `test bad signature is rejected`() {
     var sig = crypto.sign(other.privateKey, payload);
     val sigR = sig.loadUint(256);
     val sigS = sig.loadUint(256);
-    val res = core.sendSignedPriceUpdate(relayer.address, sigR, sigS, payload, { value: ton("0.05") });
+    val res = core.sendSignedPriceUpdate(relayer.address, sigR, sigS, 0, 0, payload, { value: ton("0.05") });
     expect(res).toHaveFailedTx({ from: relayer.address, to: core.address, exitCode: 114 });
 }
 
@@ -100,6 +100,47 @@ get fun `test signed update rejected when no signer set`() {
     var sig = crypto.sign(kp.privateKey, payload);
     val sigR = sig.loadUint(256);
     val sigS = sig.loadUint(256);
-    val res = core.sendSignedPriceUpdate(relayer.address, sigR, sigS, payload, { value: ton("0.05") });
+    val res = core.sendSignedPriceUpdate(relayer.address, sigR, sigS, 0, 0, payload, { value: ton("0.05") });
     expect(res).toHaveFailedTx({ from: relayer.address, to: core.address, exitCode: 113 });
+}
+
+get fun `test dual-sign requires both signatures`() {
+    val (core, deployer, relayer) = deployCoreSigned();
+    val kp1 = crypto.createMnemonic().toKeyPair();
+    val kp2 = crypto.createMnemonic().toKeyPair();
+    core.sendSetSigner(deployer.address, 0, kp1.publicKey as uint256, { value: ton("0.05") });
+    core.sendSetSigner2(deployer.address, 0, kp2.publicKey as uint256, { value: ton("0.05") });
+    core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
+    val payload = PricePayload {
+        queryId: 0, index: 0, price: 1100000, volatility: 0, liquidity: 1000000, riskState: 0, timestamp: 1000,
+    }.toCell();
+    var s1 = crypto.sign(kp1.privateKey, payload);
+    var s2 = crypto.sign(kp2.privateKey, payload);
+    val r1 = s1.loadUint(256);
+    val t1 = s1.loadUint(256);
+    val r2 = s2.loadUint(256);
+    val t2 = s2.loadUint(256);
+    core.sendSignedPriceUpdate(relayer.address, r1, t1, r2, t2, payload, { value: ton("0.05") });
+    expect(core.ppi()).toEqual(1100000);
+}
+
+get fun `test dual-sign rejects a bad second signature`() {
+    val (core, deployer, relayer) = deployCoreSigned();
+    val kp1 = crypto.createMnemonic().toKeyPair();
+    val kp2 = crypto.createMnemonic().toKeyPair();
+    val wrong = crypto.createMnemonic().toKeyPair();
+    core.sendSetSigner(deployer.address, 0, kp1.publicKey as uint256, { value: ton("0.05") });
+    core.sendSetSigner2(deployer.address, 0, kp2.publicKey as uint256, { value: ton("0.05") });
+    core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
+    val payload = PricePayload {
+        queryId: 0, index: 0, price: 1100000, volatility: 0, liquidity: 1000000, riskState: 0, timestamp: 1000,
+    }.toCell();
+    var s1 = crypto.sign(kp1.privateKey, payload);
+    var bad = crypto.sign(wrong.privateKey, payload);
+    val r1 = s1.loadUint(256);
+    val t1 = s1.loadUint(256);
+    val r2 = bad.loadUint(256);
+    val t2 = bad.loadUint(256);
+    val res = core.sendSignedPriceUpdate(relayer.address, r1, t1, r2, t2, payload, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: relayer.address, to: core.address, exitCode: 117 });
 }

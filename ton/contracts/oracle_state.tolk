@@ -7,6 +7,7 @@
 
 struct OracleState {
     oracle: address
-    signerKey: uint256  // ed25519 public key for signed price updates (0 = unset)
+    signerKey: uint256  // primary ed25519 key for signed price updates (0 = unset)
+    signerKey2: uint256 // optional 2nd key; if set, updates need BOTH signatures
     lastOracleUpdate: int64
 }

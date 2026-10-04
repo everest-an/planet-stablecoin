@@ -27,7 +27,7 @@ fun deployCoreCam(): (PlanetCore, Treasury, Treasury, Treasury) {
         cams: [],
         assetCount: 0,
         baseLocked: false,
-        oracleState: OracleState { oracle: deployer.address, signerKey: 0, lastOracleUpdate: 0 }.toCell(),
+        oracleState: OracleState { oracle: deployer.address, signerKey: 0, signerKey2: 0, lastOracleUpdate: 0 }.toCell(),
         limitsState: Limits { maxPerTx: 0, arbRebateBps: 0, riskFund: 0 }.toCell(),
     });
     expect(core.deploy(deployer.address, { value: ton("0.3") }))
@@ -89,12 +89,12 @@ get fun `test frozen asset is excluded from ppi`() {
     core.sendCamUpdate(cam.address, 0, 1, 1000000, 0, 1000000, 0, 200, { value: ton("0.05") });
     expect(core.ppi()).toEqual(1000000);
 
-    // asset 0 misbehaves (price 2.0) -> PPI 1.5 (polluted)
-    core.sendCamUpdate(cam.address, 0, 0, 2000000, 0, 1000000, 0, 300, { value: ton("0.05") });
-    expect(core.ppi()).toEqual(1500000);
+    // asset 0 misbehaves (price 1.4) -> PPI 1.2 (polluted)
+    core.sendCamUpdate(cam.address, 0, 0, 1400000, 0, 1000000, 0, 300, { value: ton("0.05") });
+    expect(core.ppi()).toEqual(1200000);
 
     // CAM marks asset 0 frozen -> excluded, PPI renormalised over asset 1 -> back to 1.0
-    core.sendCamUpdate(cam.address, 0, 0, 2000000, 0, 1000000, 2, 400, { value: ton("0.05") });
+    core.sendCamUpdate(cam.address, 0, 0, 1400000, 0, 1000000, 2, 400, { value: ton("0.05") });
     expect(core.assetAt(0).riskState).toEqual(2);
     expect(core.ppi()).toEqual(1000000);
 }

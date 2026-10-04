@@ -19,8 +19,15 @@ struct (0x10000011) SetSigner {
 
 // Ed25519 signatures are 64 bytes; message fields must be fixed-width, so the
 // signature is split into two 256-bit halves (R || S) and rebuilt on-chain.
+struct (0x10000013) SetSigner2 {
+    queryId: int64
+    key: uint256       // second signer key (0 = disable dual-sign)
+}
+
 struct (0x10000010) SignedPriceUpdate {
     sigR: uint256
     sigS: uint256
+    sig2R: uint256     // second signer's signature (required only if signerKey2 is set)
+    sig2S: uint256
     payload: cell      // PricePayload
 }

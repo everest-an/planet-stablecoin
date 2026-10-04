@@ -23,6 +23,7 @@ const REDEEM_PENALTY_PPI = 970000; // below this PPI, redeem fee is penalised
 const REDEEM_PENALTY_BPS = 100;    // extra redeem fee (bps) below REDEEM_PENALTY_PPI
 const BAND_RICH = 1030000;         // PPI above this = index rich -> reward minting
 const RISK_SHARE_BPS = 1000;       // 10% of each fee -> risk fund
+const MAX_PRICE_JUMP_PPM = 500000; // reject a single price update that jumps >50%
 
 const ERR_PAUSED = 100;
 const ERR_NOT_OWNER = 101;
@@ -40,6 +41,8 @@ const ERR_NOT_CAM = 112;
 const ERR_NO_SIGNER = 113;
 const ERR_BAD_SIG = 114;
 const ERR_RISK_FUND = 115;
+const ERR_PRICE_JUMP = 116;
+const ERR_BAD_SIG2 = 117;
 
 // Fee split (white paper §8.4): 45% buyback-burn / 30% reserve / 25% PLTG staking.
 const BURN_SHARE_BPS = 4500;
@@ -170,7 +173,7 @@ struct (0x10000012) CoverDeficit {
     amount: int64      // move this much from the risk fund into the reserve
 }
 
-type AllowedMessage = Mint | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | BurnMirror | SetBasketAsset | OracleUpdateAssetPrice | LockBasePrices | SetLimits | SetCam | CamUpdate | SetArb | SetSigner | SignedPriceUpdate | CoverDeficit
+type AllowedMessage = Mint | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | BurnMirror | SetBasketAsset | OracleUpdateAssetPrice | LockBasePrices | SetLimits | SetCam | CamUpdate | SetArb | SetSigner | SignedPriceUpdate | CoverDeficit | SetSigner2
 
 // ---------------- Contract ABI ----------------
 
@@ -216,6 +219,16 @@ fun diffAbs(a: int64, b: int64): int64 {
         return d;
     }
     return -d;
+}
+
+// Oracle tamper resistance: reject a single price update that jumps too far from the
+// current price, limiting the damage one compromised update can do.
+fun priceJumpOk(oldPrice: int64, newPrice: int64): bool {
+    if (oldPrice == 0) {
+        return true;
+    }
+    val jump = (diffAbs(newPrice, oldPrice) as int) * PPI_SCALE / (oldPrice as int);
+    return jump <= MAX_PRICE_JUMP_PPM as int;
 }
 
 // Band-based fee (stability): low friction near the peg, steepening beyond BAND_HIGH.
@@ -351,6 +364,7 @@ fun onInternalMessage(in: InMessage) {
         SetSigner => { handleSetSigner(in.senderAddress, msg); }
         SignedPriceUpdate => { handleSignedPriceUpdate(msg); }
         CoverDeficit => { handleCoverDeficit(in.senderAddress, msg); }
+        SetSigner2 => { handleSetSigner2(in.senderAddress, msg); }
         else => { assert (in.body.isEmpty()) throw 0xFFFF; }
     }
 }
@@ -454,6 +468,7 @@ fun handleSetOracle(sender: address, msg: SetOracle) {
     storage.oracleState = OracleState {
         oracle: msg.oracle,
         signerKey: os.signerKey,
+        signerKey2: os.signerKey2,
         lastOracleUpdate: os.lastOracleUpdate,
     }.toCell();
     storage.save();
@@ -518,6 +533,21 @@ fun handleSetSigner(sender: address, msg: SetSigner) {
     storage.oracleState = OracleState {
         oracle: os.oracle,
         signerKey: msg.key,
+        signerKey2: os.signerKey2,
+        lastOracleUpdate: os.lastOracleUpdate,
+    }.toCell();
+    storage.save();
+}
+
+// Owner sets the optional SECOND signer key; while set, signed updates need both.
+fun handleSetSigner2(sender: address, msg: SetSigner2) {
+    var storage = lazy Storage.load();
+    assert (sender == storage.owner) throw ERR_NOT_OWNER;
+    val os = OracleState.fromCell(storage.oracleState);
+    storage.oracleState = OracleState {
+        oracle: os.oracle,
+        signerKey: os.signerKey,
+        signerKey2: msg.key,
         lastOracleUpdate: os.lastOracleUpdate,
     }.toCell();
     storage.save();
@@ -531,11 +561,16 @@ fun handleSignedPriceUpdate(msg: SignedPriceUpdate) {
     assert (os.signerKey != 0) throw ERR_NO_SIGNER;
     val sig = beginCell().storeUint(msg.sigR, 256).storeUint(msg.sigS, 256).endCell().beginParse();
     assert (isSignatureValid(msg.payload.hash(), sig, os.signerKey)) throw ERR_BAD_SIG;
+    if (os.signerKey2 != 0) {
+        val sig2 = beginCell().storeUint(msg.sig2R, 256).storeUint(msg.sig2S, 256).endCell().beginParse();
+        assert (isSignatureValid(msg.payload.hash(), sig2, os.signerKey2)) throw ERR_BAD_SIG2;
+    }
     val p = PricePayload.fromCell(msg.payload);
     assert (p.timestamp > os.lastOracleUpdate) throw ERR_STALE_PRICE;
     assert (p.index < storage.assetCount) throw ERR_BAD_INDEX;
     assert (weightsSum(storage.assets, storage.assetCount) == WEIGHT_SCALE) throw ERR_BAD_WEIGHTS;
     val a = storage.assets.mustGet(p.index);
+    assert (priceJumpOk(a.currentPrice, p.price)) throw ERR_PRICE_JUMP;
     storage.assets.set(p.index, CoreAsset {
         weight: a.weight,
         basePrice: a.basePrice,
@@ -547,6 +582,7 @@ fun handleSignedPriceUpdate(msg: SignedPriceUpdate) {
     storage.oracleState = OracleState {
         oracle: os.oracle,
         signerKey: os.signerKey,
+        signerKey2: os.signerKey2,
         lastOracleUpdate: p.timestamp,
     }.toCell();
     storage.currentPpi = computePpi(storage.assets, storage.assetCount);
@@ -586,6 +622,7 @@ fun handleCamUpdate(sender: address, msg: CamUpdate) {
     assert (msg.index < storage.assetCount) throw ERR_BAD_INDEX;
     assert (weightsSum(storage.assets, storage.assetCount) == WEIGHT_SCALE) throw ERR_BAD_WEIGHTS;
     val a = storage.assets.mustGet(msg.index);
+    assert (priceJumpOk(a.currentPrice, msg.price)) throw ERR_PRICE_JUMP;
     storage.assets.set(msg.index, CoreAsset {
         weight: a.weight,
         basePrice: a.basePrice,
@@ -597,6 +634,7 @@ fun handleCamUpdate(sender: address, msg: CamUpdate) {
     storage.oracleState = OracleState {
         oracle: os.oracle,
         signerKey: os.signerKey,
+        signerKey2: os.signerKey2,
         lastOracleUpdate: msg.timestamp,
     }.toCell();
     storage.currentPpi = computePpi(storage.assets, storage.assetCount);
@@ -613,6 +651,7 @@ fun handleOracleUpdateAssetPrice(sender: address, msg: OracleUpdateAssetPrice) {
     assert (msg.index < storage.assetCount) throw ERR_BAD_INDEX;
     assert (weightsSum(storage.assets, storage.assetCount) == WEIGHT_SCALE) throw ERR_BAD_WEIGHTS;
     val a = storage.assets.mustGet(msg.index);
+    assert (priceJumpOk(a.currentPrice, msg.price)) throw ERR_PRICE_JUMP;
     storage.assets.set(msg.index, CoreAsset {
         weight: a.weight,
         basePrice: a.basePrice,
@@ -624,6 +663,7 @@ fun handleOracleUpdateAssetPrice(sender: address, msg: OracleUpdateAssetPrice) {
     storage.oracleState = OracleState {
         oracle: os.oracle,
         signerKey: os.signerKey,
+        signerKey2: os.signerKey2,
         lastOracleUpdate: msg.timestamp,
     }.toCell();
     storage.currentPpi = computePpi(storage.assets, storage.assetCount);
@@ -691,6 +731,11 @@ get fun arbRebateBps(): int64 {
 get fun signerKey(): uint256 {
     val storage = lazy Storage.load();
     return OracleState.fromCell(storage.oracleState).signerKey;
+}
+
+get fun signerKey2(): uint256 {
+    val storage = lazy Storage.load();
+    return OracleState.fromCell(storage.oracleState).signerKey2;
 }
 
 get fun riskFund(): int64 {

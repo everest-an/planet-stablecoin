@@ -27,7 +27,7 @@ fun deployCoreForOracle(): (PlanetCore, Treasury, Treasury, Treasury) {
         cams: [],
         assetCount: 0,
         baseLocked: false,
-        oracleState: OracleState { oracle: deployer.address, signerKey: 0, lastOracleUpdate: 0 }.toCell(),
+        oracleState: OracleState { oracle: deployer.address, signerKey: 0, signerKey2: 0, lastOracleUpdate: 0 }.toCell(),
         limitsState: Limits { maxPerTx: 0, arbRebateBps: 0, riskFund: 0 }.toCell(),
     });
     expect(core.deploy(deployer.address, { value: ton("0.3") }))
@@ -133,4 +133,16 @@ get fun `test locked base prices freeze the basket`() {
     core.sendLockBasePrices(deployer.address, 0, { value: ton("0.05") });
     val res = core.sendSetBasketAsset(deployer.address, 0, 1, 0, 2000000, { value: ton("0.05") });
     expect(res).toHaveFailedTx({ from: deployer.address, to: core.address, exitCode: 108 });
+}
+
+get fun `test price jump guard rejects a big single update`() {
+    val (core, deployer, oracleAcc, _) = deployCoreForOracle();
+    core.sendSetOracle(deployer.address, 0, oracleAcc.address, { value: ton("0.05") });
+    core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
+    // base 1.0 -> 1.6 is a 60% jump > 50% guard -> rejected
+    val res = core.sendOracleUpdateAssetPrice(oracleAcc.address, 0, 0, 1600000, 1000, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: oracleAcc.address, to: core.address, exitCode: 116 });
+    // base 1.0 -> 1.4 (40%) is allowed
+    core.sendOracleUpdateAssetPrice(oracleAcc.address, 0, 0, 1400000, 2000, { value: ton("0.05") });
+    expect(core.ppi()).toEqual(1400000);
 }
