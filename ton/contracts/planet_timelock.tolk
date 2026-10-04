@@ -12,11 +12,11 @@
 // every proposal also needs M-of-N signatures. This composes WITHOUT touching
 // PlanetCore: Core only ever sees `owner == timelock` and an ordinary message.
 
-const ERR_NOT_OWNER = 101;
-const ERR_NO_PENDING = 210;
-const ERR_ALREADY_PENDING = 211;
-const ERR_TOO_EARLY = 212;
-const ERR_BAD_DELAY = 213;
+const TL_ERR_NOT_OWNER = 101;
+const TL_ERR_NO_PENDING = 210;
+const TL_ERR_ALREADY_PENDING = 211;
+const TL_ERR_TOO_EARLY = 212;
+const TL_ERR_BAD_DELAY = 213;
 
 struct TimelockStorage {
     owner: address      // proposer/executor (use a TON multisig wallet for M-of-N)
@@ -75,15 +75,15 @@ fun onInternalMessage(in: InMessage) {
         TlExecute => { handleExecute(in.senderAddress, msg); }
         TlCancel => { handleCancel(in.senderAddress, msg); }
         TlSetDelay => { handleSetDelay(in.senderAddress, msg); }
-        TlSetOwner => { handleSetOwner(in.senderAddress, msg); }
+        TlSetOwner => { tlHandleSetOwner(in.senderAddress, msg); }
         else => { assert (in.body.isEmpty()) throw 0xFFFF; }
     }
 }
 
 fun handlePropose(sender: address, msg: TlPropose) {
     var storage = lazy TimelockStorage.load();
-    assert (sender == storage.owner) throw ERR_NOT_OWNER;
-    assert (!storage.hasPending) throw ERR_ALREADY_PENDING;
+    assert (sender == storage.owner) throw TL_ERR_NOT_OWNER;
+    assert (!storage.hasPending) throw TL_ERR_ALREADY_PENDING;
     storage.hasPending = true;
     storage.dest = msg.dest;
     storage.body = msg.body;
@@ -93,9 +93,9 @@ fun handlePropose(sender: address, msg: TlPropose) {
 
 fun handleExecute(sender: address, msg: TlExecute) {
     var storage = lazy TimelockStorage.load();
-    assert (sender == storage.owner) throw ERR_NOT_OWNER;
-    assert (storage.hasPending) throw ERR_NO_PENDING;
-    assert ((blockchain.now() as int64) >= storage.eta) throw ERR_TOO_EARLY;
+    assert (sender == storage.owner) throw TL_ERR_NOT_OWNER;
+    assert (storage.hasPending) throw TL_ERR_NO_PENDING;
+    assert ((blockchain.now() as int64) >= storage.eta) throw TL_ERR_TOO_EARLY;
 
     // Replay the proposed body to its target, from THIS contract (which holds owner
     // rights on Core). Carry the attached value so the inner message is funded.
@@ -113,30 +113,30 @@ fun handleExecute(sender: address, msg: TlExecute) {
 
 fun handleCancel(sender: address, msg: TlCancel) {
     var storage = lazy TimelockStorage.load();
-    assert (sender == storage.owner) throw ERR_NOT_OWNER;
-    assert (storage.hasPending) throw ERR_NO_PENDING;
+    assert (sender == storage.owner) throw TL_ERR_NOT_OWNER;
+    assert (storage.hasPending) throw TL_ERR_NO_PENDING;
     storage.hasPending = false;
     storage.save();
 }
 
 fun handleSetDelay(sender: address, msg: TlSetDelay) {
     var storage = lazy TimelockStorage.load();
-    assert (sender == storage.owner) throw ERR_NOT_OWNER;
-    assert (msg.delay >= 0) throw ERR_BAD_DELAY;
+    assert (sender == storage.owner) throw TL_ERR_NOT_OWNER;
+    assert (msg.delay >= 0) throw TL_ERR_BAD_DELAY;
     storage.delay = msg.delay;
     storage.save();
 }
 
-fun handleSetOwner(sender: address, msg: TlSetOwner) {
+fun tlHandleSetOwner(sender: address, msg: TlSetOwner) {
     var storage = lazy TimelockStorage.load();
-    assert (sender == storage.owner) throw ERR_NOT_OWNER;
+    assert (sender == storage.owner) throw TL_ERR_NOT_OWNER;
     storage.owner = msg.newOwner;
     storage.save();
 }
 
 // ---------------- Getters ----------------
 
-get fun owner(): address {
+get fun tlOwner(): address {
     val storage = lazy TimelockStorage.load();
     return storage.owner;
 }

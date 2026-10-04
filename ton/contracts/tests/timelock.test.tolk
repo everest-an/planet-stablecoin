@@ -65,7 +65,7 @@ get fun `test owner can set delay and transfer ownership`() {
     tl.sendTlSetDelay(owner.address, 0, 3600, { value: ton("0.05") });
     expect(tl.delay()).toEqual(3600);
     tl.sendTlSetOwner(owner.address, 0, other.address, { value: ton("0.05") });
-    expect(tl.owner()).toEqual(other.address);
+    expect(tl.tlOwner()).toEqual(other.address);
 }
 
 get fun `test execute replays the proposed body to the target`() {
