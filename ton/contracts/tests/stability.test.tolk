@@ -92,18 +92,20 @@ get fun `test non-owner cannot set arbitrage rebate`() {
     expect(res).toHaveFailedTx({ from: alice.address, to: core.address, exitCode: 101 });
 }
 
-get fun `test arbitrage rebate reduces mint fee when rich`() {
-    // without rebate: PPI 1.05 -> band fee 100 bps -> fee 10000 -> burn 4500
-    val (coreNo, depNo, aliceNo) = deployCoreStability();
-    coreNo.sendUpdatePrice(depNo.address, 0, 1050000, { value: ton("0.05") });
-    coreNo.sendMint(aliceNo.address, 0, 1000000, { value: ton("0.5") });
-    expect(coreNo.feesBurn()).toEqual(4500);
+get fun `test mint fee at 5% without arbitrage`() {
+    val (core, deployer, alice) = deployCoreStability();
+    core.sendUpdatePrice(deployer.address, 0, 1050000, { value: ton("0.05") });
+    core.sendMint(alice.address, 0, 1000000, { value: ton("0.5") });
+    // band fee 100 bps -> fee 10000 -> burn 4500
+    expect(core.feesBurn()).toEqual(4500);
+}
 
-    // with rebate 50: effective 50 bps -> fee 5000 -> burn 2250
-    val (coreArb, depArb, aliceArb) = deployCoreStability();
-    coreArb.sendSetArb(depArb.address, 0, 50, { value: ton("0.05") });
-    coreArb.sendUpdatePrice(depArb.address, 0, 1050000, { value: ton("0.05") });
-    coreArb.sendMint(aliceArb.address, 0, 1000000, { value: ton("0.5") });
-    expect(coreArb.feesBurn()).toEqual(2250);
+get fun `test arbitrage rebate reduces mint fee when rich`() {
+    val (core, deployer, alice) = deployCoreStability();
+    core.sendSetArb(deployer.address, 0, 50, { value: ton("0.05") });
+    core.sendUpdatePrice(deployer.address, 0, 1050000, { value: ton("0.05") });
+    core.sendMint(alice.address, 0, 1000000, { value: ton("0.5") });
+    // effective 50 bps -> fee 5000 -> burn 2250
+    expect(core.feesBurn()).toEqual(2250);
 }
 
