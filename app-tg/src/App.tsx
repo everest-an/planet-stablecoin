@@ -456,7 +456,7 @@ export default function App() {
           <span className="end">¬</span>
         </div>
         <label className="k" htmlFor="amt">
-          deposit USDC → mint PLT
+          testnet demo mint (no real deposit)
         </label>
         <div className="row">
           <input
