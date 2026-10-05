@@ -139,3 +139,15 @@ get fun `test timelock gates a Core owner action end-to-end`() {
     expect(core.owner()).toEqual(other.address);
     expect(tl.hasPending()).toEqual(false);
 }
+
+get fun `test cancel with no pending is rejected`() {
+    val (tl, owner, _) = deployTimelock(0);
+    val res = tl.sendTlCancel(owner.address, 0, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: owner.address, to: tl.address, exitCode: 210 });
+}
+
+get fun `test negative delay is rejected`() {
+    val (tl, owner, _) = deployTimelock(0);
+    val res = tl.sendTlSetDelay(owner.address, 0, -1, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: owner.address, to: tl.address, exitCode: 213 });
+}

@@ -82,3 +82,17 @@ get fun `test double redeem is rejected`() {
     val res = bond.sendRedeem(alice.address, 0, { value: ton("0.05") });
     expect(res).toHaveFailedTx({ from: alice.address, to: bond.address, exitCode: 202 });
 }
+
+get fun `test subscribe with zero amount is rejected`() {
+    val (bond, owner, alice) = deployBond();
+    bond.sendSetOpen(owner.address, 0, true, { value: ton("0.05") });
+    val res = bond.sendSubscribe(alice.address, 0, 0, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: alice.address, to: bond.address, exitCode: 203 });
+}
+
+get fun `test redeem with no bond is rejected`() {
+    val (bond, owner, alice) = deployBond();
+    bond.sendSetOpen(owner.address, 0, true, { value: ton("0.05") });
+    val res = bond.sendRedeem(alice.address, 0, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: alice.address, to: bond.address, exitCode: 201 });
+}

@@ -51,3 +51,9 @@ get fun `test non-owner cannot set asset`() {
     expect(res).toHaveFailedTx({ from: outsider.address, to: basket.address, exitCode: 101 });
     expect(basket.assetCount()).toEqual(0);
 }
+
+get fun `test unknown opcode is rejected`() {
+    val (basket, owner, _) = deployBasket();
+    val res = basket.sendAny(owner.address, beginCell().storeUint(0xDEADBEEF, 32).endCell(), { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: owner.address, to: basket.address, exitCode: 65535 });
+}

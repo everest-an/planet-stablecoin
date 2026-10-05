@@ -157,3 +157,12 @@ get fun `test caution widens the threshold further`() {
     // 1% drift, calm inputs, but riskState=caution -> threshold doubled -> false
     expect(shouldRebalanceRisk(500000, 490, 1000, 0, 1000000, 1)).toEqual(false);
 }
+
+get fun `test low liquidity widens the rebalance threshold`() {
+    // 1% drift, but 50% liquidity -> threshold scaled x2 -> not strictly greater
+    expect(shouldRebalanceRisk(500000, 490, 1000, 0, 500000, 0)).toEqual(false);
+}
+
+get fun `test rebalanceDrift with zero reserve returns the weight`() {
+    expect(rebalanceDrift(500000, 123, 0)).toEqual(500000);
+}
