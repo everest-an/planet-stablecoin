@@ -165,3 +165,54 @@ get fun `test transfer with forward payload notifies recipient and returns exces
     expect(bobWallet.getWalletData().jettonBalance).toEqual(100000);
     expect(aliceWallet.getWalletData().jettonBalance).toEqual(895000);
 }
+
+// ERROR_INVALID_PAYLOAD (708): the forward payload must be non-empty.
+get fun `test transfer with empty forward payload is rejected`() {
+    val (core, minter, _, alice) = deployPlanetMintSetup();
+    val bob = testing.treasury("bob");
+    core.sendMint(alice.address, 0, 1000000, { value: ton("1") });
+    val wallet = JettonWallet.fromAddress(minter.getWalletAddress(alice.address));
+    val empty = beginCell().endCell().beginParse();
+    val res = wallet.sendAskToTransfer(alice.address, 0, 1000, bob.address, null, null, 0, empty, { value: ton("0.2") });
+    expect(res).toHaveFailedTx({ from: alice.address, to: wallet.address, exitCode: 708 });
+}
+
+// ERROR_NOT_ENOUGH_TON (709): insufficient value attached for the message cascade.
+get fun `test transfer with insufficient ton is rejected`() {
+    val (core, minter, _, alice) = deployPlanetMintSetup();
+    val bob = testing.treasury("bob");
+    core.sendMint(alice.address, 0, 1000000, { value: ton("1") });
+    val wallet = JettonWallet.fromAddress(minter.getWalletAddress(alice.address));
+    val payload = beginCell().storeUint(1, 1).endCell().beginParse();
+    val res = wallet.sendAskToTransfer(alice.address, 0, 1000, bob.address, null, null, 0, payload, { value: ton("0.005") });
+    expect(res).toHaveFailedTx({ from: alice.address, to: wallet.address, exitCode: 709 });
+}
+
+// ERROR_NOT_ENOUGH_BALANCE (706) on the burn path.
+get fun `test burn above balance is rejected`() {
+    val (core, minter, _, alice) = deployPlanetMintSetup();
+    core.sendMint(alice.address, 0, 1000000, { value: ton("1") });
+    val wallet = JettonWallet.fromAddress(minter.getWalletAddress(alice.address));
+    val res = wallet.sendAskToBurn(alice.address, 0, 2000000, null, null, { value: ton("0.2") });
+    expect(res).toHaveFailedTx({ from: alice.address, to: wallet.address, exitCode: 706 });
+}
+
+// ERROR_INVALID_WALLET (707): a spoofed internal_transfer from a non-minter is rejected.
+get fun `test spoofed internal transfer is rejected`() {
+    val (core, minter, _, alice) = deployPlanetMintSetup();
+    val mallory = testing.treasury("mallory");
+    core.sendMint(alice.address, 0, 1000000, { value: ton("1") });
+    val wallet = JettonWallet.fromAddress(minter.getWalletAddress(alice.address));
+    val payload = beginCell().storeUint(1, 1).endCell().beginParse();
+    val res = wallet.sendInternalTransferStep(mallory.address, 0, 1000, mallory.address, null, 0, payload, { value: ton("0.1") });
+    expect(res).toHaveFailedTx({ from: mallory.address, to: wallet.address, exitCode: 707 });
+}
+
+// Unknown opcode on the wallet is rejected.
+get fun `test unknown wallet opcode is rejected`() {
+    val (core, minter, _, alice) = deployPlanetMintSetup();
+    core.sendMint(alice.address, 0, 1000000, { value: ton("1") });
+    val wallet = JettonWallet.fromAddress(minter.getWalletAddress(alice.address));
+    val res = wallet.sendAny(alice.address, beginCell().storeUint(0xDEAD, 32).endCell(), { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: alice.address, to: wallet.address, exitCode: 65535 });
+}
