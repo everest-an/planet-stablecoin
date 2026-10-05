@@ -105,21 +105,11 @@ get fun `test cover deficit above risk fund is rejected`() {
 
 // 112 CAM update from a non-registered sender
 get fun `test cam update from non-cam is rejected`() {
-    val (core, deployer, _) = coreWith(1000000, false, 0, 0, false, 0, 0);
+    val (core, deployer, minter) = coreWith(1000000, false, 0, 0, false, 0, 0);
     core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
+    core.sendSetCam(deployer.address, 0, 0, minter.address, { value: ton("0.05") });
     val res = core.sendCamUpdate(deployer.address, 0, 0, 1100000, 0, 1000000, 0, 1000, { value: ton("0.05") });
     expect(res).toHaveFailedTx({ from: deployer.address, to: core.address, exitCode: 112 });
-}
-
-// 103 oracle update from a non-oracle
-get fun `test oracle update from non-oracle is rejected`() {
-    val (core, deployer, _) = coreWith(1000000, false, 0, 0, false, 0, 0);
-    core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
-    // oracle was set to the deployer in storage; send from a different treasury is awkward,
-    // so assert via a plain non-owner path: an unset oracle index buys us ERR_NOT_ORACLE
-    // only for a non-deployer sender, exercised in oracle.test.tolk — here cover stale/index.
-    val res = core.sendOracleUpdateAssetPrice(deployer.address, 0, 0, 1100000, 0, { value: ton("0.05") });
-    expect(res).toHaveFailedTx({ from: deployer.address, to: core.address, exitCode: 109 });
 }
 
 // 109 oracle update with a bad index
