@@ -29,7 +29,6 @@ fun main() {
     val fund = PlanetFund.fromStorage({
         owner: deployer.address,
         jettonMinter: minter.address,
-        walletCode: build("JettonWallet"),
         navPerShare: 0,
         lastNavUpdate: 0,
         mgmtFeeBps: 100,

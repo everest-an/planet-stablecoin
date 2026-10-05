@@ -14,7 +14,6 @@
 // See docs/fund-contract-design.md, docs/positioning-v2.md.
 
 import "jetton/messages"
-import "jetton/jetton-utils"
 
 const FUND_DOMAIN = 0x46554E44; // "FUND" — domain tag for custodian signatures
 
@@ -36,8 +35,6 @@ const ERR_STALE = 209;
 const ERR_KYC = 210;
 const ERR_BAD_AMOUNT = 211;
 const ERR_BAD_THRESHOLD = 212;
-const ERR_NOT_FUND_WALLET = 213;
-const ERR_NOT_FUNDED = 214;
 
 // ---------------- Storage ----------------
 
@@ -56,13 +53,11 @@ struct Redeem {
     payout: int64
     ts: int64
     done: bool
-    funded: bool     // true once the shares have been received by the fund's jetton wallet
 }
 
 struct FundStorage {
     owner: address
     jettonMinter: address
-    walletCode: cell       // PLT jetton wallet code (to derive the fund's own jetton wallet)
     navPerShare: int64
     lastNavUpdate: int64
     mgmtFeeBps: int64      // annual management fee (accrued inside the attested NAV)
@@ -180,7 +175,7 @@ struct (0x3000000E) CancelRedeem {
 
 type FundMessage = Subscribe | ConfirmMint | CancelOrder | AttestNav | SetFees | SetCustodian |
     SetCustodianThreshold | SetPaused | SetKyc | Allow | SetJettonMinter | SetOwner |
-    RequestRedeem | ConfirmRedeem | CancelRedeem | TransferNotificationForRecipient
+    RequestRedeem | ConfirmRedeem | CancelRedeem
 
 contract PlanetFund {
     storage: FundStorage
@@ -249,7 +244,6 @@ fun onInternalMessage(in: InMessage) {
         RequestRedeem => { handleRequestRedeem(in.senderAddress, msg); }
         ConfirmRedeem => { handleConfirmRedeem(in.valueCoins, msg); }
         CancelRedeem => { handleCancelRedeem(in.senderAddress, msg); }
-        TransferNotificationForRecipient => { handleShareReceived(in.senderAddress, msg); }
         else => { assert (in.body.isEmpty()) throw 0xFFFF; }
     }
 }
@@ -423,38 +417,8 @@ fun handleRequestRedeem(sender: address, msg: RequestRedeem) {
         val lk = storage.allowed.get(sender);
         assert (lk.isFound && lk.loadValue()) throw ERR_KYC;
     }
-    storage.redeems.set(msg.queryId, Redeem { user: sender, shares: msg.shares, payout: 0, ts: blockchain.now() as int64, done: false, funded: false });
+    storage.redeems.set(msg.queryId, Redeem { user: sender, shares: msg.shares, payout: 0, ts: blockchain.now() as int64, done: false });
     storage.save();
-}
-
-// The fund's OWN jetton wallet (derived from minter + wallet code) notifies us that
-// shares arrived (a subscriber transferring their PLT in to redeem). Verify provenance,
-// mark the redeem funded, and burn the received shares.
-fun handleShareReceived(sender: address, msg: TransferNotificationForRecipient) {
-    var storage = lazy FundStorage.load();
-    val expected = calcAddressOfJettonWallet(contract.getAddress(), storage.jettonMinter, storage.walletCode);
-    assert (sender == expected) throw ERR_NOT_FUND_WALLET;
-
-    // The transfer's queryId is the redeem order id.
-    val lk = storage.redeems.get(msg.queryId as int64);
-    assert (lk.isFound) throw ERR_NO_ORDER;
-    val r = lk.loadValue();
-    storage.redeems.set(msg.queryId as int64, Redeem { user: r.user, shares: r.shares, payout: r.payout, ts: r.ts, done: r.done, funded: true });
-    storage.save();
-
-    // Burn the received shares from the fund's own jetton wallet.
-    val burn = createMessage({
-        bounce: BounceMode.Only256BitsOfBody,
-        value: 0,
-        dest: expected,
-        body: AskToBurn {
-            queryId: msg.queryId,
-            jettonAmount: msg.jettonAmount,
-            sendExcessesTo: null,
-            customPayload: null,
-        },
-    });
-    burn.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
 }
 
 fun handleConfirmRedeem(msgValue: coins, msg: ConfirmRedeem) {
@@ -469,14 +433,13 @@ fun handleConfirmRedeem(msgValue: coins, msg: ConfirmRedeem) {
     assert (lk.isFound) throw ERR_NO_ORDER;
     val r = lk.loadValue();
     assert (!r.done) throw ERR_ORDER_DONE;
-    assert (r.funded) throw ERR_NOT_FUNDED; // shares must be received before payout
 
     if (storage.navPerShare > 0 && navJumpOk(storage.navPerShare, msg.navPerShare) == false) {
         throw ERR_NAV_JUMP;
     }
 
     val payout = ((r.shares as int) * (msg.navPerShare as int) / NAV_SCALE) * (BPS_DENOM - storage.redeemFeeBps as int) / BPS_DENOM;
-    storage.redeems.set(msg.orderId, Redeem { user: r.user, shares: r.shares, payout: payout as int64, ts: r.ts, done: true, funded: true });
+    storage.redeems.set(msg.orderId, Redeem { user: r.user, shares: r.shares, payout: payout as int64, ts: r.ts, done: true });
     storage.navPerShare = msg.navPerShare;
     storage.lastNavUpdate = msg.timestamp;
     storage.save();
@@ -498,7 +461,7 @@ fun handleCancelRedeem(sender: address, msg: CancelRedeem) {
     val r = lk.loadValue();
     assert (!r.done) throw ERR_ORDER_DONE;
     assert (sender == r.user || sender == storage.owner) throw ERR_NOT_OWNER;
-    storage.redeems.set(msg.orderId, Redeem { user: r.user, shares: r.shares, payout: r.payout, ts: r.ts, done: true, funded: r.funded });
+    storage.redeems.set(msg.orderId, Redeem { user: r.user, shares: r.shares, payout: r.payout, ts: r.ts, done: true });
     storage.save();
 }
 

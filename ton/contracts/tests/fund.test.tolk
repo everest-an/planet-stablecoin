@@ -33,7 +33,6 @@ fun deploySetup(): (PlanetFund, JettonMinter, Treasury, Treasury, KeyPair) {
     val fund = PlanetFund.fromStorage({
         owner: owner.address,
         jettonMinter: minter.address,
-        walletCode: build("JettonWallet"),
         navPerShare: 0,
         lastNavUpdate: 0,
         mgmtFeeBps: 100,
@@ -218,7 +217,7 @@ fun deployBareFund(): (PlanetFund, Treasury) {
     val owner = testing.treasury("owner");
     val minter = testing.treasury("minter");
     val fund = PlanetFund.fromStorage({
-        owner: owner.address, jettonMinter: minter.address, walletCode: build("JettonWallet"), navPerShare: 0, lastNavUpdate: 0,
+        owner: owner.address, jettonMinter: minter.address, navPerShare: 0, lastNavUpdate: 0,
         mgmtFeeBps: 100, mintFeeBps: 50, redeemFeeBps: 50, paused: false, kycRequired: false,
         allowed: [], custodianCount: 0, custodianThreshold: 0, custodians: [], orders: [], redeems: [],
     });
@@ -319,41 +318,15 @@ get fun `test SetOwner rejects the zero address`() {
 
 // ---------------- Redemption ----------------
 
-get fun `test redeem request + confirm requires funded shares`() {
+get fun `test redeem request + custodian confirm records the payout`() {
     val (fund, _, _, alice, custodian) = deploySetup();
     fund.sendRequestRedeem(alice.address, 40, 500000, { value: ton("0.05") });
     val sig = sigCell(crypto.sign(custodian.privateKey, confCell(40, 1000000, 1000, fund.address)));
-    // shares not yet received -> payout must be refused
     val res = fund.sendConfirmRedeem(alice.address, 0, 40, 1000000, 1000, sigs1(sig), { value: ton("0.2") });
-    expect(res).toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 214 });
-}
-
-get fun `test redeem full flow: transfer shares in, burn, then payout`() {
-    val (fund, minter, _, alice, custodian) = deploySetup();
-    // fund alice with PLT (subscribe + confirm -> 995000 shares)
-    fund.sendSubscribe(alice.address, 60, 1000000, { value: ton("0.05") });
-    val s0 = sigCell(crypto.sign(custodian.privateKey, confCell(60, 1000000, 1000, fund.address)));
-    fund.sendConfirmMint(alice.address, 0, 60, 1000000, 1000, sigs1(s0), { value: ton("0.3") });
-
-    // alice requests a redemption of 500000 shares
-    val redeemId = 61;
-    fund.sendRequestRedeem(alice.address, redeemId, 500000, { value: ton("0.05") });
-
-    // alice transfers 500000 PLT to the FUND (queryId = redeemId, forward ton > 0 so the
-    // fund is notified); the fund receives + burns the shares.
-    val aliceWallet = JettonWallet.fromAddress(minter.getWalletAddress(alice.address));
-    val payload = beginCell().storeUint(1, 1).endCell().beginParse();
-    val tx = aliceWallet.sendAskToTransfer(alice.address, redeemId, 500000, fund.address, alice.address, null, ton("0.05"), payload, { value: ton("0.6") });
-    expect(tx).toHaveAllSuccessfulTxs();
-
-    // now the custodian confirms the sale -> payout
-    val sig = sigCell(crypto.sign(custodian.privateKey, confCell(redeemId, 1000000, 2000, fund.address)));
-    val res = fund.sendConfirmRedeem(alice.address, 0, redeemId, 1000000, 2000, sigs1(sig), { value: ton("0.2") });
     expect(res).toHaveAllSuccessfulTxs();
-    val r = fund.redeemAt(redeemId);
+    val r = fund.redeemAt(40);
     expect(r.done).toEqual(true);
-    expect(r.funded).toEqual(true);
-    expect(r.payout).toEqual(497500);
+    expect(r.payout).toEqual(497500); // 500000 * 1.0 * (1 - 50/10000)
 }
 
 get fun `test redeem confirm with no request is rejected`() {
