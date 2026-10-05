@@ -95,6 +95,20 @@ get fun `test signed update with a price drop is accepted`() {
     expect(core.ppi()).toEqual(900000);
 }
 
+get fun `test n-signature update with no signers is rejected`() {
+    val (core, _, relayer) = coreWith(1000000, false, 0, 0, false, 0, 0);
+    val sigs = sigsCell2(beginCell().endCell(), beginCell().endCell());
+    val p = pl1(0, 1100000, 1000);
+    val res = core.sendSignedPriceUpdateN(relayer.address, sigs, p, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: relayer.address, to: core.address, exitCode: 113 });
+}
+
+get fun `test CoverDeficit by non-owner is rejected`() {
+    val (core, _, minter) = coreWith(1000000, false, 0, 0, false, 0, 0);
+    val res = core.sendCoverDeficit(minter.address, 0, 1, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: minter.address, to: core.address, exitCode: 101 });
+}
+
 // rich index (PPI > BAND_RICH) + arb rebate larger than the fee -> effective fee clamps to 0.
 get fun `test mint with arb rebate above the fee clamps to zero`() {
     val (core, deployer, _) = coreWith(1040000, false, 0, 0, false, 0, 0);
