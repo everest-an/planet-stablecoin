@@ -71,5 +71,20 @@ fun main() {
 
     fund.sendConfirmMint(deployer.address, 0, orderId, nav, ts, sigs, { value: ton("0.2") });
 
-    println("Fund deploy + two-phase subscribe done.");
+    // 6) Redemption: request + custodian-confirmed payout (NAV 1.0, fee 0.5%).
+    val redeemId = 2;
+    val ts2 = 1000001;
+    fund.sendRequestRedeem(deployer.address, redeemId, 500000, { value: ton("0.05") });
+    val rhashCell = beginCell()
+        .storeUint(0x46554E44, 32)
+        .storeAddress(fund.address)
+        .storeInt(redeemId, 64)
+        .storeInt(nav, 64)
+        .storeInt(ts2, 64)
+        .endCell();
+    val rsig = deployer.sign(rhashCell);
+    val rsigs = beginCell().storeUint(1, 8).storeRef(beginCell().storeSlice(rsig).endCell()).endCell();
+    fund.sendConfirmRedeem(deployer.address, 0, redeemId, nav, ts2, rsigs, { value: ton("0.2") });
+
+    println("Fund deploy + two-phase subscribe + redeem done.");
 }
