@@ -103,3 +103,77 @@ get fun `test arb rebate set but index not rich`() {
     core.sendMint(deployer.address, 0, 1000000, { value: ton("1") });
     expect(core.supply()).toEqual(995000);
 }
+
+// Exercise every getter (many were never called → uncovered branches).
+get fun `test all core getters are readable`() {
+    val (core, deployer, minter) = coreWith(1000000, false, 0, 0, false, 0, 0);
+    core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
+    core.sendSetCam(deployer.address, 0, 0, minter.address, { value: ton("0.05") });
+    val a = crypto.createMnemonic().toKeyPair();
+    core.sendSetSigner(deployer.address, 0, 0, a.publicKey as uint256, { value: ton("0.05") });
+    expect(core.assetAt(0).weight).toEqual(1000000);
+    expect(core.camAt(0)).toEqual(minter.address);
+    expect(core.signerAt(0)).toEqual(a.publicKey);
+    expect(core.owner()).toEqual(deployer.address);
+    expect(core.oracle()).toEqual(deployer.address);
+    expect(core.jettonMinter()).toEqual(minter.address);
+    expect(core.lastOracleUpdate()).toEqual(0);
+    expect(core.maxPerTx()).toEqual(0);
+    expect(core.arbRebateBps()).toEqual(0);
+    expect(core.signerCount()).toEqual(1);
+    expect(core.threshold()).toEqual(0);
+    expect(core.riskFund()).toEqual(0);
+    expect(core.feesBurn()).toEqual(0);
+    expect(core.feesReserve()).toEqual(0);
+    expect(core.feesStaking()).toEqual(0);
+}
+
+get fun `test unknown opcode on core is rejected`() {
+    val (core, deployer, _) = coreWith(1000000, false, 0, 0, false, 0, 0);
+    val res = core.sendAny(deployer.address, beginCell().storeUint(0xDEAD, 32).endCell(), { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: deployer.address, to: core.address, exitCode: 65535 });
+}
+
+get fun `test LockBasePrices by non-owner is rejected`() {
+    val (core, _, minter) = coreWith(1000000, false, 0, 0, false, 0, 0);
+    val res = core.sendLockBasePrices(minter.address, 0, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: minter.address, to: core.address, exitCode: 101 });
+}
+
+get fun `test basket asset with negative weight is rejected`() {
+    val (core, deployer, _) = coreWith(1000000, false, 0, 0, false, 0, 0);
+    val res = core.sendSetBasketAsset(deployer.address, 0, 0, -1, 1000000, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: deployer.address, to: core.address, exitCode: 107 });
+}
+
+get fun `test cam update with an out-of-range index is rejected`() {
+    val (core, deployer, minter) = coreWith(1000000, false, 0, 0, false, 0, 0);
+    core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
+    core.sendSetCam(deployer.address, 0, 0, minter.address, { value: ton("0.05") });
+    val res = core.sendCamUpdate(minter.address, 0, 5, 1000000, 0, 1000000, 0, 1000, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: minter.address, to: core.address, exitCode: 109 });
+}
+
+get fun `test cam update with a stale timestamp is rejected`() {
+    val (core, deployer, minter) = coreWith(1000000, false, 0, 0, false, 0, 0);
+    core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
+    core.sendSetCam(deployer.address, 0, 0, minter.address, { value: ton("0.05") });
+    core.sendCamUpdate(minter.address, 0, 0, 1000000, 0, 1000000, 0, 100, { value: ton("0.05") });
+    val res = core.sendCamUpdate(minter.address, 0, 0, 1000000, 0, 1000000, 0, 100, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: minter.address, to: core.address, exitCode: 104 });
+}
+
+get fun `test oracle update with a stale timestamp is rejected`() {
+    val (core, deployer, _) = coreWith(1000000, false, 0, 0, false, 0, 0);
+    core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
+    core.sendOracleUpdateAssetPrice(deployer.address, 0, 0, 1100000, 1, { value: ton("0.05") });
+    val res = core.sendOracleUpdateAssetPrice(deployer.address, 0, 0, 1100000, 1, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: deployer.address, to: core.address, exitCode: 104 });
+}
+
+get fun `test oracle update with a price jump is rejected`() {
+    val (core, deployer, _) = coreWith(1000000, false, 0, 0, false, 0, 0);
+    core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
+    val res = core.sendOracleUpdateAssetPrice(deployer.address, 0, 0, 3000000, 1, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: deployer.address, to: core.address, exitCode: 116 });
+}

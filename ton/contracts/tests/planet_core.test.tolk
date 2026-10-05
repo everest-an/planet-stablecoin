@@ -171,3 +171,8 @@ get fun `test zero liquidity does not widen the threshold`() {
     // liquidity 0 -> the liquidity-scaling branch is skipped (true)
     expect(shouldRebalanceRisk(500000, 490, 1000, 0, 0, 0)).toEqual(true);
 }
+
+get fun `test shouldRebalance overweight position triggers`() {
+    // 60% actual vs 50% target -> drift -100000 -> |drift| > threshold -> true
+    expect(shouldRebalance(500000, 600, 1000)).toEqual(true);
+}
