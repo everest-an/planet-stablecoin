@@ -33,7 +33,7 @@ fun deploySetup(): (PlanetFund, JettonMinter, Treasury, Treasury, KeyPair) {
     val fund = PlanetFund.fromStorage({
         owner: owner.address,
         jettonMinter: minter.address,
-        walletCode: build("JettonWallet"),
+        fundWallet: owner.address,
         navPerShare: 0,
         lastNavUpdate: 0,
         mgmtFeeBps: 100,
@@ -55,6 +55,7 @@ fun deploySetup(): (PlanetFund, JettonMinter, Treasury, Treasury, KeyPair) {
     minter.sendChangeMinterAdmin(owner.address, 0, fund.address, { value: ton("0.05") });
     fund.sendSetCustodian(owner.address, 0, 0, custodian.publicKey as uint256, { value: ton("0.05") });
     fund.sendSetCustodianThreshold(owner.address, 0, 1, { value: ton("0.05") });
+    fund.sendSetFundWallet(owner.address, 0, minter.getWalletAddress(fund.address), { value: ton("0.05") });
     return (fund, minter, owner, alice, custodian);
 }
 
@@ -218,7 +219,7 @@ fun deployBareFund(): (PlanetFund, Treasury) {
     val owner = testing.treasury("owner");
     val minter = testing.treasury("minter");
     val fund = PlanetFund.fromStorage({
-        owner: owner.address, jettonMinter: minter.address, walletCode: build("JettonWallet"), navPerShare: 0, lastNavUpdate: 0,
+        owner: owner.address, jettonMinter: minter.address, fundWallet: owner.address, navPerShare: 0, lastNavUpdate: 0,
         mgmtFeeBps: 100, mintFeeBps: 50, redeemFeeBps: 50, paused: false, kycRequired: false,
         allowed: [], custodianCount: 0, custodianThreshold: 0, custodians: [], orders: [], redeems: [],
     });

@@ -29,7 +29,7 @@ fun main() {
     val fund = PlanetFund.fromStorage({
         owner: deployer.address,
         jettonMinter: minter.address,
-        walletCode: build("JettonWallet"),
+        fundWallet: deployer.address,
         navPerShare: 0,
         lastNavUpdate: 0,
         mgmtFeeBps: 100,
@@ -49,6 +49,9 @@ fun main() {
 
     // 3) Wire the minter admin to the fund (so the fund may MintNewJettons).
     minter.sendChangeMinterAdmin(deployer.address, 0, fund.address, { value: ton("0.05") });
+
+    // 3b) Point the fund at its own jetton wallet (for share receipt on redemption).
+    fund.sendSetFundWallet(deployer.address, 0, minter.getWalletAddress(fund.address), { value: ton("0.05") });
 
     // 4) Register a 1-of-1 custodian (the deployer key, for this testnet demo).
     fund.sendSetCustodian(deployer.address, 0, 0, deployer.publicKey() as uint256, { value: ton("0.05") });
