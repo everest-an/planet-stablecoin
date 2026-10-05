@@ -47,6 +47,7 @@ const ERR_RESERVE = 118;
 const ERR_BAD_THRESHOLD = 119;
 const ERR_BAD_OWNER = 120;
 const ERR_BAD_RISK = 121;
+const ERR_BAD_AMOUNT = 122;
 
 // Cap the redeem fee so the payout can never go negative (defends against a far
 // below-peg PPI inflating the reserve through a negative fee → AR3).
@@ -410,6 +411,9 @@ fun priceHash(payload: cell): uint256 {
 fun handleMint(sender: address, msgValue: coins, msg: Mint) {
     var storage = lazy Storage.load();
     assert (!storage.paused) throw ERR_PAUSED;
+    // Reject non-positive deposits: a negative amount would reverse the operation
+    // (mint would DECREASE supply/reserve) — TON signed-integer pitfall (NEW-3).
+    assert (msg.amount > 0) throw ERR_BAD_AMOUNT;
     // stability: reject mint when PPI is far off peg (hard band), and enforce per-tx cap
     assert (diffAbs(storage.currentPpi, PPI_SCALE) <= BAND_FREEZE) throw ERR_DEVIATION;
     val lim = Limits.fromCell(storage.limitsState);
@@ -518,6 +522,7 @@ fun handleSetBasketAsset(sender: address, msg: SetBasketAsset) {
     assert (sender == storage.owner) throw ERR_NOT_OWNER;
     assert (!storage.baseLocked) throw ERR_BASE_LOCKED;
     assert (msg.basePrice > 0) throw ERR_BAD_BASE;
+    assert (msg.weight >= 0) throw ERR_BAD_WEIGHTS;
     val asset: CoreAsset = {
         weight: msg.weight,
         basePrice: msg.basePrice,
@@ -695,6 +700,7 @@ fun handleSignedPriceUpdateN(msg: SignedPriceUpdateN) {
 fun handleCoverDeficit(sender: address, msg: CoverDeficit) {
     var storage = lazy Storage.load();
     assert (sender == storage.owner) throw ERR_NOT_OWNER;
+    assert (msg.amount > 0) throw ERR_BAD_AMOUNT;
     val lim = Limits.fromCell(storage.limitsState);
     assert (lim.riskFund >= msg.amount) throw ERR_RISK_FUND;
     storage.limitsState = Limits {

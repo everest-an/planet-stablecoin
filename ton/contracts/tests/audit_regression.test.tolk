@@ -93,3 +93,18 @@ get fun `test bounced mint is ignored`() {
     core.sendMint(alice.address, 0, 1000000, { value: ton("1") });
     expect(core.supply()).toEqual(995000);
 }
+
+// NEW-3: non-positive amounts must be rejected (TON signed-integer pitfall — a
+// negative deposit would reverse the operation and corrupt supply/reserve).
+get fun `test mint rejects a negative amount`() {
+    val (core, deployer, _) = deployCoreAt(0, 0, 1000000, false);
+    core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
+    val res = core.sendMint(deployer.address, 0, -1000000, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: deployer.address, to: core.address, exitCode: 122 });
+}
+
+get fun `test cover deficit rejects a negative amount`() {
+    val (core, deployer, _) = deployCoreAt(0, 0, 1000000, false);
+    val res = core.sendCoverDeficit(deployer.address, 0, -1, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: deployer.address, to: core.address, exitCode: 122 });
+}
