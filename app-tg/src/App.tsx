@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { TonConnectButton, useTonAddress, useTonConnectUI } from "@tonconnect/ui-react";
+import { useTonAddress, useTonConnectUI } from "@tonconnect/ui-react";
 import { Address, Cell, beginCell, toNano } from "@ton/core";
 import { TonClient } from "@ton/ton";
 
@@ -300,11 +300,29 @@ export default function App() {
     <main className="wrap">
       <header className="head">
         <h1>Planet</h1>
-        <TonConnectButton />
+        {!userAddress ? (
+          <button className="btn" onClick={() => tonConnectUI.openModal()}>
+            connect wallet
+          </button>
+        ) : (
+          <div className="wallet">
+            <span className="addr" title={userAddress}>
+              {userAddress.slice(0, 4)}…{userAddress.slice(-4)}
+            </span>
+            <button className="link" onClick={() => tonConnectUI.disconnect()}>
+              disconnect
+            </button>
+          </div>
+        )}
       </header>
 
-      <p className="tag">Commodity purchasing-power index · TON · TON Connect</p>
+      <p className="tag">[ commodity purchasing-power index · TON testnet ]</p>
 
+      <div className="sec-head">
+        <span className="num">[ 01 ]</span>
+        <span className="lbl">ledger</span>
+        <span className="end">¬</span>
+      </div>
       <section className="grid">
         <div className="card">
           <span className="k">PPI</span>
@@ -336,7 +354,11 @@ export default function App() {
 
       {assets.length > 0 && (
         <section className="basket">
-          <label className="k">Index composition (on-chain basket)</label>
+          <div className="sec-head">
+            <span className="num">[ 02 ]</span>
+            <span className="lbl">index composition</span>
+            <span className="end">¬</span>
+          </div>
           {implied !== null && (
             <p className="implied">
               basket-implied PPI <b>{implied.toFixed(4)}</b>
@@ -372,16 +394,17 @@ export default function App() {
                   <td>{a.base}</td>
                   <td>{a.cur}</td>
                   <td className={a.drift >= 0 ? "drift up" : "drift down"}>
+                    {a.drift >= 0 ? "▲ " : "▼ "}
                     {a.drift >= 0 ? "+" : ""}
                     {a.drift.toFixed(1)}%
                   </td>
                   <td>
                     {a.risk !== 0 ? (
-                      <span className="drift down" title={`riskState=${a.risk}`}>
+                      <span className="badge frozen" title={`riskState=${a.risk}`}>
                         frozen
                       </span>
                     ) : (
-                      "ok"
+                      <span className="badge">ok</span>
                     )}
                   </td>
                 </tr>
@@ -392,8 +415,13 @@ export default function App() {
       )}
 
       <section className="mint">
+        <div className="sec-head">
+          <span className="num">[ 03 ]</span>
+          <span className="lbl">mint</span>
+          <span className="end">¬</span>
+        </div>
         <label className="k" htmlFor="amt">
-          Mint PLT (deposit USDC)
+          deposit USDC → mint PLT
         </label>
         <div className="row">
           <input
@@ -412,8 +440,13 @@ export default function App() {
       </section>
 
       <section className="mint">
+        <div className="sec-head">
+          <span className="num">[ 04 ]</span>
+          <span className="lbl">burn</span>
+          <span className="end">¬</span>
+        </div>
         <label className="k" htmlFor="burn">
-          Burn PLT (TEP-74 burn via your jetton wallet)
+          TEP-74 burn via your jetton wallet
         </label>
         <div className="row">
           <input
