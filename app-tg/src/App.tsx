@@ -5,6 +5,8 @@ import { TonClient } from "@ton/ton";
 
 const ENDPOINT =
   import.meta.env.VITE_TON_ENDPOINT ?? "https://testnet.toncenter.com/api/v2/jsonRPC";
+// Optional toncenter API key (sent as X-API-Key) — raises the public testnet rate limit.
+const API_KEY = (import.meta.env.VITE_TONCENTER_API_KEY as string | undefined) || undefined;
 const PLANET_ADDRESS = import.meta.env.VITE_PLANET_ADDRESS ?? "";
 const PLT_MINTER_ADDRESS = import.meta.env.VITE_PLT_MINTER_ADDRESS ?? "";
 // Since A2, PlanetCore owns the commodity basket; the app reads assets from it directly.
@@ -13,21 +15,26 @@ const OP_MINT = 0x10000001; // PlanetCore Mint message opcode
 const OP_ASK_TO_BURN = 0x595f07bc; // TEP-74 AskToBurn (sent to the user's jetton wallet)
 const USD_DECIMALS = 6;
 
-const client = new TonClient({ endpoint: ENDPOINT });
+const client = new TonClient({ endpoint: ENDPOINT, apiKey: API_KEY });
 
-// The public testnet RPC is rate-limited (HTTP 429); retry with backoff so the UI
-// still loads its state instead of erroring out.
+// The public testnet RPC is rate-limited (HTTP 429); retry with exponential backoff +
+// jitter (and transient network errors) so the UI still loads instead of erroring out.
 async function runMethodRetry(addr: Address, method: string, args?: any[], tries = 6) {
   for (let i = 0; i < tries; i++) {
     try {
       return await client.runMethod(addr, method, args);
     } catch (e) {
       const m = String((e as Error)?.message ?? e);
-      if (!/429|Too Many|rate/i.test(m)) throw e;
-      await new Promise((r) => setTimeout(r, 1500 * (i + 1)));
+      if (!/429|Too Many|rate|timeout|timed out|fetch|network/i.test(m)) throw e;
+      const wait = Math.min(8000, 600 * 2 ** i) + Math.random() * 400;
+      await new Promise((r) => setTimeout(r, wait));
     }
   }
-  throw new Error("RPC throttled: " + method);
+  throw new Error(
+    "RPC throttled: " +
+      method +
+      (API_KEY ? "" : " — set VITE_TONCENTER_API_KEY or a keyed VITE_TON_ENDPOINT")
+  );
 }
 
 function fmtFixed(raw: bigint, decimals = 6): string {
@@ -46,6 +53,19 @@ function mintBody(usdcAmount: bigint): Cell {
 
 const EXPLORER = "https://testnet.tonviewer.com";
 
+type Theme = "light" | "dark";
+
+// Precedence: saved choice → Telegram colorScheme → OS preference.
+function preferredTheme(): Theme {
+  const saved = localStorage.getItem("planet-theme");
+  if (saved === "light" || saved === "dark") return saved;
+  const tg = (window as unknown as { Telegram?: { WebApp?: { colorScheme?: string } } }).Telegram
+    ?.WebApp;
+  if (tg?.colorScheme === "dark") return "dark";
+  if (tg?.colorScheme === "light") return "light";
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
 // Turn a TON Connect / RPC error into a human-readable message.
 function classifyTxError(e: unknown): string {
   const m = String((e as Error)?.message ?? e);
@@ -57,6 +77,7 @@ function classifyTxError(e: unknown): string {
 export default function App() {
   const userAddress = useTonAddress();
   const [tonConnectUI] = useTonConnectUI();
+  const [theme, setTheme] = useState<Theme>(preferredTheme);
   const [ppi, setPpi] = useState("—");
   const [reserve, setReserve] = useState("—");
   const [supply, setSupply] = useState("—");
@@ -86,6 +107,11 @@ export default function App() {
   const [updatedAt, setUpdatedAt] = useState("");
   const [maxMint, setMaxMint] = useState(0);
   const [pltRaw, setPltRaw] = useState<bigint | null>(null);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem("planet-theme", theme);
+  }, [theme]);
 
   async function refresh() {
     if (!PLANET_ADDRESS) {
@@ -300,20 +326,29 @@ export default function App() {
     <main className="wrap">
       <header className="head">
         <h1>Planet</h1>
-        {!userAddress ? (
-          <button className="btn" onClick={() => tonConnectUI.openModal()}>
-            connect wallet
+        <div className="head-right">
+          <button
+            className="link"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            title="toggle theme"
+          >
+            [ {theme} ]
           </button>
-        ) : (
-          <div className="wallet">
-            <span className="addr" title={userAddress}>
-              {userAddress.slice(0, 4)}…{userAddress.slice(-4)}
-            </span>
-            <button className="link" onClick={() => tonConnectUI.disconnect()}>
-              disconnect
+          {!userAddress ? (
+            <button className="btn" onClick={() => tonConnectUI.openModal()}>
+              connect wallet
             </button>
-          </div>
-        )}
+          ) : (
+            <div className="wallet">
+              <span className="addr" title={userAddress}>
+                {userAddress.slice(0, 4)}…{userAddress.slice(-4)}
+              </span>
+              <button className="link" onClick={() => tonConnectUI.disconnect()}>
+                disconnect
+              </button>
+            </div>
+          )}
+        </div>
       </header>
 
       <p className="tag">[ commodity purchasing-power index · TON testnet ]</p>

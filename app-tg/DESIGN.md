@@ -75,5 +75,16 @@ Caret blink honours reduced-motion. All numerals tabular for stable columns.
 
 ## 7. Accepted debt
 
-- No dark-mode toggle in-UI yet — honours `prefers-color-scheme` only.
-- Telegram theme params not wired (`ThemeParams`) — system scheme is used instead.
+- ✅ Theme toggle **shipped** (light/dark, persisted) + Telegram `colorScheme` honoured on first load.
+- Telegram `ThemeParams` **colours** are not imported — the system is intentionally monochrome,
+  so only `colorScheme` (light/dark) is mapped, not Telegram's palette.
+- No in-app network switcher (single configured `VITE_TON_ENDPOINT`).
+
+## 8. QA evidence (fresh, real browser)
+
+- `getComputedStyle` on the running page: body `Space Grotesk` / `#0F0F0F` on `#FFF`;
+  `.sec-head`, `.card .v`, and buttons are `DM Mono`; button `border-radius: 0`; hero numeral `48px`.
+- Responsive: at a 360px viewport `scrollWidth === clientWidth` → **no horizontal overflow**;
+  basket table 328px; mobile density rules applied (`≤640px`).
+- Theme toggle: `data-theme` flips light↔dark and persists to `localStorage`.
+- Real on-chain data rendered: PPI `0.995879`, per-asset `NOW` = pushed medians, `▲/▼` drift, `ok/frozen` badges.

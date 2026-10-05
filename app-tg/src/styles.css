@@ -17,8 +17,16 @@
 
   color-scheme: light dark;
 }
+[data-theme="dark"] {
+  --paper: #0f0f0f;
+  --ink: #f5f5f5;
+  --muted: #9a9a9a;
+  --hair: rgba(245, 245, 245, 0.16);
+  --hair-strong: rgba(245, 245, 245, 0.36);
+  --signal: #e8663f;
+}
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --paper: #0f0f0f;
     --ink: #f5f5f5;
     --muted: #9a9a9a;
@@ -295,6 +303,11 @@ code {
 @media (max-width: 640px) {
   .card:first-child .v { font-size: 36px; }
   .wrap { padding: 0 var(--sp-4) var(--sp-7); }
+  th, td { padding: var(--sp-2) var(--sp-1); }
+  table { font-size: 11px; }
+  .wbar { width: 24px; margin-right: var(--sp-1); }
+  .wcell { white-space: normal; }
+  .badge { padding: 1px 4px; }
 }
 
 /* ---- wallet control (custom, replaces TON Connect's default button) ---- */
@@ -316,6 +329,7 @@ code {
 .btn:focus-visible { outline: 1px solid var(--ink); outline-offset: 2px; }
 
 .wallet { display: flex; align-items: center; gap: var(--sp-3); }
+.head-right { display: flex; align-items: center; gap: var(--sp-3); }
 .wallet .addr {
   font-family: var(--mono);
   font-size: 11px;

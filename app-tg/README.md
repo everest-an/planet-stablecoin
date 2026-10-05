@@ -17,6 +17,7 @@ npm run build      # -> dist/
 | Var | Purpose |
 |---|---|
 | `VITE_TON_ENDPOINT` | TON RPC endpoint (default: testnet toncenter) |
+| `VITE_TONCENTER_API_KEY` | Optional toncenter API key (`X-API-Key`) — recommended in prod to avoid 429s |
 | `VITE_PLANET_ADDRESS` | Deployed PlanetCore address (basket/PPI + mint) |
 | `VITE_PLT_MINTER_ADDRESS` | PLT Jetton minter (burn) |
 | `VITE_TONCONNECT_MANIFEST` | **Self-hosted** TON Connect manifest URL |
@@ -30,12 +31,15 @@ VITE_PLT_MINTER_ADDRESS=kQCBs5unYxUi2Ewlgor0vNBqLsWrdPHHiZ4WVouZ5--BEwN1
 
 ## Features
 
-- Reads PPI / reserve / supply + on-chain basket (weights, prices, drift) + basket-implied PPI.
+- **Design system:** monochrome "on-chain ledger / technical terminal" aesthetic (Aptos-inspired,
+  tokens extracted live) — see [`DESIGN.md`](DESIGN.md). Light/dark toggle (remembered) +
+  Telegram `colorScheme`. Custom mono wallet button (no default TON Connect button).
+- Reads PPI / reserve / supply + on-chain basket (weights, prices, drift, **risk/frozen**) + basket-implied PPI.
 - Connected-wallet balances: **Your PLT** (jetton wallet) and **Your TON**.
 - Mint (PlanetCore `Mint` 0x10000001) and Burn (TEP-74 `AskToBurn` 0x595f07bc).
 - Transaction feedback (submitted + explorer link), client-side guards (per-tx cap, PLT
   balance), auto-refresh (60s).
-- RPC 429 retry with backoff; `Buffer` polyfill for `@ton/core` in the browser.
+- RPC resilience: optional API key, exponential backoff + jitter on 429/timeouts; `Buffer` polyfill.
 
 ## Security / release notes
 
