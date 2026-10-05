@@ -16,6 +16,22 @@ fun confCell(orderId: int64, nav: int64, ts: int64, fund: address): cell {
 fun sigs1(sig: cell): cell { return beginCell().storeUint(1, 8).storeRef(sig).endCell(); }
 fun sigCell(sig: slice): cell { return beginCell().storeSlice(sig).endCell(); }
 
+// A TEP-74 TransferNotificationForRecipient body (as the fund's own jetton wallet would send):
+// opcode | queryId | jettonAmount | transferInitiator(null bit) | (empty forward payload)
+fun notifBody(qid: uint64, amt: int): cell {
+    return beginCell()
+        .storeUint(0x7362d09c, 32)
+        .storeUint(qid, 64)
+        .storeCoins(amt)
+        .storeUint(0, 1)
+        .endCell();
+}
+
+// An empty OrdersStore cell: two empty maps = two "0" maybe-bits.
+fun emptyOrdersStore(): cell {
+    return beginCell().storeUint(0, 1).storeUint(0, 1).endCell();
+}
+
 fun deploySetup(): (PlanetFund, JettonMinter, Treasury, Treasury, KeyPair) {
     val owner = testing.treasury("owner");
     val alice = testing.treasury("alice");
@@ -44,8 +60,8 @@ fun deploySetup(): (PlanetFund, JettonMinter, Treasury, Treasury, KeyPair) {
         custodianCount: 0,
         custodianThreshold: 0,
         custodians: [],
-        orders: [],
-        redeems: [],
+        ordersStore: emptyOrdersStore(),
+        fundWallet: beginCell().storeAddress(owner.address).endCell(),
     });
     expect(fund.deploy(owner.address, { value: ton("0.2") }))
         .toHaveSuccessfulDeploy({ to: fund.address });
@@ -219,7 +235,8 @@ fun deployBareFund(): (PlanetFund, Treasury) {
     val fund = PlanetFund.fromStorage({
         owner: owner.address, jettonMinter: minter.address, navPerShare: 0, lastNavUpdate: 0,
         mgmtFeeBps: 100, mintFeeBps: 50, redeemFeeBps: 50, paused: false, kycRequired: false,
-        allowed: [], custodianCount: 0, custodianThreshold: 0, custodians: [], orders: [], redeems: [],
+        allowed: [], custodianCount: 0, custodianThreshold: 0, custodians: [],
+        ordersStore: emptyOrdersStore(), fundWallet: beginCell().storeAddress(owner.address).endCell(),
     });
     expect(fund.deploy(owner.address, { value: ton("0.2") }))
         .toHaveSuccessfulDeploy({ to: fund.address });
@@ -319,14 +336,61 @@ get fun `test SetOwner rejects the zero address`() {
 // ---------------- Redemption ----------------
 
 get fun `test redeem request + custodian confirm records the payout`() {
-    val (fund, _, _, alice, custodian) = deploySetup();
+    val (fund, _, owner, alice, custodian) = deploySetup();
+    val fw = testing.treasury("fw");
+    fund.sendSetFundWallet(owner.address, 0, fw.address, { value: ton("0.05") });
     fund.sendRequestRedeem(alice.address, 40, 500000, { value: ton("0.05") });
+    fund.sendAny(fw.address, notifBody(40, 500000), { value: ton("0.05") });
     val sig = sigCell(crypto.sign(custodian.privateKey, confCell(40, 1000000, 1000, fund.address)));
     val res = fund.sendConfirmRedeem(alice.address, 0, 40, 1000000, 1000, sigs1(sig), { value: ton("0.2") });
     expect(res).toHaveAllSuccessfulTxs();
     val r = fund.redeemAt(40);
     expect(r.done).toEqual(true);
     expect(r.payout).toEqual(497500); // 500000 * 1.0 * (1 - 50/10000)
+}
+
+// ---------------- TEP-74 share receipt (trustless redemption) ----------------
+
+get fun `test redeem confirm before shares are funded is rejected`() {
+    val (fund, _, _, alice, custodian) = deploySetup();
+    fund.sendRequestRedeem(alice.address, 60, 500000, { value: ton("0.05") });
+    val sig = sigCell(crypto.sign(custodian.privateKey, confCell(60, 1000000, 1000, fund.address)));
+    val res = fund.sendConfirmRedeem(alice.address, 0, 60, 1000000, 1000, sigs1(sig), { value: ton("0.2") });
+    expect(res).toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 214 });
+}
+
+get fun `test share notification from a non-wallet sender is rejected`() {
+    val (fund, _, owner, alice, _) = deploySetup();
+    val fw = testing.treasury("fw");
+    fund.sendSetFundWallet(owner.address, 0, fw.address, { value: ton("0.05") });
+    expect(fund.fundWallet()).toEqual(fw.address);
+    fund.sendRequestRedeem(alice.address, 61, 500000, { value: ton("0.05") });
+    val res = fund.sendAny(alice.address, notifBody(61, 500000), { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 213 });
+}
+
+get fun `test share receipt from the fund wallet funds the redeem and allows payout`() {
+    val (fund, _, owner, alice, custodian) = deploySetup();
+    val fw = testing.treasury("fw");
+    fund.sendSetFundWallet(owner.address, 0, fw.address, { value: ton("0.05") });
+    fund.sendRequestRedeem(alice.address, 62, 500000, { value: ton("0.05") });
+    expect(fund.redeemAt(62).funded).toEqual(false);
+    fund.sendAny(fw.address, notifBody(62, 500000), { value: ton("0.05") });
+    expect(fund.redeemAt(62).funded).toEqual(true);
+    val sig = sigCell(crypto.sign(custodian.privateKey, confCell(62, 1000000, 1000, fund.address)));
+    val res = fund.sendConfirmRedeem(alice.address, 0, 62, 1000000, 1000, sigs1(sig), { value: ton("0.2") });
+    expect(res).toHaveAllSuccessfulTxs();
+    val r = fund.redeemAt(62);
+    expect(r.done).toEqual(true);
+    expect(r.payout).toEqual(497500);
+}
+
+get fun `test share notification for an unknown redeem is rejected`() {
+    val (fund, _, owner, _, _) = deploySetup();
+    val fw = testing.treasury("fw");
+    fund.sendSetFundWallet(owner.address, 0, fw.address, { value: ton("0.05") });
+    val res = fund.sendAny(fw.address, notifBody(999, 500000), { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: fw.address, to: fund.address, exitCode: 203 });
 }
 
 get fun `test redeem confirm with no request is rejected`() {

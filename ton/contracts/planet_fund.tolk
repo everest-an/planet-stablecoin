@@ -35,6 +35,8 @@ const ERR_STALE = 209;
 const ERR_KYC = 210;
 const ERR_BAD_AMOUNT = 211;
 const ERR_BAD_THRESHOLD = 212;
+const ERR_NOT_FUND_WALLET = 213; // share notification not from the fund's own jetton wallet
+const ERR_NOT_FUNDED = 214;      // redeem must be funded with shares before payout
 
 // ---------------- Storage ----------------
 
@@ -53,11 +55,20 @@ struct Redeem {
     payout: int64
     ts: int64
     done: bool
+    funded: bool   // set once the shares have been received into the fund's wallet (TEP-74)
+}
+
+// Both order maps live inside ONE cell so FundStorage stays within TON's 4-ref limit
+// (freeing a ref for `fundWallet`).
+struct OrdersStore {
+    mints: map<int64, Order>
+    redeems: map<int64, Redeem>
 }
 
 struct FundStorage {
     owner: address
     jettonMinter: address
+    fundWallet: cell       // address of the fund's OWN PLT jetton wallet (parsed on share receipt)
     navPerShare: int64
     lastNavUpdate: int64
     mgmtFeeBps: int64      // annual management fee (accrued inside the attested NAV)
@@ -69,8 +80,7 @@ struct FundStorage {
     custodianCount: int64
     custodianThreshold: int64
     custodians: map<int64, uint256>
-    orders: map<int64, Order>
-    redeems: map<int64, Redeem>
+    ordersStore: cell      // OrdersStore{mints, redeems}
 }
 
 fun FundStorage.load() {
@@ -79,6 +89,20 @@ fun FundStorage.load() {
 
 fun FundStorage.save(self) {
     contract.setData(self.toCell())
+}
+
+// The fund's own PLT jetton wallet address lives in its own cell so FundStorage stays
+// within TON's 4-ref limit; wrapped in a struct so it round-trips via fromCell/toCell.
+struct FundWalletRef {
+    addr: address
+}
+
+fun loadFundWallet(self: FundStorage): address {
+    return FundWalletRef.fromCell(self.fundWallet).addr;
+}
+
+fun storeFundWallet(self: FundStorage, wallet: address) {
+    self.fundWallet = FundWalletRef { addr: wallet }.toCell();
 }
 
 // ---------------- Messages ----------------
@@ -173,9 +197,14 @@ struct (0x3000000E) CancelRedeem {
     orderId: int64
 }
 
+struct (0x30000010) SetFundWallet {
+    queryId: int64
+    wallet: address
+}
+
 type FundMessage = Subscribe | ConfirmMint | CancelOrder | AttestNav | SetFees | SetCustodian |
     SetCustodianThreshold | SetPaused | SetKyc | Allow | SetJettonMinter | SetOwner |
-    RequestRedeem | ConfirmRedeem | CancelRedeem
+    RequestRedeem | ConfirmRedeem | CancelRedeem | SetFundWallet | TransferNotificationForRecipient
 
 contract PlanetFund {
     storage: FundStorage
@@ -244,6 +273,8 @@ fun onInternalMessage(in: InMessage) {
         RequestRedeem => { handleRequestRedeem(in.senderAddress, msg); }
         ConfirmRedeem => { handleConfirmRedeem(in.valueCoins, msg); }
         CancelRedeem => { handleCancelRedeem(in.senderAddress, msg); }
+        SetFundWallet => { handleSetFundWallet(in.senderAddress, msg); }
+        TransferNotificationForRecipient => { handleShareReceived(in.senderAddress, msg); }
         else => { assert (in.body.isEmpty()) throw 0xFFFF; }
     }
 }
@@ -261,7 +292,10 @@ fun handleSubscribe(sender: address, msg: Subscribe) {
         val lk = storage.allowed.get(sender);
         assert (lk.isFound && lk.loadValue()) throw ERR_KYC;
     }
-    storage.orders.set(msg.queryId, Order { user: sender, usd: msg.usd, ts: blockchain.now() as int64, done: false });
+    var osSub = OrdersStore.fromCell(storage.ordersStore);
+    var orders = osSub.mints;
+    orders.set(msg.queryId, Order { user: sender, usd: msg.usd, ts: blockchain.now() as int64, done: false });
+    storage.ordersStore = OrdersStore { mints: orders, redeems: osSub.redeems }.toCell();
     storage.save();
 }
 
@@ -274,7 +308,7 @@ fun handleConfirmMint(msgValue: coins, msg: ConfirmMint) {
     assert (msg.timestamp > storage.lastNavUpdate) throw ERR_STALE;
     assert (msg.navPerShare >= MIN_NAV) throw ERR_BAD_NAV;
 
-    val lk = storage.orders.get(msg.orderId);
+    val lk = OrdersStore.fromCell(storage.ordersStore).mints.get(msg.orderId);
     assert (lk.isFound) throw ERR_NO_ORDER;
     val order = lk.loadValue();
     assert (!order.done) throw ERR_ORDER_DONE;
@@ -285,7 +319,10 @@ fun handleConfirmMint(msgValue: coins, msg: ConfirmMint) {
     }
 
     val shares = (order.usd as int) * NAV_SCALE / (msg.navPerShare as int) * (BPS_DENOM - storage.mintFeeBps as int) / BPS_DENOM;
-    storage.orders.set(msg.orderId, Order { user: order.user, usd: order.usd, ts: order.ts, done: true });
+    var osMint = OrdersStore.fromCell(storage.ordersStore);
+    var mints = osMint.mints;
+    mints.set(msg.orderId, Order { user: order.user, usd: order.usd, ts: order.ts, done: true });
+    storage.ordersStore = OrdersStore { mints: mints, redeems: osMint.redeems }.toCell();
     storage.navPerShare = msg.navPerShare;
     storage.lastNavUpdate = msg.timestamp;
     storage.save();
@@ -331,12 +368,15 @@ fun handleAttestNav(msg: AttestNav) {
 // The subscriber (or owner) can cancel an unconfirmed order.
 fun handleCancelOrder(sender: address, msg: CancelOrder) {
     var storage = lazy FundStorage.load();
-    val lk = storage.orders.get(msg.orderId);
+    val lk = OrdersStore.fromCell(storage.ordersStore).mints.get(msg.orderId);
     assert (lk.isFound) throw ERR_NO_ORDER;
     val order = lk.loadValue();
     assert (!order.done) throw ERR_ORDER_DONE;
     assert (sender == order.user || sender == storage.owner) throw ERR_NOT_OWNER;
-    storage.orders.set(msg.orderId, Order { user: order.user, usd: order.usd, ts: order.ts, done: true });
+    var osCancel = OrdersStore.fromCell(storage.ordersStore);
+    var mints2 = osCancel.mints;
+    mints2.set(msg.orderId, Order { user: order.user, usd: order.usd, ts: order.ts, done: true });
+    storage.ordersStore = OrdersStore { mints: mints2, redeems: osCancel.redeems }.toCell();
     storage.save();
 }
 
@@ -417,7 +457,10 @@ fun handleRequestRedeem(sender: address, msg: RequestRedeem) {
         val lk = storage.allowed.get(sender);
         assert (lk.isFound && lk.loadValue()) throw ERR_KYC;
     }
-    storage.redeems.set(msg.queryId, Redeem { user: sender, shares: msg.shares, payout: 0, ts: blockchain.now() as int64, done: false });
+    var osReq = OrdersStore.fromCell(storage.ordersStore);
+    var redeemsReq = osReq.redeems;
+    redeemsReq.set(msg.queryId, Redeem { user: sender, shares: msg.shares, payout: 0, ts: blockchain.now() as int64, done: false, funded: false });
+    storage.ordersStore = OrdersStore { mints: osReq.mints, redeems: redeemsReq }.toCell();
     storage.save();
 }
 
@@ -429,17 +472,21 @@ fun handleConfirmRedeem(msgValue: coins, msg: ConfirmRedeem) {
     assert (msg.timestamp > storage.lastNavUpdate) throw ERR_STALE;
     assert (msg.navPerShare >= MIN_NAV) throw ERR_BAD_NAV;
 
-    val lk = storage.redeems.get(msg.orderId);
+    val lk = OrdersStore.fromCell(storage.ordersStore).redeems.get(msg.orderId);
     assert (lk.isFound) throw ERR_NO_ORDER;
     val r = lk.loadValue();
     assert (!r.done) throw ERR_ORDER_DONE;
+    assert (r.funded) throw ERR_NOT_FUNDED;
 
     if (storage.navPerShare > 0 && navJumpOk(storage.navPerShare, msg.navPerShare) == false) {
         throw ERR_NAV_JUMP;
     }
 
     val payout = ((r.shares as int) * (msg.navPerShare as int) / NAV_SCALE) * (BPS_DENOM - storage.redeemFeeBps as int) / BPS_DENOM;
-    storage.redeems.set(msg.orderId, Redeem { user: r.user, shares: r.shares, payout: payout as int64, ts: r.ts, done: true });
+    var osConf = OrdersStore.fromCell(storage.ordersStore);
+    var redeemsConf = osConf.redeems;
+    redeemsConf.set(msg.orderId, Redeem { user: r.user, shares: r.shares, payout: payout as int64, ts: r.ts, done: true, funded: true });
+    storage.ordersStore = OrdersStore { mints: osConf.mints, redeems: redeemsConf }.toCell();
     storage.navPerShare = msg.navPerShare;
     storage.lastNavUpdate = msg.timestamp;
     storage.save();
@@ -456,12 +503,60 @@ fun handleConfirmRedeem(msgValue: coins, msg: ConfirmRedeem) {
 
 fun handleCancelRedeem(sender: address, msg: CancelRedeem) {
     var storage = lazy FundStorage.load();
-    val lk = storage.redeems.get(msg.orderId);
+    val lk = OrdersStore.fromCell(storage.ordersStore).redeems.get(msg.orderId);
     assert (lk.isFound) throw ERR_NO_ORDER;
     val r = lk.loadValue();
     assert (!r.done) throw ERR_ORDER_DONE;
     assert (sender == r.user || sender == storage.owner) throw ERR_NOT_OWNER;
-    storage.redeems.set(msg.orderId, Redeem { user: r.user, shares: r.shares, payout: r.payout, ts: r.ts, done: true });
+    var osCR = OrdersStore.fromCell(storage.ordersStore);
+    var redeemsCR = osCR.redeems;
+    redeemsCR.set(msg.orderId, Redeem { user: r.user, shares: r.shares, payout: r.payout, ts: r.ts, done: true, funded: r.funded });
+    storage.ordersStore = OrdersStore { mints: osCR.mints, redeems: redeemsCR }.toCell();
+    storage.save();
+}
+
+// ---------------- TEP-74 share receipt (trustless redemption) ----------------
+
+// The fund's own PLT jetton wallet reports received shares. The subscriber transfers PLT into
+// the fund with queryId == their redeem orderId; we mark that redeem funded and burn the shares,
+// so a payout can only happen after the shares have actually left the subscriber.
+fun handleShareReceived(sender: address, msg: TransferNotificationForRecipient) {
+    var storage = lazy FundStorage.load();
+    val fw = loadFundWallet(storage);
+    assert (sender == fw) throw ERR_NOT_FUND_WALLET;
+
+    val orderId = msg.queryId as int64;
+    val osIn = OrdersStore.fromCell(storage.ordersStore);
+    val lk = osIn.redeems.get(orderId);
+    assert (lk.isFound) throw ERR_NO_ORDER;
+    val r = lk.loadValue();
+    assert (!r.done) throw ERR_ORDER_DONE;
+    assert ((msg.jettonAmount as int) >= (r.shares as int)) throw ERR_BAD_AMOUNT;
+
+    var redeemsIn = osIn.redeems;
+    redeemsIn.set(orderId, Redeem { user: r.user, shares: r.shares, payout: r.payout, ts: r.ts, done: false, funded: true });
+    storage.ordersStore = OrdersStore { mints: osIn.mints, redeems: redeemsIn }.toCell();
+    storage.save();
+
+    // Burn the received shares (carry the attached value along to the wallet).
+    val burn = createMessage({
+        bounce: BounceMode.NoBounce,
+        value: 0,
+        dest: fw,
+        body: AskToBurn {
+            queryId: msg.queryId,
+            jettonAmount: msg.jettonAmount,
+            sendExcessesTo: null,
+            customPayload: null,
+        },
+    });
+    burn.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
+}
+
+fun handleSetFundWallet(sender: address, msg: SetFundWallet) {
+    var storage = lazy FundStorage.load();
+    assert (sender == storage.owner) throw ERR_NOT_OWNER;
+    storeFundWallet(storage, msg.wallet);
     storage.save();
 }
 
@@ -545,10 +640,15 @@ get fun jettonMinter(): address {
 
 get fun orderAt(id: int64): Order {
     val storage = lazy FundStorage.load();
-    return storage.orders.mustGet(id);
+    return OrdersStore.fromCell(storage.ordersStore).mints.mustGet(id);
 }
 
 get fun redeemAt(id: int64): Redeem {
     val storage = lazy FundStorage.load();
-    return storage.redeems.mustGet(id);
+    return OrdersStore.fromCell(storage.ordersStore).redeems.mustGet(id);
+}
+
+get fun fundWallet(): address {
+    val storage = lazy FundStorage.load();
+    return loadFundWallet(storage);
 }

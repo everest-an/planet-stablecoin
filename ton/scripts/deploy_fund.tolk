@@ -40,14 +40,18 @@ fun main() {
         custodianCount: 0,
         custodianThreshold: 0,
         custodians: [],
-        orders: [],
-        redeems: [],
+        // empty OrdersStore (two empty maps = two "0" maybe-bits); placeholder fund wallet.
+        ordersStore: beginCell().storeUint(0, 1).storeUint(0, 1).endCell(),
+        fundWallet: beginCell().storeAddress(deployer.address).endCell(),
     });
     fund.deploy(deployer.address, { value: ton("0.15") });
     println("PlanetFund        -> {}", fund.address);
 
     // 3) Wire the minter admin to the fund (so the fund may MintNewJettons).
     minter.sendChangeMinterAdmin(deployer.address, 0, fund.address, { value: ton("0.05") });
+
+    // 3b) Point the fund at its OWN jetton wallet (verified on share receipt at redemption).
+    fund.sendSetFundWallet(deployer.address, 0, minter.getWalletAddress(fund.address), { value: ton("0.05") });
 
     // 4) Register a 1-of-1 custodian (the deployer key, for this testnet demo).
     fund.sendSetCustodian(deployer.address, 0, 0, deployer.publicKey() as uint256, { value: ton("0.05") });
@@ -71,20 +75,13 @@ fun main() {
 
     fund.sendConfirmMint(deployer.address, 0, orderId, nav, ts, sigs, { value: ton("0.2") });
 
-    // 6) Redemption: request + custodian-confirmed payout (NAV 1.0, fee 0.5%).
+    // 6) Redemption is two-phase and now requires the shares to actually arrive: the subscriber
+    //    registers a request, transfers PLT shares to the FUND's jetton wallet (the transfer
+    //    notification marks the redeem funded and burns the shares), and only then can the
+    //    custodian confirm the payout. We register the request here; funding + confirm are
+    //    exercised end-to-end in the test suite.
     val redeemId = 2;
-    val ts2 = 1000001;
     fund.sendRequestRedeem(deployer.address, redeemId, 500000, { value: ton("0.05") });
-    val rhashCell = beginCell()
-        .storeUint(0x46554E44, 32)
-        .storeAddress(fund.address)
-        .storeInt(redeemId, 64)
-        .storeInt(nav, 64)
-        .storeInt(ts2, 64)
-        .endCell();
-    val rsig = deployer.sign(rhashCell);
-    val rsigs = beginCell().storeUint(1, 8).storeRef(beginCell().storeSlice(rsig).endCell()).endCell();
-    fund.sendConfirmRedeem(deployer.address, 0, redeemId, nav, ts2, rsigs, { value: ton("0.2") });
-
-    println("Fund deploy + two-phase subscribe + redeem done.");
+    println("Redeem request registered (transfer shares to the fund wallet, then ConfirmRedeem).");
+    println("Fund deploy + two-phase subscribe done.");
 }
