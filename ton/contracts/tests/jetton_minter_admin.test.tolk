@@ -52,3 +52,21 @@ get fun `test wallet address discovery request`() {
     val res = minter.sendRequestWalletAddress(outsider.address, 0, deployer.address, true, { value: ton("0.1") });
     expect(res).toHaveAllSuccessfulTxs();
 }
+
+get fun `test non-admin cannot mint`() {
+    val (minter, _, outsider) = deployMinter();
+    val res = minter.sendMintNewJettons(outsider.address, 0, outsider.address, ton("0.05"), beginCell().endCell(), { value: ton("0.1") });
+    expect(res).toHaveFailedTx({ from: outsider.address, to: minter.address, exitCode: 73 });
+}
+
+get fun `test unauthorized burn notification is rejected`() {
+    val (minter, _, outsider) = deployMinter();
+    val res = minter.sendBurnNotificationForMinter(outsider.address, 0, 1000, outsider.address, null, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: outsider.address, to: minter.address, exitCode: 74 });
+}
+
+get fun `test unknown minter opcode is rejected`() {
+    val (minter, _, outsider) = deployMinter();
+    val res = minter.sendAny(outsider.address, beginCell().storeUint(0xDEAD, 32).endCell(), { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: outsider.address, to: minter.address, exitCode: 65535 });
+}
