@@ -101,10 +101,6 @@ fun loadFundWallet(st: FundStorage): address {
     return FundWalletRef.fromCell(st.fundWallet).addr;
 }
 
-fun storeFundWallet(st: FundStorage, wallet: address) {
-    st.fundWallet = FundWalletRef { addr: wallet }.toCell();
-}
-
 // ---------------- Messages ----------------
 
 struct (0x30000001) Subscribe {
@@ -556,7 +552,7 @@ fun handleShareReceived(sender: address, msg: TransferNotificationForRecipient) 
 fun handleSetFundWallet(sender: address, msg: SetFundWallet) {
     var storage = lazy FundStorage.load();
     assert (sender == storage.owner) throw ERR_NOT_OWNER;
-    storeFundWallet(storage, msg.wallet);
+    storage.fundWallet = FundWalletRef { addr: msg.wallet }.toCell();
     storage.save();
 }
 
