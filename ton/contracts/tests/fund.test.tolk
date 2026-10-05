@@ -211,3 +211,106 @@ get fun `test unknown fund opcode is rejected`() {
     val res = fund.sendAny(owner.address, beginCell().storeUint(0xDEAD, 32).endCell(), { value: ton("0.05") });
     expect(res).toHaveFailedTx({ from: owner.address, to: fund.address, exitCode: 65535 });
 }
+
+fun deployBareFund(): (PlanetFund, Treasury) {
+    val owner = testing.treasury("owner");
+    val minter = testing.treasury("minter");
+    val fund = PlanetFund.fromStorage({
+        owner: owner.address, jettonMinter: minter.address, navPerShare: 0, lastNavUpdate: 0,
+        mgmtFeeBps: 100, mintFeeBps: 50, redeemFeeBps: 50, paused: false, kycRequired: false,
+        allowed: [], custodianCount: 0, custodianThreshold: 0, custodians: [], orders: [],
+    });
+    expect(fund.deploy(owner.address, { value: ton("0.2") }))
+        .toHaveSuccessfulDeploy({ to: fund.address });
+    return (fund, owner);
+}
+
+get fun `test confirm mint with no custodian is rejected`() {
+    val (fund, owner) = deployBareFund();
+    fund.sendSubscribe(owner.address, 1, 1000000, { value: ton("0.05") });
+    val res = fund.sendConfirmMint(owner.address, 0, 1, 1000000, 1000, sigs1(beginCell().endCell()), { value: ton("0.1") });
+    expect(res).toHaveFailedTx({ from: owner.address, to: fund.address, exitCode: 206 });
+}
+
+get fun `test attest nav with no custodian is rejected`() {
+    val (fund, owner) = deployBareFund();
+    val res = fund.sendAttestNav(owner.address, 0, 1000000, 1000, sigs1(beginCell().endCell()), { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: owner.address, to: fund.address, exitCode: 206 });
+}
+
+get fun `test confirm mint while paused is rejected`() {
+    val (fund, _, owner, alice, custodian) = deploySetup();
+    fund.sendSubscribe(alice.address, 20, 1000000, { value: ton("0.05") });
+    fund.sendSetPaused(owner.address, 0, true, { value: ton("0.05") });
+    val sig = sigCell(crypto.sign(custodian.privateKey, confCell(20, 1000000, 1000, fund.address)));
+    val res = fund.sendConfirmMint(alice.address, 0, 20, 1000000, 1000, sigs1(sig), { value: ton("0.1") });
+    expect(res).toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 202 });
+}
+
+get fun `test confirm mint with bad nav is rejected`() {
+    val (fund, _, _, alice, custodian) = deploySetup();
+    fund.sendSubscribe(alice.address, 21, 1000000, { value: ton("0.05") });
+    val sig = sigCell(crypto.sign(custodian.privateKey, confCell(21, 100, 1000, fund.address)));
+    val res = fund.sendConfirmMint(alice.address, 0, 21, 100, 1000, sigs1(sig), { value: ton("0.1") });
+    expect(res).toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 207 });
+}
+
+get fun `test confirm mint applies the nav jump guard`() {
+    val (fund, _, _, alice, custodian) = deploySetup();
+    fund.sendSubscribe(alice.address, 22, 1000000, { value: ton("0.05") });
+    val s1 = sigCell(crypto.sign(custodian.privateKey, confCell(22, 1000000, 1000, fund.address)));
+    fund.sendConfirmMint(alice.address, 0, 22, 1000000, 1000, sigs1(s1), { value: ton("0.3") });
+    fund.sendSubscribe(alice.address, 23, 1000000, { value: ton("0.05") });
+    val s2 = sigCell(crypto.sign(custodian.privateKey, confCell(23, 2000000, 2000, fund.address)));
+    val res = fund.sendConfirmMint(alice.address, 0, 23, 2000000, 2000, sigs1(s2), { value: ton("0.1") });
+    expect(res).toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 208 });
+}
+
+get fun `test attest nav stale timestamp is rejected`() {
+    val (fund, _, _, alice, custodian) = deploySetup();
+    val s1 = sigCell(crypto.sign(custodian.privateKey, confCell(0, 1000000, 2000, fund.address)));
+    fund.sendAttestNav(alice.address, 0, 1000000, 2000, sigs1(s1), { value: ton("0.05") });
+    val s2 = sigCell(crypto.sign(custodian.privateKey, confCell(0, 1000000, 1000, fund.address)));
+    val res = fund.sendAttestNav(alice.address, 0, 1000000, 1000, sigs1(s2), { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 209 });
+}
+
+get fun `test cancel of a missing or done order is rejected`() {
+    val (fund, _, _, alice, _) = deploySetup();
+    // missing order
+    expect(fund.sendCancelOrder(alice.address, 0, 99, { value: ton("0.05") }))
+        .toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 203 });
+    // done order
+    fund.sendSubscribe(alice.address, 30, 1000000, { value: ton("0.05") });
+    fund.sendCancelOrder(alice.address, 0, 30, { value: ton("0.05") });
+    expect(fund.sendCancelOrder(alice.address, 0, 30, { value: ton("0.05") }))
+        .toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 204 });
+}
+
+get fun `test invalid fee bps is rejected`() {
+    val (fund, _, owner, _, _) = deploySetup();
+    val res = fund.sendSetFees(owner.address, 0, 100, 20000, 100, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: owner.address, to: fund.address, exitCode: 211 });
+}
+
+get fun `test custodian threshold bounds are enforced`() {
+    val (fund, _, owner, _, _) = deploySetup();
+    expect(fund.sendSetCustodianThreshold(owner.address, 0, 0, { value: ton("0.05") }))
+        .toHaveFailedTx({ from: owner.address, to: fund.address, exitCode: 212 });
+    expect(fund.sendSetCustodianThreshold(owner.address, 0, 5, { value: ton("0.05") }))
+        .toHaveFailedTx({ from: owner.address, to: fund.address, exitCode: 212 });
+}
+
+get fun `test custodian slot can be overwritten`() {
+    val (fund, _, owner, _, _) = deploySetup();
+    val b = crypto.createMnemonic().toKeyPair();
+    fund.sendSetCustodian(owner.address, 0, 0, b.publicKey as uint256, { value: ton("0.05") });
+    expect(fund.custodianCount()).toEqual(1);
+    expect(fund.custodianAt(0)).toEqual(b.publicKey);
+}
+
+get fun `test SetOwner rejects the zero address`() {
+    val (fund, _, owner, _, _) = deploySetup();
+    val res = fund.sendSetOwner(owner.address, 0, address("EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c"), { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: owner.address, to: fund.address, exitCode: 201 });
+}
