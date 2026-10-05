@@ -151,3 +151,15 @@ get fun `test negative delay is rejected`() {
     val res = tl.sendTlSetDelay(owner.address, 0, -1, { value: ton("0.05") });
     expect(res).toHaveFailedTx({ from: owner.address, to: tl.address, exitCode: 213 });
 }
+
+// Exercise every getter (delay/tlOwner/pendingEta/pendingDest were never read).
+get fun `test timelock getters`() {
+    val (tl, owner, other) = deployTimelock(3600);
+    expect(tl.delay()).toEqual(3600);
+    expect(tl.tlOwner()).toEqual(owner.address);
+    expect(tl.hasPending()).toEqual(false);
+    tl.sendTlPropose(owner.address, 0, other.address, beginCell().endCell(), { value: ton("0.05") });
+    expect(tl.hasPending()).toEqual(true);
+    expect(tl.pendingEta() > 0).toEqual(true);
+    expect(tl.pendingDest()).toEqual(other.address);
+}
