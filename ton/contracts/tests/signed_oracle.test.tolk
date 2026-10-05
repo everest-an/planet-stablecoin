@@ -49,6 +49,11 @@ fun sigsCell3(a: cell, b: cell, c: cell): cell {
     return beginCell().storeUint(3, 8).storeRef(a).storeRef(b).storeRef(c).endCell();
 }
 
+// Domain-separated signed cell: matches PlanetCore.priceHash (tag + core address + payload).
+fun domCell(payload: cell, core: address): cell {
+    return beginCell().storeUint(0x504C4E54, 32).storeAddress(core).storeRef(payload).endCell();
+}
+
 fun samplePayload(): cell {
     return PricePayload {
         queryId: 0,
@@ -87,7 +92,7 @@ get fun `test single-signer update is applied`() {
     core.sendSetThreshold(deployer.address, 0, 1, { value: ton("0.05") });
     core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
     val payload = samplePayload();
-    val s1 = crypto.sign(a.privateKey, payload);
+    val s1 = crypto.sign(a.privateKey, domCell(payload, core.address));
     core.sendSignedPriceUpdate(relayer.address, sigCell(s1), beginCell().endCell(), payload, { value: ton("0.05") });
     expect(core.ppi()).toEqual(1100000);
 }
@@ -97,7 +102,7 @@ get fun `test update rejected without signers`() {
     val a = crypto.createMnemonic().toKeyPair();
     core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
     val payload = samplePayload();
-    val s1 = crypto.sign(a.privateKey, payload);
+    val s1 = crypto.sign(a.privateKey, domCell(payload, core.address));
     val res = core.sendSignedPriceUpdate(relayer.address, sigCell(s1), beginCell().endCell(), payload, { value: ton("0.05") });
     expect(res).toHaveFailedTx({ from: relayer.address, to: core.address, exitCode: 113 });
 }
@@ -110,7 +115,7 @@ get fun `test bad signature is rejected`() {
     core.sendSetThreshold(deployer.address, 0, 1, { value: ton("0.05") });
     core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
     val payload = samplePayload();
-    val bad = crypto.sign(other.privateKey, payload);
+    val bad = crypto.sign(other.privateKey, domCell(payload, core.address));
     val res = core.sendSignedPriceUpdate(relayer.address, sigCell(bad), beginCell().endCell(), payload, { value: ton("0.05") });
     expect(res).toHaveFailedTx({ from: relayer.address, to: core.address, exitCode: 114 });
 }
@@ -127,8 +132,8 @@ get fun `test 2-of-3 requires two distinct signers`() {
     core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
     val payload = samplePayload();
     // two distinct valid signers (a and c) -> OK
-    val sa = crypto.sign(a.privateKey, payload);
-    val sc = crypto.sign(c.privateKey, payload);
+    val sa = crypto.sign(a.privateKey, domCell(payload, core.address));
+    val sc = crypto.sign(c.privateKey, domCell(payload, core.address));
     core.sendSignedPriceUpdate(relayer.address, sigCell(sa), sigCell(sc), payload, { value: ton("0.05") });
     expect(core.ppi()).toEqual(1100000);
 }
@@ -143,8 +148,8 @@ get fun `test 2-of-3 rejects when both signatures are from the same signer`() {
     core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
     val payload = samplePayload();
     // both signatures from `a` -> only one distinct signer -> rejected
-    val sa1 = crypto.sign(a.privateKey, payload);
-    val sa2 = crypto.sign(a.privateKey, payload);
+    val sa1 = crypto.sign(a.privateKey, domCell(payload, core.address));
+    val sa2 = crypto.sign(a.privateKey, domCell(payload, core.address));
     val res = core.sendSignedPriceUpdate(relayer.address, sigCell(sa1), sigCell(sa2), payload, { value: ton("0.05") });
     expect(res).toHaveFailedTx({ from: relayer.address, to: core.address, exitCode: 117 });
 }
@@ -160,7 +165,7 @@ get fun `test N-signature update: 3-of-3 distinct signers applied`() {
     core.sendSetThreshold(deployer.address, 0, 3, { value: ton("0.05") });
     core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
     val payload = samplePayload();
-    val sigs = sigsCell3(sigCell(crypto.sign(a.privateKey, payload)), sigCell(crypto.sign(b.privateKey, payload)), sigCell(crypto.sign(c.privateKey, payload)));
+    val sigs = sigsCell3(sigCell(crypto.sign(a.privateKey, domCell(payload, core.address))), sigCell(crypto.sign(b.privateKey, domCell(payload, core.address))), sigCell(crypto.sign(c.privateKey, domCell(payload, core.address))));
     core.sendSignedPriceUpdateN(relayer.address, sigs, payload, { value: ton("0.05") });
     expect(core.ppi()).toEqual(1100000);
 }
@@ -177,7 +182,7 @@ get fun `test N-signature update: too few signatures rejected`() {
     core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
     val payload = samplePayload();
     // only 2 signatures for a 3-of-3 threshold -> matched(2) < 3 -> rejected
-    val sigs = sigsCell2(sigCell(crypto.sign(a.privateKey, payload)), sigCell(crypto.sign(b.privateKey, payload)));
+    val sigs = sigsCell2(sigCell(crypto.sign(a.privateKey, domCell(payload, core.address))), sigCell(crypto.sign(b.privateKey, domCell(payload, core.address))));
     val res = core.sendSignedPriceUpdateN(relayer.address, sigs, payload, { value: ton("0.05") });
     expect(res).toHaveFailedTx({ from: relayer.address, to: core.address, exitCode: 117 });
 }
@@ -192,7 +197,7 @@ get fun `test N-signature update: duplicate signer does not count twice`() {
     core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
     val payload = samplePayload();
     // two copies of `a`'s signature -> only one distinct signer -> rejected
-    val sigs = sigsCell2(sigCell(crypto.sign(a.privateKey, payload)), sigCell(crypto.sign(a.privateKey, payload)));
+    val sigs = sigsCell2(sigCell(crypto.sign(a.privateKey, domCell(payload, core.address))), sigCell(crypto.sign(a.privateKey, domCell(payload, core.address))));
     val res = core.sendSignedPriceUpdateN(relayer.address, sigs, payload, { value: ton("0.05") });
     expect(res).toHaveFailedTx({ from: relayer.address, to: core.address, exitCode: 117 });
 }
@@ -206,7 +211,7 @@ get fun `test signer slot gap does not brick updates`() {
     core.sendSetThreshold(deployer.address, 0, 1, { value: ton("0.05") });
     core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
     val payload = samplePayload();
-    core.sendSignedPriceUpdate(relayer.address, sigCell(crypto.sign(b.privateKey, payload)), beginCell().endCell(), payload, { value: ton("0.05") });
+    core.sendSignedPriceUpdate(relayer.address, sigCell(crypto.sign(b.privateKey, domCell(payload, core.address))), beginCell().endCell(), payload, { value: ton("0.05") });
     expect(core.ppi()).toEqual(1100000);
 }
 

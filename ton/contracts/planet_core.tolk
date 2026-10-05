@@ -387,6 +387,26 @@ fun onInternalMessage(in: InMessage) {
     }
 }
 
+// Ignore all bounced messages: a bounced body must never be parsed as a command
+// (TON best practice — prevents misparse/griefing from truncated bounced bodies).
+fun onBouncedMessage(in: InMessageBounced) {
+    in.bouncedBody.skipBouncedPrefix();
+}
+
+// Domain separation: the signature must cover THIS contract's address (+ a domain tag)
+// so a valid payload cannot be replayed on a different PlanetCore deployment that
+// reuses the same signer key (TON docs: bind signed data to its context).
+const PRICE_DOMAIN = 0x504C4E54; // "PLNT"
+
+fun priceHash(payload: cell): uint256 {
+    return beginCell()
+        .storeUint(PRICE_DOMAIN, 32)
+        .storeAddress(contract.getAddress())
+        .storeRef(payload)
+        .endCell()
+        .hash();
+}
+
 fun handleMint(sender: address, msgValue: coins, msg: Mint) {
     var storage = lazy Storage.load();
     assert (!storage.paused) throw ERR_PAUSED;
@@ -610,7 +630,7 @@ fun handleSignedPriceUpdate(msg: SignedPriceUpdate) {
     var storage = lazy Storage.load();
     val os = OracleState.fromCell(storage.oracleState);
     assert (os.signerCount > 0) throw ERR_NO_SIGNER;
-    val hash = msg.payload.hash();
+    val hash = priceHash(msg.payload);
     var matched1: int = -1;
     var si: int = 0;
     while (si < os.signerCount as int && matched1 < 0) {
@@ -643,7 +663,7 @@ fun handleSignedPriceUpdateN(msg: SignedPriceUpdateN) {
     var storage = lazy Storage.load();
     val os = OracleState.fromCell(storage.oracleState);
     assert (os.signerCount > 0) throw ERR_NO_SIGNER;
-    val hash = msg.payload.hash();
+    val hash = priceHash(msg.payload);
     var sp = msg.sigs.beginParse();
     val n = sp.loadUint(8);
     var usedMask: int = 0;

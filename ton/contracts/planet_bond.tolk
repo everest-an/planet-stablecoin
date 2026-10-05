@@ -75,6 +75,11 @@ fun onInternalMessage(in: InMessage) {
     }
 }
 
+// Ignore bounced messages (TON best practice).
+fun onBouncedMessage(in: InMessageBounced) {
+    in.bouncedBody.skipBouncedPrefix();
+}
+
 fun handleSetOpen(sender: address, msg: SetOpen) {
     var storage = lazy BondStorage.load();
     assert (sender == storage.owner) throw ERR_NOT_OWNER;

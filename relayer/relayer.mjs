@@ -311,7 +311,14 @@ async function main() {
       riskState: BigInt(agg.frozen),
       timestamp: BigInt(ts),
     });
-    const sig = sign(payload.hash(), kp.secretKey); // 64 bytes (R||S)
+    // Domain separation: sign over (domain tag + Core address + payload), matching
+    // PlanetCore.priceHash — prevents cross-deployment replay of a signed payload.
+    const domainCell = beginCell()
+      .storeUint(0x504c4e54, 32) // "PLNT"
+      .storeAddress(core)
+      .storeRef(payload)
+      .endCell();
+    const sig = sign(domainCell.hash(), kp.secretKey); // 64 bytes (R||S)
     // SignedPriceUpdate { sig1: cell, sig2: cell, payload: cell } — each carried in a ref.
     const body = beginCell()
       .storeUint(OP_SIGNED_PRICE, 32)

@@ -80,6 +80,11 @@ fun onInternalMessage(in: InMessage) {
     }
 }
 
+// Ignore bounced messages (TON best practice).
+fun onBouncedMessage(in: InMessageBounced) {
+    in.bouncedBody.skipBouncedPrefix();
+}
+
 fun handlePropose(sender: address, msg: TlPropose) {
     var storage = lazy TimelockStorage.load();
     assert (sender == storage.owner) throw TL_ERR_NOT_OWNER;
