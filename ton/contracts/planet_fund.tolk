@@ -14,6 +14,7 @@
 // See docs/fund-contract-design.md, docs/positioning-v2.md.
 
 import "jetton/messages"
+import "jetton/jetton-utils"
 
 const FUND_DOMAIN = 0x46554E44; // "FUND" — domain tag for custodian signatures
 
@@ -61,7 +62,7 @@ struct Redeem {
 struct FundStorage {
     owner: address
     jettonMinter: address
-    fundWallet: address     // the fund's OWN PLT jetton wallet (verified on share receipt)
+    walletCode: cell       // PLT jetton wallet code (to derive the fund's own jetton wallet)
     navPerShare: int64
     lastNavUpdate: int64
     mgmtFeeBps: int64      // annual management fee (accrued inside the attested NAV)
@@ -177,14 +178,9 @@ struct (0x3000000E) CancelRedeem {
     orderId: int64
 }
 
-struct (0x30000010) SetFundWallet {
-    queryId: int64
-    wallet: address
-}
-
 type FundMessage = Subscribe | ConfirmMint | CancelOrder | AttestNav | SetFees | SetCustodian |
     SetCustodianThreshold | SetPaused | SetKyc | Allow | SetJettonMinter | SetOwner |
-    RequestRedeem | ConfirmRedeem | CancelRedeem | SetFundWallet | TransferNotificationForRecipient
+    RequestRedeem | ConfirmRedeem | CancelRedeem | TransferNotificationForRecipient
 
 contract PlanetFund {
     storage: FundStorage
@@ -253,7 +249,6 @@ fun onInternalMessage(in: InMessage) {
         RequestRedeem => { handleRequestRedeem(in.senderAddress, msg); }
         ConfirmRedeem => { handleConfirmRedeem(in.valueCoins, msg); }
         CancelRedeem => { handleCancelRedeem(in.senderAddress, msg); }
-        SetFundWallet => { handleSetFundWallet(in.senderAddress, msg); }
         TransferNotificationForRecipient => { handleShareReceived(in.senderAddress, msg); }
         else => { assert (in.body.isEmpty()) throw 0xFFFF; }
     }
@@ -407,13 +402,6 @@ fun handleSetJettonMinter(sender: address, msg: SetJettonMinter) {
     storage.save();
 }
 
-fun handleSetFundWallet(sender: address, msg: SetFundWallet) {
-    var storage = lazy FundStorage.load();
-    assert (sender == storage.owner) throw ERR_NOT_OWNER;
-    storage.fundWallet = msg.wallet;
-    storage.save();
-}
-
 fun handleSetOwner(sender: address, msg: SetOwner) {
     var storage = lazy FundStorage.load();
     assert (sender == storage.owner) throw ERR_NOT_OWNER;
@@ -444,7 +432,8 @@ fun handleRequestRedeem(sender: address, msg: RequestRedeem) {
 // mark the redeem funded, and burn the received shares.
 fun handleShareReceived(sender: address, msg: TransferNotificationForRecipient) {
     var storage = lazy FundStorage.load();
-    assert (sender == storage.fundWallet && storage.fundWallet != contract.getAddress()) throw ERR_NOT_FUND_WALLET;
+    val expected = calcAddressOfJettonWallet(contract.getAddress(), storage.jettonMinter, storage.walletCode);
+    assert (sender == expected) throw ERR_NOT_FUND_WALLET;
 
     // The transfer's queryId is the redeem order id.
     val lk = storage.redeems.get(msg.queryId as int64);
@@ -457,7 +446,7 @@ fun handleShareReceived(sender: address, msg: TransferNotificationForRecipient) 
     val burn = createMessage({
         bounce: BounceMode.Only256BitsOfBody,
         value: 0,
-        dest: storage.fundWallet,
+        dest: expected,
         body: AskToBurn {
             queryId: msg.queryId,
             jettonAmount: msg.jettonAmount,
