@@ -23,7 +23,7 @@ fun deploySetup(): (PlanetFund, JettonMinter, Treasury, Treasury, KeyPair) {
 
     val minter = JettonMinter.fromStorage({
         totalSupply: 0,
-        adminAddress: owner.address, // placeholder; rewired to the fund below
+        adminAddress: owner.address,
         content: beginCell().endCell(),
         jettonWalletCode: build("JettonWallet"),
     });
@@ -49,11 +49,10 @@ fun deploySetup(): (PlanetFund, JettonMinter, Treasury, Treasury, KeyPair) {
     expect(fund.deploy(owner.address, { value: ton("0.2") }))
         .toHaveSuccessfulDeploy({ to: fund.address });
 
-    // register a 1-of-1 custodian and wire the minter admin to the fund
+    // minter admin -> fund (so the fund may MintNewJettons); register a 1-of-1 custodian
+    minter.sendChangeMinterAdmin(owner.address, 0, fund.address, { value: ton("0.05") });
     fund.sendSetCustodian(owner.address, 0, 0, custodian.publicKey as uint256, { value: ton("0.05") });
     fund.sendSetCustodianThreshold(owner.address, 0, 1, { value: ton("0.05") });
-    // NOTE: the minter admin cannot be changed to the fund without a ChangeMinterAdmin
-    // round-trip; for this test the admin stays `owner`, so we assert the FUND state only.
     return (fund, minter, owner, alice, custodian);
 }
 
@@ -66,6 +65,18 @@ get fun `test subscribe records a pending order and does NOT mint`() {
     expect(o.done).toEqual(false);
 }
 
+get fun `test confirm mint credits ETF shares at NAV net of fee`() {
+    val (fund, minter, _, alice, custodian) = deploySetup();
+    fund.sendSubscribe(alice.address, 2, 1000000, { value: ton("0.05") });
+    val sig = sigCell(crypto.sign(custodian.privateKey, confCell(2, 1000000, 1000, fund.address)));
+    val res = fund.sendConfirmMint(alice.address, 0, 2, 1000000, 1000, sigs1(sig), { value: ton("0.3") });
+    expect(res).toHaveAllSuccessfulTxs();
+    expect(fund.navPerShare()).toEqual(1000000);
+    expect(fund.orderAt(2).done).toEqual(true);
+    // shares = 1e6 * 1e6/1e6 * (1 - 50/10000) = 995000
+    expect(minter.getJettonData().totalSupply).toEqual(995000);
+}
+
 get fun `test non-custodian confirmation is rejected`() {
     val (fund, _, _, alice, _) = deploySetup();
     val mallory = crypto.createMnemonic().toKeyPair();
@@ -75,24 +86,38 @@ get fun `test non-custodian confirmation is rejected`() {
     expect(res).toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 205 });
 }
 
-get fun `test confirmed mint sets NAV and marks the order done`() {
+get fun `test confirm mint with no order is rejected`() {
     val (fund, _, _, alice, custodian) = deploySetup();
-    fund.sendSubscribe(alice.address, 2, 1000000, { value: ton("0.05") });
-    val sig = sigCell(crypto.sign(custodian.privateKey, confCell(2, 1000000, 1000, fund.address)));
-    val res = fund.sendConfirmMint(alice.address, 0, 2, 1000000, 1000, sigs1(sig), { value: ton("0.1") });
-    expect(res).toHaveAllSuccessfulTxs();
-    expect(fund.navPerShare()).toEqual(1000000);
-    expect(fund.lastNavUpdate()).toEqual(1000);
-    expect(fund.orderAt(2).done).toEqual(true);
+    val sig = sigCell(crypto.sign(custodian.privateKey, confCell(9, 1000000, 1000, fund.address)));
+    val res = fund.sendConfirmMint(alice.address, 0, 9, 1000000, 1000, sigs1(sig), { value: ton("0.1") });
+    expect(res).toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 203 });
+}
+
+get fun `test double confirm is rejected`() {
+    val (fund, _, _, alice, custodian) = deploySetup();
+    fund.sendSubscribe(alice.address, 5, 1000000, { value: ton("0.05") });
+    val s1 = sigCell(crypto.sign(custodian.privateKey, confCell(5, 1000000, 1000, fund.address)));
+    fund.sendConfirmMint(alice.address, 0, 5, 1000000, 1000, sigs1(s1), { value: ton("0.3") });
+    val s2 = sigCell(crypto.sign(custodian.privateKey, confCell(5, 1000000, 2000, fund.address)));
+    val res = fund.sendConfirmMint(alice.address, 0, 5, 1000000, 2000, sigs1(s2), { value: ton("0.1") });
+    expect(res).toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 204 });
+}
+
+get fun `test stale confirmation timestamp is rejected`() {
+    val (fund, _, _, alice, custodian) = deploySetup();
+    val a = sigCell(crypto.sign(custodian.privateKey, confCell(0, 1000000, 2000, fund.address)));
+    fund.sendAttestNav(alice.address, 0, 1000000, 2000, sigs1(a), { value: ton("0.05") });
+    fund.sendSubscribe(alice.address, 6, 1000000, { value: ton("0.05") });
+    val s = sigCell(crypto.sign(custodian.privateKey, confCell(6, 1000000, 1000, fund.address)));
+    val res = fund.sendConfirmMint(alice.address, 0, 6, 1000000, 1000, sigs1(s), { value: ton("0.1") });
+    expect(res).toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 209 });
 }
 
 get fun `test attest nav applies the jump guard`() {
     val (fund, _, _, alice, custodian) = deploySetup();
-    // first attest: NAV 1.0 (any sender works — auth is by signature)
     val s1 = sigCell(crypto.sign(custodian.privateKey, confCell(0, 1000000, 1000, fund.address)));
     fund.sendAttestNav(alice.address, 0, 1000000, 1000, sigs1(s1), { value: ton("0.05") });
     expect(fund.navPerShare()).toEqual(1000000);
-    // second attest jumps +50% -> rejected (cap 20%)
     val s2 = sigCell(crypto.sign(custodian.privateKey, confCell(0, 1500000, 2000, fund.address)));
     val res = fund.sendAttestNav(alice.address, 0, 1500000, 2000, sigs1(s2), { value: ton("0.05") });
     expect(res).toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 208 });
@@ -112,14 +137,77 @@ get fun `test subscriber can cancel an unconfirmed order`() {
     expect(fund.orderAt(3).done).toEqual(true);
 }
 
-get fun `test non-owner cannot set fees`() {
+get fun `test non-subscriber cannot cancel an order`() {
     val (fund, _, _, alice, _) = deploySetup();
-    val res = fund.sendSetFees(alice.address, 0, 100, 100, 100, { value: ton("0.05") });
-    expect(res).toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 201 });
+    val bob = testing.treasury("bob");
+    fund.sendSubscribe(alice.address, 8, 1000000, { value: ton("0.05") });
+    val res = fund.sendCancelOrder(bob.address, 0, 8, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: bob.address, to: fund.address, exitCode: 201 });
 }
 
 get fun `test subscribe zero is rejected`() {
     val (fund, _, _, alice, _) = deploySetup();
     val res = fund.sendSubscribe(alice.address, 4, 0, { value: ton("0.05") });
     expect(res).toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 211 });
+}
+
+get fun `test paused fund rejects subscribe`() {
+    val (fund, _, owner, alice, _) = deploySetup();
+    fund.sendSetPaused(owner.address, 0, true, { value: ton("0.05") });
+    expect(fund.isPaused()).toEqual(true);
+    val res = fund.sendSubscribe(alice.address, 11, 1000000, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 202 });
+}
+
+get fun `test kyc gate blocks non-allowed subscribers`() {
+    val (fund, _, owner, alice, _) = deploySetup();
+    fund.sendSetKyc(owner.address, 0, true, { value: ton("0.05") });
+    expect(fund.kycRequired()).toEqual(true);
+    expect(fund.sendSubscribe(alice.address, 12, 1000000, { value: ton("0.05") }))
+        .toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 210 });
+    fund.sendAllow(owner.address, 0, alice.address, true, { value: ton("0.05") });
+    fund.sendSubscribe(alice.address, 13, 1000000, { value: ton("0.05") });
+    expect(fund.orderAt(13).done).toEqual(false);
+}
+
+get fun `test owner can set fees and jetton minter`() {
+    val (fund, minter, owner, _, _) = deploySetup();
+    fund.sendSetFees(owner.address, 0, 200, 100, 100, { value: ton("0.05") });
+    expect(fund.mgmtFeeBps()).toEqual(200);
+    expect(fund.mintFeeBps()).toEqual(100);
+    expect(fund.redeemFeeBps()).toEqual(100);
+    fund.sendSetJettonMinter(owner.address, 0, minter.address, { value: ton("0.05") });
+    expect(fund.jettonMinter()).toEqual(minter.address);
+}
+
+get fun `test non-owner setters are rejected`() {
+    val (fund, _, _, alice, _) = deploySetup();
+    expect(fund.sendSetFees(alice.address, 0, 100, 100, 100, { value: ton("0.05") })).toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 201 });
+    expect(fund.sendSetPaused(alice.address, 0, true, { value: ton("0.05") })).toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 201 });
+    expect(fund.sendSetKyc(alice.address, 0, true, { value: ton("0.05") })).toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 201 });
+    expect(fund.sendAllow(alice.address, 0, alice.address, true, { value: ton("0.05") })).toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 201 });
+    expect(fund.sendSetCustodian(alice.address, 0, 0, 0, { value: ton("0.05") })).toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 201 });
+    expect(fund.sendSetCustodianThreshold(alice.address, 0, 1, { value: ton("0.05") })).toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 201 });
+    expect(fund.sendSetJettonMinter(alice.address, 0, alice.address, { value: ton("0.05") })).toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 201 });
+    expect(fund.sendSetOwner(alice.address, 0, alice.address, { value: ton("0.05") })).toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 201 });
+}
+
+get fun `test owner can transfer ownership`() {
+    val (fund, _, owner, alice, _) = deploySetup();
+    fund.sendSetOwner(owner.address, 0, alice.address, { value: ton("0.05") });
+    expect(fund.owner()).toEqual(alice.address);
+}
+
+get fun `test all fund getters are readable`() {
+    val (fund, _, owner, _, _) = deploySetup();
+    expect(fund.owner()).toEqual(owner.address);
+    expect(fund.custodianCount()).toEqual(1);
+    expect(fund.custodianThreshold()).toEqual(1);
+    expect(fund.lastNavUpdate()).toEqual(0);
+}
+
+get fun `test unknown fund opcode is rejected`() {
+    val (fund, _, owner, _, _) = deploySetup();
+    val res = fund.sendAny(owner.address, beginCell().storeUint(0xDEAD, 32).endCell(), { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: owner.address, to: fund.address, exitCode: 65535 });
 }
