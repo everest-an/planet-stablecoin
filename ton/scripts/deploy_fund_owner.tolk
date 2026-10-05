@@ -12,7 +12,7 @@ import "@wrappers/PlanetTimelock.gen"
 
 fun main() {
     val deployer = scripts.wallet("deployer");
-    val fund = PlanetFund.fromAddress(address("kQAx7TXC6C5Na32azXUqS8XPCYH6GCrhkTK9QE-Yq2egTMTf"));
+    val fund = PlanetFund.fromAddress(address("kQAYbx_u7I7yhcYU8yxeewWdh3gnS067IgaWeV8UlYItug1o"));
 
     // A timelock with a 60s reaction window (production: 24h+), owned by the deployer.
     val tl = PlanetTimelock.fromStorage({
