@@ -89,22 +89,22 @@ get fun `test confirmed mint sets NAV and marks the order done`() {
 }
 
 get fun `test attest nav applies the jump guard`() {
-    val (fund, _, _, _, custodian) = deploySetup();
-    // first attest: NAV 1.0
+    val (fund, _, _, alice, custodian) = deploySetup();
+    // first attest: NAV 1.0 (any sender works — auth is by signature)
     val s1 = sigCell(crypto.sign(custodian.privateKey, confCell(0, 1000000, 1000, fund.address)));
-    fund.sendAttestNav(custodian.publicKey as address, 0, 1000000, 1000, sigs1(s1), { value: ton("0.05") });
+    fund.sendAttestNav(alice.address, 0, 1000000, 1000, sigs1(s1), { value: ton("0.05") });
     expect(fund.navPerShare()).toEqual(1000000);
     // second attest jumps +50% -> rejected (cap 20%)
     val s2 = sigCell(crypto.sign(custodian.privateKey, confCell(0, 1500000, 2000, fund.address)));
-    val res = fund.sendAttestNav(custodian.publicKey as address, 0, 1500000, 2000, sigs1(s2), { value: ton("0.05") });
-    expect(res).toHaveFailedTx({ from: custodian.publicKey as address, to: fund.address, exitCode: 208 });
+    val res = fund.sendAttestNav(alice.address, 0, 1500000, 2000, sigs1(s2), { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 208 });
 }
 
 get fun `test nav below the floor is rejected`() {
-    val (fund, _, _, _, custodian) = deploySetup();
+    val (fund, _, _, alice, custodian) = deploySetup();
     val s = sigCell(crypto.sign(custodian.privateKey, confCell(0, 100, 1000, fund.address)));
-    val res = fund.sendAttestNav(custodian.publicKey as address, 0, 100, 1000, sigs1(s), { value: ton("0.05") });
-    expect(res).toHaveFailedTx({ from: custodian.publicKey as address, to: fund.address, exitCode: 207 });
+    val res = fund.sendAttestNav(alice.address, 0, 100, 1000, sigs1(s), { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 207 });
 }
 
 get fun `test subscriber can cancel an unconfirmed order`() {

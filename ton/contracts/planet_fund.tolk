@@ -379,26 +379,77 @@ fun navJumpOk(oldNav: int64, newNav: int64): bool {
         return true;
     }
     val diff = oldNav - newNav;
-    val adiff = diff >= 0 ? diff : -diff;
+    var adiff = diff;
+    if (diff < 0) {
+        adiff = -diff;
+    }
     val jump = (adiff as int) * BPS_DENOM / (oldNav as int);
     return jump <= MAX_NAV_JUMP_BPS as int;
 }
 
 // ---------------- Getters ----------------
 
-get fun owner(): address { return lazy FundStorage.load().owner; }
-get fun navPerShare(): int64 { return lazy FundStorage.load().navPerShare; }
-get fun lastNavUpdate(): int64 { return lazy FundStorage.load().lastNavUpdate; }
-get fun mgmtFeeBps(): int64 { return lazy FundStorage.load().mgmtFeeBps; }
-get fun mintFeeBps(): int64 { return lazy FundStorage.load().mintFeeBps; }
-get fun redeemFeeBps(): int64 { return lazy FundStorage.load().redeemFeeBps; }
-get fun isPaused(): bool { return lazy FundStorage.load().paused; }
-get fun kycRequired(): bool { return lazy FundStorage.load().kycRequired; }
-get fun custodianCount(): int64 { return lazy FundStorage.load().custodianCount; }
-get fun custodianThreshold(): int64 { return lazy FundStorage.load().custodianThreshold; }
-get fun custodianAt(index: int64): uint256 { return lazy FundStorage.load().custodians.mustGet(index); }
-get fun jettonMinter(): address { return lazy FundStorage.load().jettonMinter; }
+get fun owner(): address {
+    val storage = lazy FundStorage.load();
+    return storage.owner;
+}
+
+get fun navPerShare(): int64 {
+    val storage = lazy FundStorage.load();
+    return storage.navPerShare;
+}
+
+get fun lastNavUpdate(): int64 {
+    val storage = lazy FundStorage.load();
+    return storage.lastNavUpdate;
+}
+
+get fun mgmtFeeBps(): int64 {
+    val storage = lazy FundStorage.load();
+    return storage.mgmtFeeBps;
+}
+
+get fun mintFeeBps(): int64 {
+    val storage = lazy FundStorage.load();
+    return storage.mintFeeBps;
+}
+
+get fun redeemFeeBps(): int64 {
+    val storage = lazy FundStorage.load();
+    return storage.redeemFeeBps;
+}
+
+get fun isPaused(): bool {
+    val storage = lazy FundStorage.load();
+    return storage.paused;
+}
+
+get fun kycRequired(): bool {
+    val storage = lazy FundStorage.load();
+    return storage.kycRequired;
+}
+
+get fun custodianCount(): int64 {
+    val storage = lazy FundStorage.load();
+    return storage.custodianCount;
+}
+
+get fun custodianThreshold(): int64 {
+    val storage = lazy FundStorage.load();
+    return storage.custodianThreshold;
+}
+
+get fun custodianAt(index: int64): uint256 {
+    val storage = lazy FundStorage.load();
+    return storage.custodians.mustGet(index);
+}
+
+get fun jettonMinter(): address {
+    val storage = lazy FundStorage.load();
+    return storage.jettonMinter;
+}
 
 get fun orderAt(id: int64): Order {
-    return lazy FundStorage.load().orders.mustGet(id);
+    val storage = lazy FundStorage.load();
+    return storage.orders.mustGet(id);
 }
