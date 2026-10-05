@@ -35,6 +35,11 @@ src = "contracts/planet_bond.tolk"
 display-name = "Planet Timelock"
 src = "contracts/planet_timelock.tolk"
 
+# Tokenized ETF fund (Phase 2): deposit + custodian-confirmed mint at NAV.
+[contracts.PlanetFund]
+display-name = "Planet Fund"
+src = "contracts/planet_fund.tolk"
+
 [build]
 out-dir = "build"
 output-abi = "build/abi"
