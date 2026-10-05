@@ -45,6 +45,16 @@ struct Order {
     done: bool
 }
 
+// A redemption request: the subscriber's shares are (off-chain, by the operator) moved
+// into the fund; the custodian confirms the ETF sale, then the fund records the payout.
+struct Redeem {
+    user: address
+    shares: int64
+    payout: int64
+    ts: int64
+    done: bool
+}
+
 struct FundStorage {
     owner: address
     jettonMinter: address
@@ -60,6 +70,7 @@ struct FundStorage {
     custodianThreshold: int64
     custodians: map<int64, uint256>
     orders: map<int64, Order>
+    redeems: map<int64, Redeem>
 }
 
 fun FundStorage.load() {
@@ -143,8 +154,28 @@ struct (0x10000014) SetOwner {
     newOwner: address
 }
 
+// Redemption: the subscriber asks to exit; the custodian confirms the ETF sale.
+struct (0x3000000C) RequestRedeem {
+    queryId: int64
+    shares: int64
+}
+
+struct (0x3000000D) ConfirmRedeem {
+    queryId: int64
+    orderId: int64
+    navPerShare: int64
+    timestamp: int64
+    sigs: cell
+}
+
+struct (0x3000000E) CancelRedeem {
+    queryId: int64
+    orderId: int64
+}
+
 type FundMessage = Subscribe | ConfirmMint | CancelOrder | AttestNav | SetFees | SetCustodian |
-    SetCustodianThreshold | SetPaused | SetKyc | Allow | SetJettonMinter | SetOwner
+    SetCustodianThreshold | SetPaused | SetKyc | Allow | SetJettonMinter | SetOwner |
+    RequestRedeem | ConfirmRedeem | CancelRedeem
 
 contract PlanetFund {
     storage: FundStorage
@@ -210,6 +241,9 @@ fun onInternalMessage(in: InMessage) {
         Allow => { handleAllow(in.senderAddress, msg); }
         SetJettonMinter => { handleSetJettonMinter(in.senderAddress, msg); }
         SetOwner => { handleSetOwner(in.senderAddress, msg); }
+        RequestRedeem => { handleRequestRedeem(in.senderAddress, msg); }
+        ConfirmRedeem => { handleConfirmRedeem(in.valueCoins, msg); }
+        CancelRedeem => { handleCancelRedeem(in.senderAddress, msg); }
         else => { assert (in.body.isEmpty()) throw 0xFFFF; }
     }
 }
@@ -371,6 +405,66 @@ fun handleSetOwner(sender: address, msg: SetOwner) {
     storage.save();
 }
 
+// ---------------- Redemption ----------------
+
+// The subscriber registers a redemption request. The operator moves the shares into
+// the fund; the custodian confirms the ETF sale, and the fund records the payout.
+fun handleRequestRedeem(sender: address, msg: RequestRedeem) {
+    var storage = lazy FundStorage.load();
+    assert (!storage.paused) throw ERR_PAUSED;
+    assert (msg.shares > 0) throw ERR_BAD_AMOUNT;
+    if (storage.kycRequired) {
+        val lk = storage.allowed.get(sender);
+        assert (lk.isFound && lk.loadValue()) throw ERR_KYC;
+    }
+    storage.redeems.set(msg.queryId, Redeem { user: sender, shares: msg.shares, payout: 0, ts: blockchain.now() as int64, done: false });
+    storage.save();
+}
+
+fun handleConfirmRedeem(msgValue: coins, msg: ConfirmRedeem) {
+    var storage = lazy FundStorage.load();
+    assert (!storage.paused) throw ERR_PAUSED;
+    assert (storage.custodianCount > 0) throw ERR_NO_CUSTODIAN;
+    assert (verifyCustodians(storage, confirmHash(msg.orderId, msg.navPerShare, msg.timestamp), msg.sigs)) throw ERR_BAD_CUSTODIAN_SIG;
+    assert (msg.timestamp > storage.lastNavUpdate) throw ERR_STALE;
+    assert (msg.navPerShare >= MIN_NAV) throw ERR_BAD_NAV;
+
+    val lk = storage.redeems.get(msg.orderId);
+    assert (lk.isFound) throw ERR_NO_ORDER;
+    val r = lk.loadValue();
+    assert (!r.done) throw ERR_ORDER_DONE;
+
+    if (storage.navPerShare > 0 && navJumpOk(storage.navPerShare, msg.navPerShare) == false) {
+        throw ERR_NAV_JUMP;
+    }
+
+    val payout = ((r.shares as int) * (msg.navPerShare as int) / NAV_SCALE) * (BPS_DENOM - storage.redeemFeeBps as int) / BPS_DENOM;
+    storage.redeems.set(msg.orderId, Redeem { user: r.user, shares: r.shares, payout: payout as int64, ts: r.ts, done: true });
+    storage.navPerShare = msg.navPerShare;
+    storage.lastNavUpdate = msg.timestamp;
+    storage.save();
+
+    // Pay the subscriber (carries the attached value; real payout rails handled off-chain).
+    val pay = createMessage({
+        bounce: BounceMode.NoBounce,
+        value: 0,
+        dest: r.user,
+        body: beginCell().storeUint(0x3000000F, 32).storeInt(payout as int64, 64).endCell(),
+    });
+    pay.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
+}
+
+fun handleCancelRedeem(sender: address, msg: CancelRedeem) {
+    var storage = lazy FundStorage.load();
+    val lk = storage.redeems.get(msg.orderId);
+    assert (lk.isFound) throw ERR_NO_ORDER;
+    val r = lk.loadValue();
+    assert (!r.done) throw ERR_ORDER_DONE;
+    assert (sender == r.user || sender == storage.owner) throw ERR_NOT_OWNER;
+    storage.redeems.set(msg.orderId, Redeem { user: r.user, shares: r.shares, payout: r.payout, ts: r.ts, done: true });
+    storage.save();
+}
+
 // ---------------- Pure math ----------------
 
 // NAV jump guard: reject a single attestation that moves NAV by more than the cap.
@@ -452,4 +546,9 @@ get fun jettonMinter(): address {
 get fun orderAt(id: int64): Order {
     val storage = lazy FundStorage.load();
     return storage.orders.mustGet(id);
+}
+
+get fun redeemAt(id: int64): Redeem {
+    val storage = lazy FundStorage.load();
+    return storage.redeems.mustGet(id);
 }

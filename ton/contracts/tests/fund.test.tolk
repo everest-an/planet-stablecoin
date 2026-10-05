@@ -45,6 +45,7 @@ fun deploySetup(): (PlanetFund, JettonMinter, Treasury, Treasury, KeyPair) {
         custodianThreshold: 0,
         custodians: [],
         orders: [],
+        redeems: [],
     });
     expect(fund.deploy(owner.address, { value: ton("0.2") }))
         .toHaveSuccessfulDeploy({ to: fund.address });
@@ -218,7 +219,7 @@ fun deployBareFund(): (PlanetFund, Treasury) {
     val fund = PlanetFund.fromStorage({
         owner: owner.address, jettonMinter: minter.address, navPerShare: 0, lastNavUpdate: 0,
         mgmtFeeBps: 100, mintFeeBps: 50, redeemFeeBps: 50, paused: false, kycRequired: false,
-        allowed: [], custodianCount: 0, custodianThreshold: 0, custodians: [], orders: [],
+        allowed: [], custodianCount: 0, custodianThreshold: 0, custodians: [], orders: [], redeems: [],
     });
     expect(fund.deploy(owner.address, { value: ton("0.2") }))
         .toHaveSuccessfulDeploy({ to: fund.address });
@@ -313,4 +314,45 @@ get fun `test SetOwner rejects the zero address`() {
     val (fund, _, owner, _, _) = deploySetup();
     val res = fund.sendSetOwner(owner.address, 0, address("EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c"), { value: ton("0.05") });
     expect(res).toHaveFailedTx({ from: owner.address, to: fund.address, exitCode: 201 });
+}
+
+// ---------------- Redemption ----------------
+
+get fun `test redeem request + custodian confirm records the payout`() {
+    val (fund, _, _, alice, custodian) = deploySetup();
+    fund.sendRequestRedeem(alice.address, 40, 500000, { value: ton("0.05") });
+    val sig = sigCell(crypto.sign(custodian.privateKey, confCell(40, 1000000, 1000, fund.address)));
+    val res = fund.sendConfirmRedeem(alice.address, 0, 40, 1000000, 1000, sigs1(sig), { value: ton("0.2") });
+    expect(res).toHaveAllSuccessfulTxs();
+    val r = fund.redeemAt(40);
+    expect(r.done).toEqual(true);
+    expect(r.payout).toEqual(497500); // 500000 * 1.0 * (1 - 50/10000)
+}
+
+get fun `test redeem confirm with no request is rejected`() {
+    val (fund, _, _, alice, custodian) = deploySetup();
+    val sig = sigCell(crypto.sign(custodian.privateKey, confCell(41, 1000000, 1000, fund.address)));
+    val res = fund.sendConfirmRedeem(alice.address, 0, 41, 1000000, 1000, sigs1(sig), { value: ton("0.1") });
+    expect(res).toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 203 });
+}
+
+get fun `test redeem request zero is rejected`() {
+    val (fund, _, _, alice, _) = deploySetup();
+    expect(fund.sendRequestRedeem(alice.address, 42, 0, { value: ton("0.05") }))
+        .toHaveFailedTx({ from: alice.address, to: fund.address, exitCode: 211 });
+}
+
+get fun `test subscriber can cancel a redeem request`() {
+    val (fund, _, _, alice, _) = deploySetup();
+    fund.sendRequestRedeem(alice.address, 43, 100, { value: ton("0.05") });
+    fund.sendCancelRedeem(alice.address, 0, 43, { value: ton("0.05") });
+    expect(fund.redeemAt(43).done).toEqual(true);
+}
+
+get fun `test non-subscriber cannot cancel a redeem request`() {
+    val (fund, _, _, alice, _) = deploySetup();
+    val bob = testing.treasury("bob");
+    fund.sendRequestRedeem(alice.address, 44, 100, { value: ton("0.05") });
+    val res = fund.sendCancelRedeem(bob.address, 0, 44, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: bob.address, to: fund.address, exitCode: 201 });
 }

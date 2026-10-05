@@ -41,6 +41,7 @@ fun main() {
         custodianThreshold: 0,
         custodians: [],
         orders: [],
+        redeems: [],
     });
     fund.deploy(deployer.address, { value: ton("0.15") });
     println("PlanetFund        -> {}", fund.address);
