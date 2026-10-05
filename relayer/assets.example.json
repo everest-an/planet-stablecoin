@@ -1,7 +1,18 @@
 {
   "assets": [
-    { "index": 0, "symbol": "CL=F", "sina": "hf_CL", "sinaScale": 1, "name": "WTI Crude (NYM)", "weight": 400000 },
-    { "index": 1, "symbol": "GC=F", "sina": "hf_GC", "sinaScale": 1, "name": "Gold (COMEX)", "weight": 350000 },
-    { "index": 2, "symbol": "HG=F", "sina": "hf_HG", "sinaScale": 0.01, "name": "Copper (COMEX)", "weight": 250000 }
+    { "index": 0,  "symbol": "CL=F", "sina": "hf_CL",  "sinaScale": 1,    "name": "WTI Crude (NYM)",   "weight": 140000 },
+    { "index": 1,  "symbol": "BZ=F", "sina": "hf_OIL", "sinaScale": 1,    "name": "Brent Crude (ICE)", "weight": 110000 },
+    { "index": 2,  "symbol": "NG=F", "sina": "hf_NG",  "sinaScale": 1,    "name": "Natural Gas (NYM)", "weight": 80000 },
+    { "index": 3,  "symbol": "GC=F", "sina": "hf_GC",  "sinaScale": 1,    "name": "Gold (COMEX)",      "weight": 120000 },
+    { "index": 4,  "symbol": "SI=F", "sina": "hf_SI",  "sinaScale": 1,    "name": "Silver (COMEX)",    "weight": 70000 },
+    { "index": 5,  "symbol": "HG=F", "sina": "hf_HG",  "sinaScale": 0.01, "name": "Copper (COMEX)",    "weight": 60000 },
+    { "index": 6,  "symbol": "ZW=F", "sina": "hf_ZW",  "sinaScale": 1,    "name": "Wheat (CBOT)",      "weight": 90000 },
+    { "index": 7,  "symbol": "ZC=F", "sina": "hf_ZC",  "sinaScale": 1,    "name": "Corn (CBOT)",       "weight": 70000 },
+    { "index": 8,  "symbol": "ZS=F", "sina": "hf_ZS",  "sinaScale": 1,    "name": "Soybean (CBOT)",    "weight": 60000 },
+    { "index": 9,  "symbol": "KC=F", "sina": "hf_KC",  "sinaScale": 1,    "name": "Coffee (ICE)",      "weight": 40000 },
+    { "index": 10, "symbol": "WOOD", "sina": null,     "sinaScale": 1,    "name": "Lumber (ETF)",      "weight": 40000 },
+    { "index": 11, "symbol": "LIT",  "sina": null,     "sinaScale": 1,    "name": "Lithium (ETF)",     "weight": 30000 },
+    { "index": 12, "symbol": "PHO",  "sina": null,     "sinaScale": 1,    "name": "Water (ETF)",       "weight": 50000 },
+    { "index": 13, "symbol": "KRBN", "sina": null,     "sinaScale": 1,    "name": "Carbon (ETF)",      "weight": 40000 }
   ]
 }
