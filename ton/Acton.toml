@@ -6,7 +6,7 @@ license = "Apache-2.0"
 
 [toolchain]
 # Pin the Acton CLI version (see https://ton-blockchain.github.io/acton/docs/acton-toml)
-acton = "1.2.0"
+acton = "1.2.1"
 
 [contracts.PlanetCore]
 display-name = "Planet Core"
