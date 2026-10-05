@@ -49,6 +49,52 @@ fun sigsCell2(a: cell, b: cell): cell {
     return beginCell().storeUint(2, 8).storeRef(a).storeRef(b).endCell();
 }
 
+// SetSigner: overwriting an existing slot must NOT grow signerCount (index < count path).
+get fun `test SetSigner can overwrite an existing slot`() {
+    val (core, deployer, _) = coreWith(1000000, false, 0, 0, false, 0, 0);
+    val a = crypto.createMnemonic().toKeyPair();
+    val b = crypto.createMnemonic().toKeyPair();
+    core.sendSetSigner(deployer.address, 0, 0, a.publicKey as uint256, { value: ton("0.05") });
+    core.sendSetSigner(deployer.address, 0, 0, b.publicKey as uint256, { value: ton("0.05") });
+    expect(core.signerCount()).toEqual(1);
+    expect(core.signerAt(0)).toEqual(b.publicKey);
+}
+
+get fun `test SetThreshold by non-owner is rejected`() {
+    val (core, _, minter) = coreWith(1000000, false, 0, 0, false, 0, 0);
+    val res = core.sendSetThreshold(minter.address, 0, 1, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: minter.address, to: core.address, exitCode: 101 });
+}
+
+get fun `test SetCam by non-owner is rejected`() {
+    val (core, _, minter) = coreWith(1000000, false, 0, 0, false, 0, 0);
+    val res = core.sendSetCam(minter.address, 0, 0, minter.address, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: minter.address, to: core.address, exitCode: 101 });
+}
+
+get fun `test signed update with a bad index is rejected`() {
+    val (core, deployer, relayer) = coreWith(1000000, false, 0, 0, false, 0, 0);
+    val a = crypto.createMnemonic().toKeyPair();
+    core.sendSetSigner(deployer.address, 0, 0, a.publicKey as uint256, { value: ton("0.05") });
+    core.sendSetThreshold(deployer.address, 0, 1, { value: ton("0.05") });
+    core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
+    val p = pl1(5, 1100000, 1000);
+    val res = core.sendSignedPriceUpdate(relayer.address, sigCell(crypto.sign(a.privateKey, domCell(p, core.address))), beginCell().endCell(), p, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: relayer.address, to: core.address, exitCode: 109 });
+}
+
+// A price DROP inside the band covers diffAbs' negative path (newPrice < oldPrice).
+get fun `test signed update with a price drop is accepted`() {
+    val (core, deployer, relayer) = coreWith(1000000, false, 0, 0, false, 0, 0);
+    val a = crypto.createMnemonic().toKeyPair();
+    core.sendSetSigner(deployer.address, 0, 0, a.publicKey as uint256, { value: ton("0.05") });
+    core.sendSetThreshold(deployer.address, 0, 1, { value: ton("0.05") });
+    core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
+    val p = pl1(0, 900000, 1000);
+    core.sendSignedPriceUpdate(relayer.address, sigCell(crypto.sign(a.privateKey, domCell(p, core.address))), beginCell().endCell(), p, { value: ton("0.05") });
+    expect(core.ppi()).toEqual(900000);
+}
+
 // rich index (PPI > BAND_RICH) + arb rebate larger than the fee -> effective fee clamps to 0.
 get fun `test mint with arb rebate above the fee clamps to zero`() {
     val (core, deployer, _) = coreWith(1040000, false, 0, 0, false, 0, 0);
