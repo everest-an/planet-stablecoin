@@ -23,8 +23,8 @@
       <a class="wordmark" href="/">Planet</a>
       <nav class="nav">
         <a href="#how">how it works</a>
-        <a href="#protocol">protocol</a>
-        <a href="#status">status</a>
+        <a href="#start">how to use</a>
+        <a href="#trust">trust</a>
         <a href="/whitepaper.html">whitepaper</a>
         <a class="btn" href="https://app.ppppp.space">open app</a>
       </nav>
@@ -138,6 +138,54 @@
           This is a technical PoC. Nothing here is investment advice. Commodity prices are volatile; an
           early-stage index token may diverge materially from its theoretical PPI.
         </p>
+      </section>
+      <!-- HOW TO USE -->
+      <section id="start">
+        <div class="sec-head"><span class="num">[ 06 ]</span><span class="lbl">how to use</span><span class="end">¬</span></div>
+        <ol class="steps">
+          <li>
+            <span class="step-n">01</span>
+            <div><h3>Get a wallet</h3><p>Install a TON wallet (e.g. Tonkeeper) and keep your recovery phrase safe.</p></div>
+          </li>
+          <li>
+            <span class="step-n">02</span>
+            <div><h3>Get testnet TON</h3><p>This is TON <b>testnet</b> — request free test TON from a faucet (e.g. the Telegram bot <code>@testgiver_ton_bot</code>).</p></div>
+          </li>
+          <li>
+            <span class="step-n">03</span>
+            <div><h3>Open the app</h3><p>Open the Mini App and tap <b>Connect wallet</b>. Planet never sees your keys.</p></div>
+          </li>
+          <li>
+            <span class="step-n">04</span>
+            <div><h3>Mint / burn</h3><p>Enter an amount and approve in your wallet; burn PLT back through the jetton wallet.</p></div>
+          </li>
+        </ol>
+      </section>
+
+      <!-- TRUST -->
+      <section id="trust">
+        <div class="sec-head"><span class="num">[ 07 ]</span><span class="lbl">trust &amp; safety</span><span class="end">¬</span></div>
+        <ul class="marks yes">
+          <li><b>Non-custodial</b> — the app never holds keys; you sign in your own wallet, so the site cannot move funds.</li>
+          <li><b>Verifiable on-chain</b> — every price update is ed25519-signed and verified on TON; the index is computed on-chain.</li>
+          <li><b>Fail-safe oracle</b> — two independent feeds, median, M-of-N signers, staleness + price-jump guards, auto-freeze on divergence.</li>
+          <li><b>Governance</b> — owner actions can be migrated to a multisig and gated by a timelock (Propose → delay → Execute).</li>
+          <li><b>Honest limits</b> — <b>not audited yet</b>; Phase 1 holds no real reserve (see “what it is not”).</li>
+        </ul>
+      </section>
+
+      <!-- CONTRACTS -->
+      <section id="contracts">
+        <div class="sec-head"><span class="num">[ 08 ]</span><span class="lbl">contracts · TON testnet</span><span class="end">¬</span></div>
+        <table class="status-table doc-table">
+          <tbody>
+            <tr><td>PlanetCore</td><td><code>kQB_jRsajqfsRNI8Pp7pqr1zlAbBhIoMBzITYWEainyEm2bH</code></td></tr>
+            <tr><td>PLT Jetton</td><td><code>kQCBs5unYxUi2Ewlgor0vNBqLsWrdPHHiZ4WVouZ5--BEwN1</code></td></tr>
+            <tr><td>Basket</td><td><code>kQAfGKn_UrUW8LQd92ZWy0h0BrCA_QTBhMqDA1M-PZtyv-r_</code></td></tr>
+            <tr><td>Timelock</td><td><code>kQDc_iZ7Y8lQ1r_TxXhOXrhKVrjShyyOgp5c2pUwtGGGJGDe</code></td></tr>
+          </tbody>
+        </table>
+        <p class="disclaimer">Verify these on a TON explorer (e.g. tonviewer testnet). Addresses may change before mainnet.</p>
       </section>
     </main>
 
