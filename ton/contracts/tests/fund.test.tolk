@@ -10,10 +10,8 @@ import "@wrappers/JettonWallet.gen"
 // PlanetFund (Phase 2 skeleton): two-phase subscribe + custodian-confirmed mint at NAV.
 // NO minting happens on Subscribe alone (this is the fix for the Phase-1 EC1 finding).
 
-const FUND_DOMAIN = 0x46554E44;
-
 fun confCell(orderId: int64, nav: int64, ts: int64, fund: address): cell {
-    return beginCell().storeUint(FUND_DOMAIN, 32).storeAddress(fund).storeInt(orderId, 64).storeInt(nav, 64).storeInt(ts, 64).endCell();
+    return beginCell().storeUint(0x46554E44, 32).storeAddress(fund).storeInt(orderId, 64).storeInt(nav, 64).storeInt(ts, 64).endCell();
 }
 fun sigs1(sig: cell): cell { return beginCell().storeUint(1, 8).storeRef(sig).endCell(); }
 fun sigCell(sig: slice): cell { return beginCell().storeSlice(sig).endCell(); }
