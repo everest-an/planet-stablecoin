@@ -9,7 +9,7 @@
 
 Planet（PLT）= 全球大宗商品购买力指数协议；当前实现为 **TON 上的合成指数代币 + TEP-74 代币 + 铸赎骨架**。
 仓库：`github.com/everest-an/planet-stablecoin`（**private**），分支 `main`。
-最后验证：`main`（PR #1 + 稳定机制 A/C1/C2/C3a+C3b + CAM + 签名预言机（多源 M-of-N，支持 M>2）+ 价格护栏 + SetOwner + PlanetTimelock 时间锁 + 测试网 live：mint/burn 端到端），CI 全绿（107 测试，覆盖率 90.2%）。
+最后验证：`main`（TON 主线：合成指数 + TEP-74 PLT + 铸赎骨架 + 稳定机制 A/C1/C2/C3a+C3b + CAM + 签名预言机（多源 M-of-N，支持 M>2）+ 价格护栏 + 跨合约 `onBouncedMessage` + 域分离 + `SetOwner`/`PlanetTimelock` 时间锁 + **PlanetFund（ETF 基金：两阶段申购 + 托管 M-of-N 确认按 NAV 铸 + 赎回，含 TEP-74 份额收款/burn 的**无信任赎回**）+ 测试网 live**），CI 全绿（**210 测试 / 16 文件**，All files 97.5% 行 / 88.3% 分支 / 94.0% 评分；门禁 90 只升不降）。
 
 ---
 
@@ -181,7 +181,7 @@ cd app-tg && npm install && npm run build
 
 ## 9. 下一次开局的推荐指令
 
-> "读 `docs/HANDOFF.md`。仓库已整理（主线 `ton/`+`app-tg/`，Solana 归档 `legacy-solana/`）。107 测试全绿，覆盖率 90.2%（门禁 90，只升不降）；链上 PPI/赎回/稳定机制 A/C1/C2/C3a+C3b/CAM+隔离/签名预言机（M-of-N 多源，支持 M>2）/价格护栏/`SetOwner`+`PlanetTimelock` 时间锁 均已就绪，TON 测试网 live + mint/burn 端到端验证；白皮书 v1.5 + `docs/security.md`。下一步：真实数据源接入 / 外部审计 / 1:1（RWA 托管 + 合规）或前端完善。改动保持 CI 绿。"
+> "读 `docs/HANDOFF.md`。仓库已整理（主线 `ton/`+`app-tg/`，Solana 归档 `legacy-solana/`）。**210 测试全绿**，覆盖率 97.5% 行 / 88.3% 分支 / 94.0% 评分（门禁 90，只升不降）；链上 PPI/赎回/稳定机制 A/C1/C2/C3a+C3b/CAM+隔离/签名预言机（M-of-N 多源，支持 M>2）/价格护栏/`SetOwner`+`PlanetTimelock` 时间锁 **+ PlanetFund（ETF 基金：两阶段申购 + 托管 M-of-N 确认按 NAV 铸 + 赎回，含 TEP-74 份额收款/burn 的无信任赎回）** 均已就绪，TON 测试网 live + mint/burn 端到端验证；白皮书 v1.5 + `docs/security.md`。下一步：真实数据源接入 / 外部审计 / 1:1（RWA 托管 + 合规）或前端完善。改动保持 CI 绿。"
 
 ---
 
@@ -204,6 +204,9 @@ cd app-tg && npm install && npm run build
 | **PLT Minter** | `kQB31GEg_GUUQBdvg275a67dkpbcnRdJkE5ov08mNvUZ9QaJ`（admin = Core） |
 | **PlanetBasket** | `kQAfGKn_UrUW8LQd92ZWy0h0BrCA_QTBhMqDA1M-PZtyv-r_` |
 | **PlanetBond**（稳定债券） | `kQDMxJXroCmuxBw9Sw7oj9LhO9Y0mLxdPS3Tr4vY-sdq65hz`（isOpen=false, premium=5%） |
+| **PlanetFund**（ETF 基金） | `kQAYbx_u7I7yhcYU8yxeewWdh3gnS067IgaWeV8UlYItug1o`（两阶段申购 + 托管 M-of-N 确认按 NAV 铸 + 赎回；含 TEP-74 份额收款/burn 的无信任赎回） |
+| **Fund JettonMinter** | `kQCSnnMlGUIEJvlI_NLG_x0wg-_ZX74AYFIxuLU4YpFeg1sk`（admin = PlanetFund） |
+| **Fund owner 时间锁** | `kQBo0345y-RGi49-7WWaWAHyyNtiWe-JrT44iO3G9Cyom6YK`（delay=60；`PlanetFund.owner` 已迁移至此） |
 | **PlanetTimelock**（24h，生产用） | `kQDc_iZ7Y8lQ1r_TxXhOXrhKVrjShyyOgp5c2pUwtGGGJGDe`（delay=86400） |
 | **PlanetTimelock**（demo 0s / tl2） | `kQCMwDVPftkUbRWPMzJGCjoC4YXnFGfN3myTJ1rbeCuSdPAt` / `kQAwMedJ1wWbt-zKqw06Ssb7vdeLW_FIbAQd0NmAPjC5v2Mr` |
 | 部署钱包 | `0QBW4GNM-XpAIuIzwrupQKqVOLILHfP6lnD_Xk04L9Yx6Qol`（v4r2；私钥 `ton/.secrets/`，已 gitignore） |
@@ -215,6 +218,10 @@ cd app-tg && npm install && npm run build
   - ✅ **propose→execute 投递** 链上验证（`tl2.delay=777`）；模拟器端到端亦有测试（`timelock.test.tolk`）。
   - ✅ **Core SetOwner 往返（链上验证）**：`SetOwner(Core, demo)` → demo timelock propose+execute `SetOwner(Core, deployer)` → Core 侧出现 **demo 来源交易**（`lt=100906097000012`）→ `core.owner` 恢复 = 部署钱包、`demo.hasPending=0`。**时间锁成功门控 Core owner 变更**。
   - ⚠️ 事故与修复：曾因**部署钱包 gas 耗尽（0.0116 TON）**导致所有发送静默失败（`warn: no seqno confirmation`）；已加 **`relayer.mjs check` gas 预检（低于 0.2 TON 直接报错）+ 每日 `relayer-check.yml` 告警**。充值后 `timelock-node.yml` 一次通过。
+- **PlanetFund（ETF 基金）**：`ton/contracts/planet_fund.tolk` + `ton/contracts/tests/fund.test.tolk`。存储受 TON 硬限（内联 ≤1023 bits、序列化 ≤4 refs）约束，故 `orders`+`redeems` 合并进**一个** `ordersStore: cell`（`OrdersStore{mints,redeems}`），基金自身 jetton 钱包地址进 `fundWallet: cell`（`FundWalletRef`），owner 用 `SetFundWallet` 登记。
+  - **无信任赎回（③ TEP-74）**：订阅者 `RequestRedeem` → 把 PLT 份额转到**基金自己的 jetton 钱包**（携带 `queryId == redeem orderId`）→ 钱包发 `TransferNotificationForRecipient` → 基金校验 `sender == fundWallet`（否则 `ERR_NOT_FUND_WALLET=213`）、把该 redeem 标记 `funded` 并 `AskToBurn` 销毁份额 → 之后 `ConfirmRedeem`（要求 `funded`，否则 `ERR_NOT_FUNDED=214`）才放款。**份额没真正离开用户就不能放款**。
+  - **踩坑**：① 旧 `FundStorage` 4 refs，新增字段后内联 1255 bit 超 1023 → 必须合并 refs 且新地址走 ref；② Tolk **struct 是值语义**——把 `storage` 传进辅助函数修改**无效**（改的是副本），必须**就地赋值** `storage.x = …` 再 `save()`（曾因此 `SetFundWallet` 不生效）。
+  - 部署：`.github/workflows/fund-deploy.yml`；owner→时间锁：`.github/workflows/fund-owner.yml`（**脚本内 Fund 地址为硬编码，redeploy 后须同步更新**）。
 - **部署**：`.github/workflows/ton-deploy.yml`（`gh workflow run ton-deploy.yml`）。
 - **数据源**：`.github/workflows/relayer-push.yml`（`gh workflow run relayer-push.yml`）→ `relayer/` 取 **Yahoo Finance** 行情（`CL=F`/`GC=F`/`HG=F`）→ 签 `PricePayload` → 发 `SignedPriceUpdate`（Core 链上 `isSignatureValid` 验签）→ 重算 PPI。
 - **重要经验**：本机/公共 IP 对 toncenter 的 `sendBoc` 会被 **429 限流**；**部署与 relayer 都放在 CI 跑**（runner IP 不限），relayer 内置 429 重试即可。
