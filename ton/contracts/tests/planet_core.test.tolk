@@ -166,3 +166,8 @@ get fun `test low liquidity widens the rebalance threshold`() {
 get fun `test rebalanceDrift with zero reserve returns the weight`() {
     expect(rebalanceDrift(500000, 123, 0)).toEqual(500000);
 }
+
+get fun `test zero liquidity does not widen the threshold`() {
+    // liquidity 0 -> the liquidity-scaling branch is skipped (true)
+    expect(shouldRebalanceRisk(500000, 490, 1000, 0, 0, 0)).toEqual(true);
+}

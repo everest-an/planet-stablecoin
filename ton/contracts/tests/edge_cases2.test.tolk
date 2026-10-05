@@ -88,3 +88,18 @@ get fun `test n-signature update with no valid signer is rejected`() {
     val res = core.sendSignedPriceUpdateN(relayer.address, sigs, payload, { value: ton("0.05") });
     expect(res).toHaveFailedTx({ from: relayer.address, to: core.address, exitCode: 114 });
 }
+
+// short-circuit branch: maxPerTx > 0 AND amount <= cap (the allowed case)
+get fun `test mint within the per-tx cap succeeds`() {
+    val (core, deployer, _) = coreWith(1000000, false, 2000000, 0, false, 0, 0);
+    core.sendMint(deployer.address, 0, 1000000, { value: ton("1") });
+    expect(core.supply()).toEqual(995000);
+}
+
+// short-circuit branch: arbRebateBps > 0 AND PPI <= BAND_RICH (rebate not applied)
+get fun `test arb rebate set but index not rich`() {
+    val (core, deployer, _) = coreWith(1000000, false, 0, 0, false, 0, 0);
+    core.sendSetArb(deployer.address, 0, 500, { value: ton("0.05") });
+    core.sendMint(deployer.address, 0, 1000000, { value: ton("1") });
+    expect(core.supply()).toEqual(995000);
+}
