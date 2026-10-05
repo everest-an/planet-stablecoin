@@ -43,6 +43,14 @@ const ERR_BAD_SIG = 114;
 const ERR_RISK_FUND = 115;
 const ERR_PRICE_JUMP = 116;
 const ERR_BAD_SIG2 = 117;
+const ERR_RESERVE = 118;
+const ERR_BAD_THRESHOLD = 119;
+const ERR_BAD_OWNER = 120;
+const ERR_BAD_RISK = 121;
+
+// Cap the redeem fee so the payout can never go negative (defends against a far
+// below-peg PPI inflating the reserve through a negative fee → AR3).
+const MAX_BURN_FEE_BPS = 2000;
 
 // Fee split (white paper §8.4): 45% buyback-burn / 30% reserve / 25% PLTG staking.
 const BURN_SHARE_BPS = 4500;
@@ -256,6 +264,9 @@ fun burnFeeBpsForPpi(ppi: int64): int64 {
     if (ppi < REDEEM_PENALTY_PPI) {
         f += REDEEM_PENALTY_BPS;
     }
+    if (f > MAX_BURN_FEE_BPS) {
+        f = MAX_BURN_FEE_BPS;   // clamp: payout can never go negative
+    }
     return f as int64;
 }
 
@@ -441,6 +452,7 @@ fun handleBurnMirror(sender: address, msg: BurnMirror) {
     assert (sender == storage.jettonMinter) throw ERR_NOT_MINTER;
     assert (storage.totalSupply >= msg.jettonAmount) throw ERR_SUPPLY;
     val received = burnAmountAtPpi(msg.jettonAmount, storage.currentPpi);
+    assert (storage.totalReserve >= received) throw ERR_RESERVE;
     storage.totalSupply -= msg.jettonAmount;
     storage.totalReserve -= received;
     storage.save();
@@ -449,6 +461,9 @@ fun handleBurnMirror(sender: address, msg: BurnMirror) {
 fun handleUpdatePrice(sender: address, msg: UpdatePrice) {
     var storage = lazy Storage.load();
     assert (sender == storage.owner) throw ERR_NOT_OWNER;
+    // Phase-0 placeholder only: once base prices are locked the PPI comes from the
+    // basket/oracle path, so this direct write must not be usable post-lock (OR4).
+    assert (!storage.baseLocked) throw ERR_BASE_LOCKED;
     storage.currentPpi = msg.price;
     storage.save();
 }
@@ -546,6 +561,8 @@ fun handleSetThreshold(sender: address, msg: SetThreshold) {
     var storage = lazy Storage.load();
     assert (sender == storage.owner) throw ERR_NOT_OWNER;
     var os = OracleState.fromCell(storage.oracleState);
+    // threshold must be satisfiable: 1..signerCount (AC3 — prevents self-DoS)
+    assert (msg.m >= 1 && msg.m <= os.signerCount) throw ERR_BAD_THRESHOLD;
     os.threshold = msg.m;
     storage.oracleState = os.toCell();
     storage.save();
@@ -555,6 +572,9 @@ fun handleSetThreshold(sender: address, msg: SetThreshold) {
 fun handleSetOwner(sender: address, msg: SetOwner) {
     var storage = lazy Storage.load();
     assert (sender == storage.owner) throw ERR_NOT_OWNER;
+    // Reject the zero address so ownership can never be burned by accident (AC2).
+    val (wc, h) = msg.newOwner.getWorkchainAndHash();
+    assert (!(wc == 0 && h == 0)) throw ERR_BAD_OWNER;
     storage.owner = msg.newOwner;
     storage.save();
 }
@@ -594,7 +614,8 @@ fun handleSignedPriceUpdate(msg: SignedPriceUpdate) {
     var matched1: int = -1;
     var si: int = 0;
     while (si < os.signerCount as int && matched1 < 0) {
-        if (isSignatureValid(hash, msg.sig1.beginParse(), os.signers.mustGet(si as int64))) {
+        val lk1 = os.signers.get(si as int64);
+        if (lk1.isFound && isSignatureValid(hash, msg.sig1.beginParse(), lk1.loadValue())) {
             matched1 = si;
         }
         si += 1;
@@ -604,7 +625,8 @@ fun handleSignedPriceUpdate(msg: SignedPriceUpdate) {
         var matched2: int = -1;
         var sj: int = 0;
         while (sj < os.signerCount as int && matched2 < 0) {
-            if (sj != matched1 && isSignatureValid(hash, msg.sig2.beginParse(), os.signers.mustGet(sj as int64))) {
+            val lk2 = os.signers.get(sj as int64);
+            if (sj != matched1 && lk2.isFound && isSignatureValid(hash, msg.sig2.beginParse(), lk2.loadValue())) {
                 matched2 = sj;
             }
             sj += 1;
@@ -632,7 +654,8 @@ fun handleSignedPriceUpdateN(msg: SignedPriceUpdateN) {
         var j: int = 0;
         var found: bool = false;
         while (j < os.signerCount as int && !found) {
-            if (((usedMask >> j) & 1) == 0 && isSignatureValid(hash, sig, os.signers.mustGet(j as int64))) {
+            val lkN = os.signers.get(j as int64);
+            if (((usedMask >> j) & 1) == 0 && lkN.isFound && isSignatureValid(hash, sig, lkN.loadValue())) {
                 usedMask = usedMask | (1 << j);
                 matched += 1;
                 found = true;
@@ -676,9 +699,10 @@ fun handleSetCam(sender: address, msg: SetCam) {
 fun handleCamUpdate(sender: address, msg: CamUpdate) {
     var storage = lazy Storage.load();
     var os = OracleState.fromCell(storage.oracleState);
+    assert (msg.index < storage.assetCount) throw ERR_BAD_INDEX;
     assert (sender == storage.cams.mustGet(msg.index)) throw ERR_NOT_CAM;
     assert (msg.timestamp > os.lastOracleUpdate) throw ERR_STALE_PRICE;
-    assert (msg.index < storage.assetCount) throw ERR_BAD_INDEX;
+    assert (msg.riskState >= 0 && msg.riskState <= 2) throw ERR_BAD_RISK;
     assert (weightsSum(storage.assets, storage.assetCount) == WEIGHT_SCALE) throw ERR_BAD_WEIGHTS;
     val a = storage.assets.mustGet(msg.index);
     assert (priceJumpOk(a.currentPrice, msg.price)) throw ERR_PRICE_JUMP;

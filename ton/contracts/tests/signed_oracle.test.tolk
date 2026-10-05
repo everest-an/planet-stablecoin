@@ -196,3 +196,32 @@ get fun `test N-signature update: duplicate signer does not count twice`() {
     val res = core.sendSignedPriceUpdateN(relayer.address, sigs, payload, { value: ton("0.05") });
     expect(res).toHaveFailedTx({ from: relayer.address, to: core.address, exitCode: 117 });
 }
+
+// Regression (OR1): a non-contiguous signer set must not brick price updates.
+get fun `test signer slot gap does not brick updates`() {
+    val (core, deployer, relayer) = deployCoreSigned();
+    val b = crypto.createMnemonic().toKeyPair();
+    // register ONLY slot 1 (slot 0 left empty) -> signerCount becomes 2
+    core.sendSetSigner(deployer.address, 0, 1, b.publicKey as uint256, { value: ton("0.05") });
+    core.sendSetThreshold(deployer.address, 0, 1, { value: ton("0.05") });
+    core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
+    val payload = samplePayload();
+    core.sendSignedPriceUpdate(relayer.address, sigCell(crypto.sign(b.privateKey, payload)), beginCell().endCell(), payload, { value: ton("0.05") });
+    expect(core.ppi()).toEqual(1100000);
+}
+
+// Regression (AC2): ownership cannot be set to the zero address.
+get fun `test SetOwner rejects the zero address`() {
+    val (core, deployer, _) = deployCoreSigned();
+    val res = core.sendSetOwner(deployer.address, 0, address("EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c"), { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: deployer.address, to: core.address, exitCode: 120 });
+}
+
+// Regression (AC3): threshold must be satisfiable (<= signerCount).
+get fun `test threshold cannot exceed signer count`() {
+    val (core, deployer, _) = deployCoreSigned();
+    val a = crypto.createMnemonic().toKeyPair();
+    core.sendSetSigner(deployer.address, 0, 0, a.publicKey as uint256, { value: ton("0.05") });
+    val res = core.sendSetThreshold(deployer.address, 0, 3, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: deployer.address, to: core.address, exitCode: 119 });
+}

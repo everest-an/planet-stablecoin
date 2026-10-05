@@ -99,6 +99,11 @@ fun handleExecute(sender: address, msg: TlExecute) {
 
     // Replay the proposed body to its target, from THIS contract (which holds owner
     // rights on Core). Carry the attached value so the inner message is funded.
+    // Clear pending BEFORE sending: if the send reverts, the timelock is not left in a
+    // stuck "pending" state (the action can simply be re-proposed) — TL2.
+    storage.hasPending = false;
+    storage.save();
+
     val out = createMessage({
         bounce: BounceMode.NoBounce,
         value: 0,
@@ -106,9 +111,6 @@ fun handleExecute(sender: address, msg: TlExecute) {
         body: storage.body,
     });
     out.send(SEND_MODE_CARRY_ALL_REMAINING_MESSAGE_VALUE);
-
-    storage.hasPending = false;
-    storage.save();
 }
 
 fun handleCancel(sender: address, msg: TlCancel) {

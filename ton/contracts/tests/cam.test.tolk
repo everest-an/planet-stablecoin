@@ -41,6 +41,15 @@ get fun `test owner can register a cam`() {
     expect(core.camAt(0)).toEqual(cam.address);
 }
 
+// Regression (IV2): riskState outside 0..2 is rejected.
+get fun `test cam rejects an out-of-range riskState`() {
+    val (core, deployer, cam, _) = deployCoreCam();
+    core.sendSetCam(deployer.address, 0, 0, cam.address, { value: ton("0.05") });
+    core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
+    val res = core.sendCamUpdate(cam.address, 0, 0, 1000000, 0, 1000000, 5, 1000, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: cam.address, to: core.address, exitCode: 121 });
+}
+
 get fun `test non-owner cannot register a cam`() {
     val (core, _, _, mallory) = deployCoreCam();
     val res = core.sendSetCam(mallory.address, 0, 0, mallory.address, { value: ton("0.05") });
