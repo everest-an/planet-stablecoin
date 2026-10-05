@@ -96,3 +96,15 @@ get fun `test redeem with no bond is rejected`() {
     val res = bond.sendRedeem(alice.address, 0, { value: ton("0.05") });
     expect(res).toHaveFailedTx({ from: alice.address, to: bond.address, exitCode: 201 });
 }
+
+get fun `test non-owner cannot set premium`() {
+    val (bond, _, alice) = deployBond();
+    val res = bond.sendSetPremium(alice.address, 0, 1000, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: alice.address, to: bond.address, exitCode: 101 });
+}
+
+get fun `test unknown bond op is rejected`() {
+    val (bond, owner, _) = deployBond();
+    val res = bond.sendAny(owner.address, beginCell().storeUint(0xDEAD, 32).endCell(), { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: owner.address, to: bond.address, exitCode: 65535 });
+}

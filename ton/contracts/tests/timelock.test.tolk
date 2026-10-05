@@ -163,3 +163,11 @@ get fun `test timelock getters`() {
     expect(tl.pendingEta() > 0).toEqual(true);
     expect(tl.pendingDest()).toEqual(other.address);
 }
+
+get fun `test non-owner timelock actions are rejected`() {
+    val (tl, _, other) = deployTimelock(0);
+    expect(tl.sendTlExecute(other.address, 0, { value: ton("0.05") })).toHaveFailedTx({ from: other.address, to: tl.address, exitCode: 101 });
+    expect(tl.sendTlCancel(other.address, 0, { value: ton("0.05") })).toHaveFailedTx({ from: other.address, to: tl.address, exitCode: 101 });
+    expect(tl.sendTlSetDelay(other.address, 0, 10, { value: ton("0.05") })).toHaveFailedTx({ from: other.address, to: tl.address, exitCode: 101 });
+    expect(tl.sendTlSetOwner(other.address, 0, other.address, { value: ton("0.05") })).toHaveFailedTx({ from: other.address, to: tl.address, exitCode: 101 });
+}
