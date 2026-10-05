@@ -519,8 +519,8 @@ export default function App() {
       {error && <p className="err">{error}</p>}
 
       <footer className="foot">
-        <a href="https://github.com/everest-an/planet-stablecoin" target="_blank" rel="noreferrer">
-          github.com/everest-an/planet-stablecoin
+        <a href="https://ppppp.space" target="_blank" rel="noreferrer">
+          ppppp.space
         </a>
       </footer>
     </main>

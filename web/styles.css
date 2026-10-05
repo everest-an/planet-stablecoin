@@ -119,3 +119,17 @@ section { padding: var(--sp-7) 0; border-bottom: 1px solid var(--hair); }
   .prop { padding-left: 0 !important; border-right: 0 !important; }
   .status-table td:first-child { width: 120px; }
 }
+
+/* whitepaper / prose */
+.doc { max-width: 74ch; padding-top: var(--sp-7); }
+.doc h2 { font-size: 22px; letter-spacing: -0.01em; margin: var(--sp-7) 0 var(--sp-3); padding-top: var(--sp-4); border-top: 1px solid var(--hair); }
+.doc h2:first-child { margin-top: 0; border-top: 0; padding-top: 0; }
+.doc p { margin: 0 0 var(--sp-4); }
+.doc b { font-weight: 500; }
+.doc ul { margin: 0 0 var(--sp-4); padding-left: var(--sp-5); }
+.doc li { margin-bottom: var(--sp-2); }
+.doc code { font-family: var(--mono); font-size: 0.9em; border: 1px solid var(--hair); padding: 0 4px; }
+.doc .callout { border-left: 2px solid var(--ink); padding: var(--sp-3) var(--sp-4); background: transparent; font-family: var(--mono); font-size: 13px; }
+.doc-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12.5px; margin-bottom: var(--sp-4); }
+.doc-table th { text-align: left; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; font-size: 10px; color: var(--muted); padding: var(--sp-3) var(--sp-2); border-bottom: 1px solid var(--ink); }
+.doc-table td { padding: var(--sp-3) var(--sp-2); border-bottom: 1px solid var(--hair); vertical-align: top; }

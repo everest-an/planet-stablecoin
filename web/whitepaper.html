@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Planet — whitepaper</title>
+    <meta name="description" content="Planet whitepaper: an on-chain commodity purchasing-power index on TON. Phase 1 synthetic index token." />
+    <link rel="icon" href="/icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="wordmark" href="/">Planet</a>
+      <nav class="nav">
+        <a href="/#how">how it works</a>
+        <a href="/#protocol">protocol</a>
+        <a href="/#status">status</a>
+        <a class="btn" href="https://app.ppppp.space">open app</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <p class="eyebrow">[ whitepaper · v1.5 · engineering addendum ]</p>
+        <h1>Planet — an on-chain commodity purchasing-power index.</h1>
+        <p class="lede">
+          This page summarises the Planet protocol. The full Chinese manuscript is maintained
+          internally and is available on request to partners. Nothing here is investment advice.
+        </p>
+      </section>
+
+      <article class="doc">
+        <h2>1. Overview</h2>
+        <p>
+          Planet (PLT) aggregates the real prices of a basket of global commodities — energy,
+          metals and agriculture — into an on-chain <b>purchasing-power index (PPI)</b>, and
+          expresses that index as a TEP-74 token on <b>TON</b>. A wallet can mint PLT by
+          depositing value at the current PPI, and burn PLT to redeem against the basket.
+        </p>
+        <p class="callout">
+          <b>Phase 1 status.</b> Planet is a proof-of-concept <b>synthetic index token</b>. It
+          holds <b>no real commodity reserve</b> and is <b>not a fully-collateralised
+          stablecoin</b>. The full “1:1 commodity reserve” variant is a future phase that
+          requires an RWA custodian and regulatory compliance.
+        </p>
+
+        <h2>2. Architecture</h2>
+        <table class="doc-table">
+          <thead><tr><th>Layer</th><th>Component</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>L3</td><td>Stability &amp; risk — tiered fees, elastic curve, arbitrage, bonds, risk fund, circuit-breakers</td><td>implemented</td></tr>
+            <tr><td>L2</td><td>CAM adapter — per-commodity standardisation (price / volatility / liquidity / risk)</td><td>phase A</td></tr>
+            <tr><td>L1</td><td>PlanetCore — basket, on-chain PPI, mint/burn, fees, redemption mirror</td><td>implemented</td></tr>
+            <tr><td>L0</td><td>Reserve / RWA — physical &amp; ETF custody, proof-of-reserve</td><td>future</td></tr>
+          </tbody>
+        </table>
+
+        <h2>3. The index (PPI)</h2>
+        <p>
+          The owner configures a weighted basket (e.g. WTI 40% · Gold 35% · Copper 25%) and
+          locks base prices on-chain. A relayer submits signed per-asset prices; PlanetCore
+          recomputes the PPI from the live basket. An asset flagged as frozen is excluded and
+          the remaining weights are re-normalised.
+        </p>
+
+        <h2>4. Mint / burn and fees</h2>
+        <p>
+          Minting deposits value and issues PLT at the current PPI, net of a tiered fee
+          (45 / 30 / 25 split across burn / reserve / staking). Burning goes through the TEP-74
+          jetton wallet and is mirrored back to core accounting so supply stays consistent.
+        </p>
+
+        <h2>5. Stability mechanisms</h2>
+        <ul>
+          <li><b>Band circuit-breaker:</b> minting freezes when the PPI deviates &gt;15% from peg.</li>
+          <li><b>Fee slope:</b> fees rise above a 5% deviation; redemption is asymmetric.</li>
+          <li><b>Arbitrage incentive:</b> a fee rebate when the index is rich, to pull it back.</li>
+          <li><b>Stabilisation bonds &amp; risk fund:</b> absorb selling pressure below peg; part of each fee funds a risk reserve.</li>
+        </ul>
+
+        <h2>6. Oracle</h2>
+        <p>
+          Prices are sourced off-chain from <b>two independent feeds</b>, combined as a
+          <b>median</b>, and signed with ed25519. PlanetCore verifies against an
+          <b>M-of-N signer set</b> (distinct signers enforced) and applies guards: strictly
+          increasing timestamps, a single-update price-jump limit, and automatic freeze on
+          source divergence.
+        </p>
+
+        <h2>7. Governance</h2>
+        <p>
+          All privileged actions require the owner. Ownership can be migrated to a
+          <b>multisig wallet</b> and routed through a <b>timelock</b>:
+          <code>Propose → delay → Execute</code>, giving holders a reaction window. Set the
+          timelock’s owner to a multisig for M-of-N plus delay.
+        </p>
+
+        <h2>8. Status &amp; roadmap</h2>
+        <ul>
+          <li><b>Now:</b> TON testnet; contracts implemented and tested; multi-source oracle live.</li>
+          <li><b>Next:</b> third-party audit; production oracle sources; key separation; multisig owner.</li>
+          <li><b>Later:</b> 1:1 commodity reserve via an RWA custodian, proof-of-reserve and compliance.</li>
+        </ul>
+
+        <h2>9. Disclaimer</h2>
+        <p class="callout">
+          This is a technical proposal and a proof-of-concept, not investment advice. It is not
+          audited. Commodity prices are volatile and an early-stage index token may diverge
+          materially from its theoretical PPI. Do not use with value you cannot afford to lose.
+        </p>
+      </article>
+    </main>
+
+    <footer class="foot">
+      <div class="foot-row">
+        <span class="wordmark">Planet</span>
+        <span class="ver">[ v0.1 · TON testnet ]</span>
+      </div>
+      <nav class="foot-nav">
+        <a href="/">home</a>
+        <a href="https://app.ppppp.space">open app</a>
+        <a href="/#status">status</a>
+      </nav>
+    </footer>
+  </body>
+</html>
