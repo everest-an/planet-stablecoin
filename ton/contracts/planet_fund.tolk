@@ -97,12 +97,12 @@ struct FundWalletRef {
     addr: address
 }
 
-fun loadFundWallet(self: FundStorage): address {
-    return FundWalletRef.fromCell(self.fundWallet).addr;
+fun loadFundWallet(st: FundStorage): address {
+    return FundWalletRef.fromCell(st.fundWallet).addr;
 }
 
-fun storeFundWallet(self: FundStorage, wallet: address) {
-    self.fundWallet = FundWalletRef { addr: wallet }.toCell();
+fun storeFundWallet(st: FundStorage, wallet: address) {
+    st.fundWallet = FundWalletRef { addr: wallet }.toCell();
 }
 
 // ---------------- Messages ----------------
