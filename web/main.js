@@ -1,6 +1,6 @@
 // Live PPI ticker for the landing site. Reads PlanetCore's `ppi()` over the public TON
 // testnet RPC. Degrades gracefully (shows "—" + a note) if the RPC is unavailable.
-const CORE = "kQB_jRsajqfsRNI8Pp7pqr1zlAbBhIoMBzITYWEainyEm2bH";
+const CORE = "kQAzxh1PoqeXWVYQrABxZky8_bAXddjoGTPbqN4tv8Zsfuul";
 const ENDPOINT = "https://testnet.toncenter.com/api/v2/runGetMethod";
 
 async function readPpi() {

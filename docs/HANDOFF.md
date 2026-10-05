@@ -200,8 +200,8 @@ cd app-tg && npm install && npm run build
 
 | 合约 | 地址 |
 |---|---|
-| **PlanetCore** | `kQB_jRsajqfsRNI8Pp7pqr1zlAbBhIoMBzITYWEainyEm2bH`（v1.5 代码：SetOwner + M-of-N 签名集 + M>2） |
-| **PLT Minter** | `kQCBs5unYxUi2Ewlgor0vNBqLsWrdPHHiZ4WVouZ5--BEwN1`（admin = Core） |
+| **PlanetCore** | `kQAzxh1PoqeXWVYQrABxZky8_bAXddjoGTPbqN4tv8Zsfuul`（v1.5 代码：SetOwner + M-of-N 签名集 + M>2） |
+| **PLT Minter** | `kQB31GEg_GUUQBdvg275a67dkpbcnRdJkE5ov08mNvUZ9QaJ`（admin = Core） |
 | **PlanetBasket** | `kQAfGKn_UrUW8LQd92ZWy0h0BrCA_QTBhMqDA1M-PZtyv-r_` |
 | **PlanetBond**（稳定债券） | `kQDMxJXroCmuxBw9Sw7oj9LhO9Y0mLxdPS3Tr4vY-sdq65hz`（isOpen=false, premium=5%） |
 | **PlanetTimelock**（24h，生产用） | `kQDc_iZ7Y8lQ1r_TxXhOXrhKVrjShyyOgp5c2pUwtGGGJGDe`（delay=86400） |

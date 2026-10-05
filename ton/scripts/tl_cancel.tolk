@@ -5,7 +5,7 @@ import "@wrappers/PlanetTimelock.gen"
 import "@wrappers/PlanetCore.gen"
 
 const DEMO = "kQCMwDVPftkUbRWPMzJGCjoC4YXnFGfN3myTJ1rbeCuSdPAt";
-const CORE = "kQB_jRsajqfsRNI8Pp7pqr1zlAbBhIoMBzITYWEainyEm2bH";
+const CORE = "kQAzxh1PoqeXWVYQrABxZky8_bAXddjoGTPbqN4tv8Zsfuul";
 
 // Step 1: clear any leftover pending proposal on the demo timelock (no message to Core).
 fun main() {

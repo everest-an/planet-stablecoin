@@ -25,8 +25,8 @@ npm run build      # -> dist/
 Current live testnet values (see `../docs/HANDOFF.md` §11):
 
 ```
-VITE_PLANET_ADDRESS=kQB_jRsajqfsRNI8Pp7pqr1zlAbBhIoMBzITYWEainyEm2bH
-VITE_PLT_MINTER_ADDRESS=kQCBs5unYxUi2Ewlgor0vNBqLsWrdPHHiZ4WVouZ5--BEwN1
+VITE_PLANET_ADDRESS=kQAzxh1PoqeXWVYQrABxZky8_bAXddjoGTPbqN4tv8Zsfuul
+VITE_PLT_MINTER_ADDRESS=kQB31GEg_GUUQBdvg275a67dkpbcnRdJkE5ov08mNvUZ9QaJ
 ```
 
 ## Features
