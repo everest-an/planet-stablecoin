@@ -24,6 +24,7 @@ const REDEEM_PENALTY_BPS = 100;    // extra redeem fee (bps) below REDEEM_PENALT
 const BAND_RICH = 1030000;         // PPI above this = index rich -> reward minting
 const RISK_SHARE_BPS = 1000;       // 10% of each fee -> risk fund
 const MAX_PRICE_JUMP_PPM = 500000; // reject a single price update that jumps >50%
+const MAX_ASSET_WEIGHT = 150000;   // 15% — no single commodity may exceed this (wp §2.1)
 
 const ERR_PAUSED = 100;
 const ERR_NOT_OWNER = 101;
@@ -182,12 +183,28 @@ struct (0x10000012) CoverDeficit {
     amount: int64      // move this much from the risk fund into the reserve
 }
 
+// Governance basket management (valid AFTER base prices are locked). The white paper
+// specifies the basket is re-weighted periodically by governance. An EXISTING asset's
+// basePrice can never change (append-only + weight-only), so live PPI history stays
+// tamper-evident; a new asset may be appended with its own base price.
+struct (0x10000017) GovernanceAddAsset {
+    queryId: int64
+    weight: int64     // ppm (<= MAX_ASSET_WEIGHT)
+    basePrice: int64  // 1e6 (applies to the newly appended asset only)
+}
+
+struct (0x10000018) GovernanceSetWeight {
+    queryId: int64
+    index: int64
+    weight: int64     // ppm (<= MAX_ASSET_WEIGHT)
+}
+
 struct (0x10000014) SetOwner {
     queryId: int64
     newOwner: address  // e.g. migrate to a TON multisig wallet
 }
 
-type AllowedMessage = Mint | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | BurnMirror | SetBasketAsset | OracleUpdateAssetPrice | LockBasePrices | SetLimits | SetCam | CamUpdate | SetArb | SetSigner | SignedPriceUpdate | SignedPriceUpdateN | CoverDeficit | SetThreshold | SetOwner
+type AllowedMessage = Mint | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | BurnMirror | SetBasketAsset | OracleUpdateAssetPrice | LockBasePrices | SetLimits | SetCam | CamUpdate | SetArb | SetSigner | SignedPriceUpdate | SignedPriceUpdateN | CoverDeficit | SetThreshold | SetOwner | GovernanceAddAsset | GovernanceSetWeight
 
 // ---------------- Contract ABI ----------------
 
@@ -384,6 +401,8 @@ fun onInternalMessage(in: InMessage) {
         CoverDeficit => { handleCoverDeficit(in.senderAddress, msg); }
         SetThreshold => { handleSetThreshold(in.senderAddress, msg); }
         SetOwner => { handleSetOwner(in.senderAddress, msg); }
+        GovernanceAddAsset => { handleGovernanceAddAsset(in.senderAddress, msg); }
+        GovernanceSetWeight => { handleGovernanceSetWeight(in.senderAddress, msg); }
         else => { assert (in.body.isEmpty()) throw 0xFFFF; }
     }
 }
@@ -712,6 +731,45 @@ fun handleCoverDeficit(sender: address, msg: CoverDeficit) {
     storage.save();
 }
 
+// Owner appends a NEW basket asset (allowed after base prices are locked). The asset is
+// placed at the current assetCount (append-only: an existing index is never overwritten).
+fun handleGovernanceAddAsset(sender: address, msg: GovernanceAddAsset) {
+    var storage = lazy Storage.load();
+    assert (sender == storage.owner) throw ERR_NOT_OWNER;
+    assert (msg.basePrice > 0) throw ERR_BAD_BASE;
+    assert (msg.weight > 0 && msg.weight <= MAX_ASSET_WEIGHT) throw ERR_BAD_WEIGHTS;
+    val idx = storage.assetCount;
+    storage.assets.set(idx, CoreAsset {
+        weight: msg.weight,
+        basePrice: msg.basePrice,
+        currentPrice: msg.basePrice,
+        volatility: 0,
+        liquidity: 0,
+        riskState: 0,
+    });
+    storage.assetCount = idx + 1;
+    storage.save();
+}
+
+// Owner re-weights an EXISTING basket asset (allowed after lock; basePrice untouched).
+// The basket must still sum to 100% before the next oracle push (fail-safe).
+fun handleGovernanceSetWeight(sender: address, msg: GovernanceSetWeight) {
+    var storage = lazy Storage.load();
+    assert (sender == storage.owner) throw ERR_NOT_OWNER;
+    assert (msg.index >= 0 && msg.index < storage.assetCount) throw ERR_BAD_INDEX;
+    assert (msg.weight > 0 && msg.weight <= MAX_ASSET_WEIGHT) throw ERR_BAD_WEIGHTS;
+    val a = storage.assets.mustGet(msg.index);
+    storage.assets.set(msg.index, CoreAsset {
+        weight: msg.weight,
+        basePrice: a.basePrice,
+        currentPrice: a.currentPrice,
+        volatility: a.volatility,
+        liquidity: a.liquidity,
+        riskState: a.riskState,
+    });
+    storage.save();
+}
+
 // Owner registers the CAM adapter for a basket index.
 fun handleSetCam(sender: address, msg: SetCam) {
     var storage = lazy Storage.load();
@@ -867,4 +925,13 @@ get fun feesReserve(): int64 {
 get fun feesStaking(): int64 {
     val storage = lazy Storage.load();
     return storage.feesToStaking;
+}
+
+get fun maxAssetWeight(): int64 {
+    return MAX_ASSET_WEIGHT;
+}
+
+get fun baseLocked(): bool {
+    val storage = lazy Storage.load();
+    return storage.baseLocked;
 }
