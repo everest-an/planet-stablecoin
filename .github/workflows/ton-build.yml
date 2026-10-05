@@ -40,16 +40,14 @@ jobs:
         run: acton wrapper --all
 
       - name: Test (Tolk, with coverage)
-        run: acton test --coverage
+        run: acton test --coverage --coverage-format lcov
 
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: tolk-coverage
-          path: |
-            ton/lcov.info
-            ton/coverage
+          path: ton/lcov.info
           if-no-files-found: ignore
 
       - name: Smoke-run deploy script (emulation)
