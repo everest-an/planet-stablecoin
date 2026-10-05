@@ -103,9 +103,33 @@ RON/Curve Vyper (2023, ~$70M) 等为 **EVM 独有**（同步调用 + 回调）�
 |---|---|---|---|---|
 | **NEW-1** | 🟡 | 核心合约未拒绝 **bounced** 消息（Jett莫 Wallet 之外），畸形 body 可被当命令解析 | 加 `onBouncedMessage`（Core/Bond/Timelock） | `test bounced mint is ignored` |
 | **NEW-2** | 🟡 | 签名**无域分隔** → 跨部署重放 | `priceHash = tag + core.address + payload` + relayer/测试同步 | 全部签名测试（域分隔后仍通过） |
+| **NEW-3** | 🟠 | **有符号整数未校验正负**：`Mint.amount`/`CoverDeficit.amount` 为 int64，负值可**反向操作**（铸币反而减供应/储备被反增）——TON 官方明确警告此陷阱（≈Quantstamp「整数/任意铸币」类） | `handleMint`/`handleCoverDeficit` 加 `amount > 0`；`SetBasketAsset` 加 `weight >= 0` | `test mint rejects a negative amount`、`cover deficit rejects a negative amount` |
 
 > 另：本次修复的 AR2/AR3/OR1/OR4/AC2/AC3/IV2/TL2 见 `docs/audit-report.md`。
-> **合计**：8（原审计）+ 2（深挖）= **10 项** 已修复并回归，**116 测试 / 90.1%**，CI 绿。
+> **合计**：8（原审计）+ 3（深挖）= **11 项** 已修复并回归，**118 测试 / 90.1%**，CI 绿。
+
+---
+
+## 8.5 对照 Quantstamp 方法（采纳其清单）
+
+参考 Quantstamp 公开方法学与审计报告（specification → testing/coverage → automated symbolic execution →
+**多人独立人工复审** → 严重度分级 High/Med/Low/Info → fix review）。其**必查清单**与我们的结论：
+
+| Quantstamp 检查项 | 我们 |
+|---|---|
+| Transaction-ordering dependence / front-running | ✅ 签名不搬资金；域分隔后不可改收件人 |
+| Timestamp dependence | ✅ 时间戳仅作单调重放防护（非随机/非授权） |
+| Unsafe external calls / mishandled exceptions | 🟡 异步部分执行（SC1，已知）；bounce 已处理（NEW-1） |
+| **Integer overflow/underflow** | ✅/🟠 widen + AR2/AR3 修复 + **NEW-3（符号）** |
+| Number rounding errors | ✅ 舍入均向下（偏协议，不伤用户） |
+| Reentrancy | ✅ N/A（TON 异步，无同步回调） |
+| DoS / logical oversights | ✅ 循环有界；OR1 修复 |
+| **Access control / centralization of power** | ✅ `SetOwner`+多签+时间锁；`security.md` 明确披露中心化 |
+| Business logic vs specification | ✅ 白皮书/README 与实现一致 |
+| Arbitrary token minting | 🟠 **EC1**（PoC mock 铸造，需真实背书）——**最大待办** |
+| Test coverage | ✅ 118 测试 / **branch 79.8% / line 96.2%**；Quantstamp 建议 branch ≥90% → **待补** |
+
+> 结论：以 Quantstamp 口径，**合约级 High/Medium 基本清零**；剩 `EC1`（业务/经济）与**分支覆盖率**两项待办。
 
 ---
 
