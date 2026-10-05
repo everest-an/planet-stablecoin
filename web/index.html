@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Planet — on-chain commodity purchasing-power index</title>
+    <meta
+      name="description"
+      content="Planet (PLT) aggregates real commodity prices into an on-chain purchasing-power index on TON. Synthetic index token — Phase 1 PoC, not a fully-collateralised stablecoin."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500&family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="wordmark" href="/">Planet</a>
+      <nav class="nav">
+        <a href="#how">how it works</a>
+        <a href="#protocol">protocol</a>
+        <a href="#status">status</a>
+        <a href="https://github.com/everest-an/planet-stablecoin" target="_blank" rel="noreferrer">github</a>
+        <a class="btn" href="https://github.com/everest-an/planet-stablecoin" target="_blank" rel="noreferrer"
+          >open app</a
+        >
+      </nav>
+    </header>
+
+    <main>
+      <!-- HERO -->
+      <section class="hero">
+        <p class="eyebrow">[ on-chain commodity purchasing-power index · TON ]</p>
+        <h1>A purchasing-power index for the world's commodities, <em>on-chain</em>.</h1>
+        <p class="lede">
+          Planet (PLT) aggregates the real prices of energy, metals and agriculture into one
+          on-chain index — a synthetic index token (TEP-74), verifiable on TON and mintable from
+          your wallet.
+        </p>
+        <div class="hero-cta">
+          <a class="btn solid" href="https://github.com/everest-an/planet-stablecoin" target="_blank" rel="noreferrer"
+            >Open the Mini App →</a
+          >
+          <a class="btn" href="https://github.com/everest-an/planet-stablecoin/blob/main/docs/WHITEPAPER.md" target="_blank" rel="noreferrer"
+            >Read the whitepaper</a
+          >
+        </div>
+        <div class="ticker">
+          <span class="tk">[ live ]</span>
+          <span class="tk-label">PPI</span>
+          <span class="tk-val" id="ppi">—</span>
+          <span class="tk-note" id="ppi-note">reading PlanetCore…</span>
+        </div>
+      </section>
+
+      <!-- WHAT IT IS / IS NOT -->
+      <section class="split" id="what">
+        <div class="col">
+          <div class="sec-head"><span class="num">[ 01 ]</span><span class="lbl">what it is</span><span class="end">¬</span></div>
+          <ul class="marks yes">
+            <li>An on-chain <b>commodity purchasing-power index</b> expressed as the PLT token.</li>
+            <li>A <b>synthetic index token</b> (TEP-74) on <b>TON</b>, with mint / burn / redemption accounting.</li>
+            <li>Prices sourced by an <b>off-chain relayer</b> from <b>two independent feeds</b>, verified on-chain by ed25519 signatures.</li>
+            <li>Governed by an <b>owner + timelock</b> (Propose → delay → Execute), multisig-ready.</li>
+          </ul>
+        </div>
+        <div class="col">
+          <div class="sec-head"><span class="num">[ 02 ]</span><span class="lbl">what it is not</span><span class="end">¬</span></div>
+          <ul class="marks no">
+            <li><b>Not a fully-collateralised stablecoin.</b> Phase 1 holds no real commodity reserve.</li>
+            <li><b>Not pegged 1:1</b> to a basket — PLT is an index, its market price may diverge.</li>
+            <li><b>Not audited yet.</b> Testnet only; do not use with real value.</li>
+            <li><b>Not a DEX.</b> Planet builds no AMM; trading happens on external venues.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- HOW IT WORKS -->
+      <section id="how">
+        <div class="sec-head"><span class="num">[ 03 ]</span><span class="lbl">how it works</span><span class="end">¬</span></div>
+        <ol class="steps">
+          <li>
+            <span class="step-n">01</span>
+            <div>
+              <h3>Basket</h3>
+              <p>Owner configures a weighted basket (e.g. WTI 40% · Gold 35% · Copper 25%) and locks base prices on-chain.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-n">02</span>
+            <div>
+              <h3>Multi-source oracle</h3>
+              <p>A relayer reads two independent feeds, takes the median, and signs the payload. Divergence beyond 2% freezes the asset out of the index.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-n">03</span>
+            <div>
+              <h3>On-chain PPI</h3>
+              <p>PlanetCore verifies the signature (M-of-N signer set), guards against stale / jumped prices, and recomputes the PPI from the live basket.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-n">04</span>
+            <div>
+              <h3>Mint / burn</h3>
+              <p>Deposit to mint PLT at the current PPI (tiered fees 45/30/25). Burns mirror through the jetton minter back to core accounting.</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <!-- PROTOCOL -->
+      <section id="protocol">
+        <div class="sec-head"><span class="num">[ 04 ]</span><span class="lbl">protocol</span><span class="end">¬</span></div>
+        <div class="props">
+          <div class="prop"><span class="pk">oracle</span><span class="pv">multi-source · M-of-N</span></div>
+          <div class="prop"><span class="pk">governance</span><span class="pv">owner + timelock</span></div>
+          <div class="prop"><span class="pk">token</span><span class="pv">TEP-74 (Jetton)</span></div>
+          <div class="prop"><span class="pk">guards</span><span class="pv">price-jump · staleness · freeze</span></div>
+          <div class="prop"><span class="pk">fees</span><span class="pv">45 / 30 / 25 split</span></div>
+          <div class="prop"><span class="pk">tests</span><span class="pv">108 · 90% coverage</span></div>
+        </div>
+      </section>
+
+      <!-- STATUS -->
+      <section id="status">
+        <div class="sec-head"><span class="num">[ 05 ]</span><span class="lbl">status</span><span class="end">¬</span></div>
+        <table class="status-table">
+          <tbody>
+            <tr><td>network</td><td>TON testnet (live)</td></tr>
+            <tr><td>contracts</td><td>PlanetCore · PLT Jetton · Basket · Bond · Timelock</td></tr>
+            <tr><td>phase</td><td>Phase 1 PoC — synthetic index token</td></tr>
+            <tr><td>audit</td><td>not yet — pre-mainnet gate</td></tr>
+            <tr><td>1:1 reserve</td><td>future — requires RWA custody + compliance</td></tr>
+          </tbody>
+        </table>
+        <p class="disclaimer">
+          This is a technical PoC. Nothing here is investment advice. Commodity prices are volatile; an
+          early-stage index token may diverge materially from its theoretical PPI.
+        </p>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <div class="foot-row">
+        <span class="wordmark">Planet</span>
+        <span class="ver">[ v0.1 · TON testnet ]</span>
+      </div>
+      <nav class="foot-nav">
+        <a href="https://github.com/everest-an/planet-stablecoin" target="_blank" rel="noreferrer">github</a>
+        <a href="https://github.com/everest-an/planet-stablecoin/blob/main/docs/WHITEPAPER.md" target="_blank" rel="noreferrer">whitepaper</a>
+        <a href="https://github.com/everest-an/planet-stablecoin/blob/main/docs/HANDOFF.md" target="_blank" rel="noreferrer">status</a>
+        <a href="https://github.com/everest-an/planet-stablecoin/tree/main/docs" target="_blank" rel="noreferrer">docs</a>
+      </nav>
+    </footer>
+
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
