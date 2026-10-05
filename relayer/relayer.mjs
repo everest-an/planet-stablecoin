@@ -291,6 +291,7 @@ async function main() {
   // push
   const cfg = JSON.parse(readFileSync(ASSETS_JSON, "utf8"));
   let ts = Math.floor(Date.now() / 1000);
+  const pushed = [];
   for (const a of cfg.assets) {
     const agg = aggregate(await sourcePrices(a));
     console.log(
@@ -320,7 +321,34 @@ async function main() {
       .endCell();
     console.log(`push #${a.index} ${a.name ?? a.symbol}: price=${price}`);
     await send(body);
+    pushed.push({ index: a.index, price });
   }
+
+  // Verify the pushes actually applied on-chain. `send` only proves the wallet broadcast;
+  // it does NOT prove Core accepted the message (wrong op/format, bad signature, gas, or
+  // the price-jump guard would all silently leave state unchanged).
+  const lastTs = BigInt(ts);
+  let applied = false;
+  for (let i = 0; i < 15; i++) {
+    await sleep(2000);
+    const lu = (await runGet(core, "lastOracleUpdate")).stack.readBigNumber();
+    if (lu >= lastTs) {
+      applied = true;
+      break;
+    }
+  }
+  if (!applied) {
+    const lu = (await runGet(core, "lastOracleUpdate")).stack.readBigNumber();
+    die(`price update did NOT apply on-chain (lastOracleUpdate=${lu} < ${lastTs}) — check SignedPriceUpdate body/signature/gas`);
+  }
+  for (const p of pushed) {
+    const st = (await runGet(core, "assetAt", [{ type: "int", value: BigInt(p.index) }])).stack;
+    st.readBigNumber(); // weight
+    st.readBigNumber(); // basePrice
+    const cur = st.readBigNumber(); // currentPrice
+    if (cur !== p.price) die(`asset #${p.index} currentPrice=${cur} != pushed ${p.price}`);
+  }
+  console.log("verified: lastOracleUpdate=" + lastTs + ", all " + pushed.length + " asset price(s) match on-chain");
   console.log("done: pushed " + cfg.assets.length + " asset price(s)");
 }
 
