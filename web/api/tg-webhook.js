@@ -169,6 +169,28 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true });
   }
 
+  if (cmd === "/mint" || cmd === "/burn") {
+    const kind = cmd.slice(1);
+    const amt = (text.split(/\s+/)[1] || "").replace(/[^0-9.]/g, "");
+    const url = `https://app.ppppp.space/?intent=${kind}${amt ? "_" + amt : ""}`;
+    await reply(
+      chatId,
+      `Ready to ${kind}${amt ? " " + amt : ""}. Tap below to open the Mini App — it opens ` +
+        "pre-filled, and you sign in your own wallet. The bot never holds keys and never signs " +
+        "for you." +
+        FOOTER,
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: kind === "mint" ? "Mint (opens app)" : "Burn (opens app)", web_app: { url } }],
+            [{ text: "FAQ", url: "https://ppppp.space/faq" }],
+          ],
+        },
+      }
+    );
+    return res.status(200).json({ ok: true });
+  }
+
   if (cmd === "/faq") {
     const items = await faq();
     const list = items.map((it, i) => `${i + 1}. ${it.q}`).join("\n");

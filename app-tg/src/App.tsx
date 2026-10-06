@@ -107,6 +107,7 @@ export default function App() {
   const [updatedAt, setUpdatedAt] = useState("");
   const [maxMint, setMaxMint] = useState(0);
   const [pltRaw, setPltRaw] = useState<bigint | null>(null);
+  const [intentNote, setIntentNote] = useState("");
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -235,6 +236,39 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userAddress]);
 
+  // Conversational entry ("talk to the bot, then trade"): the bot opens the app with an
+  // intent, e.g. https://app.ppppp.space/?intent=mint_100 — or the Mini App start_param
+  // (t.me/<bot>?startapp=mint_100). We only PRE-FILL the form: the user still signs the
+  // transaction in their own wallet. The bot never holds keys and never signs for you.
+  useEffect(() => {
+    const tg = (
+      window as unknown as { Telegram?: { WebApp?: { initDataUnsafe?: { start_param?: string } } } }
+    ).Telegram?.WebApp;
+    const raw = (
+      new URLSearchParams(window.location.search).get("intent") ||
+      tg?.initDataUnsafe?.start_param ||
+      ""
+    ).trim();
+    const m = /^(mint|burn)[_-]?([0-9]*\.?[0-9]+)?$/i.exec(raw);
+    if (!m) return;
+    const kind = m[1].toLowerCase();
+    const val = m[2] || "";
+    if (kind === "mint") {
+      if (val) setAmount(val);
+      setIntentNote(
+        `From Telegram: mint${val ? " " + val : ""} — connect a wallet and sign to confirm.`
+      );
+      document.getElementById("mint")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      if (val) setBurnAmount(val);
+      setIntentNote(
+        `From Telegram: burn${val ? " " + val + " PLT" : ""} — connect a wallet and sign to confirm.`
+      );
+      document.getElementById("burn")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function onMint() {
     if (!PLANET_ADDRESS) return;
     const units = BigInt(Math.floor(Number(amount) * 10 ** USD_DECIMALS));
@@ -352,6 +386,7 @@ export default function App() {
       </header>
 
       <p className="tag">[ commodity purchasing-power index · TON testnet ]</p>
+      {intentNote && <p className="muted">▸ {intentNote}</p>}
 
       <div className="sec-head">
         <span className="num">[ 01 ]</span>
@@ -449,7 +484,7 @@ export default function App() {
         </section>
       )}
 
-      <section className="mint">
+      <section className="mint" id="mint">
         <div className="sec-head">
           <span className="num">[ 03 ]</span>
           <span className="lbl">mint</span>
@@ -474,7 +509,7 @@ export default function App() {
         {!userAddress && <p className="muted">Connect a wallet to mint.</p>}
       </section>
 
-      <section className="mint">
+      <section className="mint" id="burn">
         <div className="sec-head">
           <span className="num">[ 04 ]</span>
           <span className="lbl">burn</span>
