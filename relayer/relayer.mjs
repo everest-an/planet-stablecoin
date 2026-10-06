@@ -158,13 +158,15 @@ async function main() {
   }
 
   // Broadcast once (retry only the broadcast itself, never after it may have landed).
-  async function send(body, to = core, value = "0.05") {
+  // `bounce` defaults to true; funding a brand-new (uninitialised) wallet must pass false —
+  // a bouncing message to an uninitialised account is returned to the sender.
+  async function send(body, to = core, value = "0.05", bounce = true) {
     const seqno = await rpcRetry("getSeqno", () => contract.getSeqno());
     await rpcRetry("sendBoc", () =>
       contract.sendTransfer({
         seqno,
         secretKey: kp.secretKey,
-        messages: [internal({ to, value: toNano(value), bounce: true, body })],
+        messages: [internal({ to, value: toNano(value), bounce, body })],
       })
     );
     // best-effort confirmation
@@ -234,8 +236,8 @@ async function main() {
     const to = process.env.FUND_TO ?? "";
     const amount = process.env.FUND_TON ?? "1";
     if (!to) die("FUND_TO not set");
-    console.log(`funding ${to} with ${amount} TON`);
-    await send(beginCell().endCell(), Address.parse(to), amount);
+    console.log(`funding ${to} with ${amount} TON (bounce disabled — the wallet may be uninitialised)`);
+    await send(beginCell().endCell(), Address.parse(to), amount, false);
     console.log("done: funded");
     return;
   }
