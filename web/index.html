@@ -25,6 +25,7 @@
         <a href="#how">how it works</a>
         <a href="#start">how to use</a>
         <a href="#trust">trust</a>
+        <a href="#compare">compare</a>
         <a href="/whitepaper.html">whitepaper</a>
         <a class="btn" href="https://app.ppppp.space">open app</a>
       </nav>
@@ -180,13 +181,36 @@
         <div class="sec-head"><span class="num">[ 08 ]</span><span class="lbl">contracts · TON testnet</span><span class="end">¬</span></div>
         <table class="status-table doc-table">
           <tbody>
-<tr><td>PlanetCore</td><td><code>kQA57Fa64OT_MXIqrJD0DGokcNaw36neL-aIWjWJHcIp2QfX</code></td></tr>
-<tr><td>PLT Jetton</td><td><code>kQDh_XQENGiZ7JSzvRYp_G7EvTtTXvpz6FXS65BnYVimGsEJ</code></td></tr>
+<tr><td>PlanetCore</td><td><code>kQAzxh1PoqeXWVYQrABxZky8_bAXddjoGTPbqN4tv8Zsfuul</code></td></tr>
+<tr><td>PLT Jetton</td><td><code>kQB31GEg_GUUQBdvg275a67dkpbcnRdJkE5ov08mNvUZ9QaJ</code></td></tr>
             <tr><td>Basket</td><td><code>kQAfGKn_UrUW8LQd92ZWy0h0BrCA_QTBhMqDA1M-PZtyv-r_</code></td></tr>
             <tr><td>Timelock</td><td><code>kQDc_iZ7Y8lQ1r_TxXhOXrhKVrjShyyOgp5c2pUwtGGGJGDe</code></td></tr>
           </tbody>
         </table>
         <p class="disclaimer">Verify these on a TON explorer (e.g. tonviewer testnet). Addresses may change before mainnet.</p>
+      </section>
+
+      <!-- HOW WE COMPARE -->
+      <section id="compare">
+        <div class="sec-head"><span class="num">[ 09 ]</span><span class="lbl">how we compare · similar token designs</span><span class="end">¬</span></div>
+        <p class="lede">
+          Planet sits between <b>asset-backed</b> tokens (PAXG/XAUT), <b>basket</b> protocols (Reserve),
+          <b>purchasing-power</b> tokens (Frax FPI) and <b>elastic-supply</b> designs (Ampleforth).
+          We kept the parts that are structurally safe and deferred the parts that need custody / licences.
+        </p>
+        <table class="status-table doc-table">
+          <thead>
+            <tr><th>project</th><th>unit</th><th>backing</th><th>how the basket / peg is updated</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Planet (this)</td><td>PLT index token</td><td>none — PoC</td><td>governance add / re-weight; base prices immutable; quarterly cadence</td></tr>
+            <tr><td>Frax FPI</td><td>CPI purchasing power</td><td>100% CR (AMOs)</td><td>monthly CPI oracle ratchets the redemption price; TWAMM tops up the CR</td></tr>
+            <tr><td>Reserve RToken</td><td>collateral basket</td><td>on-chain collateral</td><td>governance sets target weights; Dutch-auction rebalancing; backup baskets</td></tr>
+            <tr><td>Ampleforth AMPL</td><td>CPI unit of account</td><td>none</td><td>rebases supply (not price); FORTH governance</td></tr>
+            <tr><td>PAXG / XAUT</td><td>1 oz gold</td><td>custody + attestation</td><td>single asset — no weighting</td></tr>
+          </tbody>
+        </table>
+        <p class="disclaimer">Reflects public documentation at build time — verify independently. Planet is a testnet PoC, not an investment.</p>
       </section>
     </main>
 
