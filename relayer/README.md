@@ -22,6 +22,13 @@ Config via env:
 | `ASSETS_JSON` | path to the asset map (default `assets.json`) |
 | `MULTI_SOURCE` | `0` disables cross-validation (default: on) |
 | `MAX_SOURCE_SPREAD` | freeze asset if sources diverge beyond this (default `0.02` = 2%) |
+| `PUSH_VALUE_TON` | TON attached per price push (default `0.006`) |
+
+**Gas budget (measured on testnet):** PlanetCore's `SignedPriceUpdate` costs **0.00226867 TON**
+of gas, so the push attaches `PUSH_VALUE_TON` (default 0.006 — ~2.6x headroom) instead of a flat
+0.05, which parked ~95% of the value in the contract unspent. A full 14-asset push run now costs
+**~0.09 TON** (was ~0.77 with 0.05 attached) — i.e. the daily cron lasts ~8x longer per TON.
+Owner ops (`configure` / `register`) keep the larger 0.05 default.
 
 ## Commands
 
