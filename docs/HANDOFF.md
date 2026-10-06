@@ -212,6 +212,8 @@ cd app-tg && npm install && npm run build
 | **PlanetTimelock**（24h，生产用） | `kQDc_iZ7Y8lQ1r_TxXhOXrhKVrjShyyOgp5c2pUwtGGGJGDe`（delay=86400） |
 | **PlanetTimelock**（demo 0s / tl2） | `kQCMwDVPftkUbRWPMzJGCjoC4YXnFGfN3myTJ1rbeCuSdPAt` / `kQAwMedJ1wWbt-zKqw06Ssb7vdeLW_FIbAQd0NmAPjC5v2Mr` |
 | 部署钱包 | `0QBW4GNM-XpAIuIzwrupQKqVOLILHfP6lnD_Xk04L9Yx6Qol`（v4r2；私钥 `ton/.secrets/`，已 gitignore） |
+| **relayer 热钱包（密钥已分离）** | `0QC-PU0nxNjX1f1PVPb68Pg_oou-A7AHvFbTTgjdDWJ6_wp-`（v4r2；**与 owner/部署钱包分离**，只做推价签名；已注资 1 TON） |
+| **预言机签名者** | `signerAt(0) = 0x75bc1c11697f7f2bbb61fd37fdde3dcc9ebdb20a05d3bc27f740cddc53d5c8dc`（= 上面的热钱包；**旧的 owner 密钥已从签名集合移除**） |
 
 - **链上状态**：**篮子已扩到 14 个商品**（WTI/Brent/NatGas/Gold/Silver/Copper/Wheat/Corn/Soybean/Coffee/Lumber/Lithium/Water/Carbon，权重各 ≤15%、合计 100%），`assetCount=14`、**14/14 价格已上链并校验**、`signerAt(0)=0x9471…0f8f`（relayer 公钥，`threshold=1`）、`lastOracleUpdate` 持续更新、**`ppi≈1.000077`（随行情动态变化；基准=建仓价）**。**Core owner = 时间锁（60s）** → 改篮子/费率等特权操作需 `Propose→60s→Execute`。
 - **治理级篮子管理（v1.6）**：`GovernanceAddAsset`（追加新商品，仅追加不覆盖）与 `GovernanceSetWeight`（改权重、**不动 basePrice**）——**在 `baseLocked` 之后仍可调整**，对齐白皮书「权重由 DAO 季度调整」。单类权重上限 `MAX_ASSET_WEIGHT=15%`。
