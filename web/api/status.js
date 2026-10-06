@@ -17,8 +17,8 @@ const API_KEY = process.env.TON_API_KEY || ""; // optional: raises the public RP
 const PPI_SCALE = 1e6;
 const WEIGHT_SCALE = 1e6;
 
-const CONCURRENCY = 4; // parallel get-methods (the public RPC rate-limits big bursts)
-const BUDGET_MS = 20000; // return whatever we have rather than risk the 30s function limit
+const CONCURRENCY = 3; // parallel get-methods (the public RPC rate-limits big bursts)
+const BUDGET_MS = 40000; // return whatever we have rather than risk the 30s function limit
 const TRIES = 5;
 const BACKOFF_MS = 350;
 
@@ -100,20 +100,21 @@ export default async function handler(_req, res) {
       assetCount = n(await one("assetCount"));
     }
 
-    // Scalars in PARALLEL (one round trip's worth of latency instead of nine).
-    const [ppi, supply, reserve, lastOracleUpdate, riskFund, threshold, feesBurn, feesReserve, feesStaking] =
-      await Promise.all([
-        one("ppi"),
-        one("supply"),
-        one("reserve"),
-        one("lastOracleUpdate"),
-        one("riskFund"),
-        one("threshold"),
-        one("feesBurn"),
-        one("feesReserve"),
-        one("feesStaking"),
-      ]);
-    for (const v of [ppi, supply, reserve, lastOracleUpdate]) if (v == null) partial = true;
+    // Headline values FIRST, sequentially, so `ppi` is never missing even under rate limiting.
+    const ppi = await one("ppi");
+    const lastOracleUpdate = await one("lastOracleUpdate");
+
+    // The remaining scalars in parallel (a burst the RPC only mildly rate-limits).
+    const [supply, reserve, riskFund, threshold, feesBurn, feesReserve, feesStaking] = await Promise.all([
+      one("supply"),
+      one("reserve"),
+      one("riskFund"),
+      one("threshold"),
+      one("feesBurn"),
+      one("feesReserve"),
+      one("feesStaking"),
+    ]);
+    for (const v of [supply, reserve]) if (v == null) partial = true;
 
     // Per-asset reads through a small worker pool (toncenter v2 stack format: ["num","0x.."];
     // a struct return is FLATTENED onto the stack — 6 ints for CoreAsset).
@@ -149,7 +150,7 @@ export default async function handler(_req, res) {
     if (assets.length < assetCount) partial = true;
 
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Cache-Control", "s-maxage=60, stale-while-revalidate=300");
+    res.setHeader("Cache-Control", "s-maxage=120, stale-while-revalidate=600");
     res.status(200).json({
       ok: true,
       partial,
