@@ -37,23 +37,25 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function yahooPrice(symbol) {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1d&interval=1d`;
   const res = await fetch(url);
-  if (!res.ok) die(`yahoo ${symbol}: HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`yahoo ${symbol}: HTTP ${res.status}`);
   const j = await res.json();
   const price = j?.chart?.result?.[0]?.meta?.regularMarketPrice;
-  if (!Number.isFinite(price) || price <= 0) die(`yahoo ${symbol}: bad price '${price}'`);
+  if (!Number.isFinite(price) || price <= 0) throw new Error(`yahoo ${symbol}: bad price '${price}'`);
   return price;
 }
 
 // Sina international-futures quote: `var hq_str_<code>="<current>,,<bid>,<ask>,..."`
+// NOTE: throw (not die/process.exit) so a missing/unavailable Sina symbol degrades to a
+// single-source (Yahoo) reading instead of killing the whole relayer run.
 async function sinaPrice(code) {
   const res = await fetch(`https://hq.sinajs.cn/list=${encodeURIComponent(code)}`, {
     headers: { Referer: "https://finance.sina.com.cn", "User-Agent": "Mozilla/5.0" },
   });
-  if (!res.ok) die(`sina ${code}: HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`sina ${code}: HTTP ${res.status}`);
   const m = (await res.text()).match(/"([^"]*)"/);
-  if (!m || !m[1]) die(`sina ${code}: no data`);
+  if (!m || !m[1]) throw new Error(`sina ${code}: no data`);
   const price = Number(m[1].split(",")[0]);
-  if (!Number.isFinite(price) || price <= 0) die(`sina ${code}: bad price`);
+  if (!Number.isFinite(price) || price <= 0) throw new Error(`sina ${code}: bad price`);
   return price;
 }
 
