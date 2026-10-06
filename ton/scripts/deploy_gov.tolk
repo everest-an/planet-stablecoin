@@ -66,5 +66,12 @@ fun main() {
     minter.sendMintNewJettons(deployer.address, 0, deployer.address, ton("0.05"), step, { value: ton("0.2") });
     println("minted PLTG genesis supply = {}", PLTG_SUPPLY);
 
+    // Verify the deploys ACTUALLY landed. deploy()/send only broadcast: a drained wallet
+    // leaves the accounts uninitialised (and the mint silently un-applied), so read them
+    // back and fail loudly instead of reporting a fake success.
+    println("verify: pltg.totalSupply = {}", minter.getJettonData().totalSupply);
+    println("verify: gov.totalStaked  = {}", gov.totalStaked());
+    println("verify: gov.pltMinter    = {}", gov.pltMinter());
+
     println("PLTG + PlanetGov deploy done.");
 }
