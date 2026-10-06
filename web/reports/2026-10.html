@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Planet basket report — 2026-10</title>
+    <meta name="description" content="Commodity basket report for 2026-10: index level, per-commodity weights and prices and the methodology behind them." />
+    <link rel="canonical" href="https://ppppp.space/reports/2026-10" />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="Planet" />
+    <meta property="og:url" content="https://ppppp.space/reports/2026-10" />
+    <meta property="og:title" content="Planet basket report — 2026-10" />
+    <meta property="og:description" content="Commodity basket report for 2026-10: index level, per-commodity weights and prices and the methodology behind them." />
+    <meta property="og:image" content="https://ppppp.space/icon.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+    <style>
+      .doc { max-width: 980px; margin: 0 auto; padding: 32px 20px 76px; }
+      .doc h1 { font-family: "Space Grotesk", sans-serif; font-size: 28px; margin: 24px 0 6px; }
+      .doc .sub { color: var(--muted, #8a8a8a); font-family: "DM Mono", monospace; font-size: 12px; margin-bottom: 20px; }
+      .doc h2 { font-family: "Space Grotesk", sans-serif; font-size: 18px; margin: 30px 0 10px; }
+      .doc p { line-height: 1.7; }
+      .doc .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 18px 0 24px; }
+      .doc .card { border: 1px solid var(--muted, #2a2a2a); padding: 12px 14px; }
+      .doc .card .k { font-family: "DM Mono", monospace; font-size: 11px; text-transform: uppercase; color: var(--muted, #8a8a8a); }
+      .doc .card .v { font-family: "Space Grotesk", sans-serif; font-size: 22px; margin-top: 6px; }
+      .doc table { width: 100%; border-collapse: collapse; font-family: "DM Mono", monospace; font-size: 12px; margin: 12px 0 18px; }
+      .doc th, .doc td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--muted, #2a2a2a); }
+      .doc th { color: var(--muted, #8a8a8a); font-weight: 400; text-transform: uppercase; letter-spacing: 0.05em; }
+      .doc td.n, .doc th.n { text-align: right; }
+      .doc .up { color: #2f9e44; } .doc .down { color: #e03131; }
+      .doc a { color: inherit; }
+      .doc .note { border-left: 2px solid var(--muted, #2a2a2a); padding-left: 12px; color: var(--muted, #8a8a8a); font-family: "DM Mono", monospace; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="wordmark" href="/">Planet</a>
+      <nav class="nav">
+        <a href="/">home</a>
+        <a href="/dashboard">dashboard</a>
+        <a href="/reports">reports</a>
+        <a href="/docs">docs</a>
+        <a href="/methodology">methodology</a>
+        <a class="btn" href="https://app.ppppp.space">open app</a>
+      </nav>
+    </header>
+    <main class="doc">
+      <p class="notice" style="font-family: 'DM Mono', monospace">[ monthly basket report · TON testnet PoC · not a stablecoin ]</p>
+      <h1>Basket report — 2026-10</h1>
+      <p class="sub">generated 2026-10-06T17:17:19.664Z UTC · core <code>kQAwzh3O-52-QBtB8JFFTjtNaKFhw-uJMkd-zdnoHoGibzcU</code> · launch report (baseline)</p>
+
+      <div class="cards">
+        <div class="card"><div class="k">PPI (index)</div><div class="v">1.001311</div></div>
+        <div class="card"><div class="k">since launch</div><div class="v up">+0.13%</div></div>
+        
+        <div class="card"><div class="k">commodities</div><div class="v">14</div></div>
+      </div>
+
+      <p>Strongest since launch: <b>WTI Crude</b> +0.39% ·
+             weakest: <b>Copper</b> -0.00%.</p>
+
+      <h2>Basket</h2>
+      <table>
+        <thead><tr><th>#</th><th>commodity</th><th>sector</th><th class="n">weight</th><th class="n">base</th><th class="n">close</th><th class="n">MoM</th><th class="n">since launch</th></tr></thead>
+        <tbody>
+<tr>
+        <td>0</td>
+        <td>WTI Crude</td>
+        <td>energy</td>
+        <td class="n">14%</td>
+        <td class="n">88.1800</td>
+        <td class="n">88.5280</td>
+        <td class="n ">—</td>
+        <td class="n up">+0.39%</td>
+      </tr>
+<tr>
+        <td>1</td>
+        <td>Brent Crude</td>
+        <td>energy</td>
+        <td class="n">11%</td>
+        <td class="n">98.4400</td>
+        <td class="n">98.6875</td>
+        <td class="n ">—</td>
+        <td class="n up">+0.25%</td>
+      </tr>
+<tr>
+        <td>2</td>
+        <td>Natural Gas</td>
+        <td>energy</td>
+        <td class="n">8%</td>
+        <td class="n">3.1000</td>
+        <td class="n">3.1015</td>
+        <td class="n ">—</td>
+        <td class="n up">+0.05%</td>
+      </tr>
+<tr>
+        <td>3</td>
+        <td>Gold</td>
+        <td>metals</td>
+        <td class="n">12%</td>
+        <td class="n">4,191.1000</td>
+        <td class="n">4,193.5100</td>
+        <td class="n ">—</td>
+        <td class="n up">+0.06%</td>
+      </tr>
+<tr>
+        <td>4</td>
+        <td>Silver</td>
+        <td>metals</td>
+        <td class="n">7%</td>
+        <td class="n">61.5750</td>
+        <td class="n">61.6360</td>
+        <td class="n ">—</td>
+        <td class="n up">+0.10%</td>
+      </tr>
+<tr>
+        <td>5</td>
+        <td>Copper</td>
+        <td>metals</td>
+        <td class="n">6%</td>
+        <td class="n">6.6410</td>
+        <td class="n">6.6409</td>
+        <td class="n ">—</td>
+        <td class="n ">-0.00%</td>
+      </tr>
+<tr>
+        <td>6</td>
+        <td>Wheat</td>
+        <td>agriculture</td>
+        <td class="n">9%</td>
+        <td class="n">694.0000</td>
+        <td class="n">695.0000</td>
+        <td class="n ">—</td>
+        <td class="n up">+0.14%</td>
+      </tr>
+<tr>
+        <td>7</td>
+        <td>Corn</td>
+        <td>agriculture</td>
+        <td class="n">7%</td>
+        <td class="n">501.7500</td>
+        <td class="n">502.7500</td>
+        <td class="n ">—</td>
+        <td class="n up">+0.20%</td>
+      </tr>
+<tr>
+        <td>8</td>
+        <td>Soybean</td>
+        <td>agriculture</td>
+        <td class="n">6%</td>
+        <td class="n">1,292.5000</td>
+        <td class="n">1,293.2500</td>
+        <td class="n ">—</td>
+        <td class="n up">+0.06%</td>
+      </tr>
+<tr>
+        <td>9</td>
+        <td>Coffee</td>
+        <td>agriculture</td>
+        <td class="n">4%</td>
+        <td class="n">305.1000</td>
+        <td class="n">305.1500</td>
+        <td class="n ">—</td>
+        <td class="n up">+0.02%</td>
+      </tr>
+<tr>
+        <td>10</td>
+        <td>Lumber (ETF)</td>
+        <td>industrial</td>
+        <td class="n">4%</td>
+        <td class="n">66.2800</td>
+        <td class="n">66.2800</td>
+        <td class="n ">—</td>
+        <td class="n ">+0.00%</td>
+      </tr>
+<tr>
+        <td>11</td>
+        <td>Lithium (ETF)</td>
+        <td>industrial</td>
+        <td class="n">3%</td>
+        <td class="n">71.1800</td>
+        <td class="n">71.1800</td>
+        <td class="n ">—</td>
+        <td class="n ">+0.00%</td>
+      </tr>
+<tr>
+        <td>12</td>
+        <td>Water (ETF)</td>
+        <td>industrial</td>
+        <td class="n">5%</td>
+        <td class="n">69.4750</td>
+        <td class="n">69.4750</td>
+        <td class="n ">—</td>
+        <td class="n ">+0.00%</td>
+      </tr>
+<tr>
+        <td>13</td>
+        <td>Carbon (ETF)</td>
+        <td>industrial</td>
+        <td class="n">4%</td>
+        <td class="n">33.6800</td>
+        <td class="n">33.6800</td>
+        <td class="n ">—</td>
+        <td class="n ">+0.00%</td>
+      </tr>
+        </tbody>
+      </table>
+      <p class="note">
+        Prices are the last oracle-accepted values on-chain at generation time, not an exchange close.
+        "since launch" compares each commodity with its immutable base price; "MoM" compares with the
+        previous monthly snapshot. A commodity flagged frozen would be excluded from the index and
+        renormalised — see the methodology.
+      </p>
+
+      <h2>Index</h2>
+      <p>
+        The index is the weighted average of each commodity's price relative to its base price, with
+        frozen commodities excluded and the remaining weights renormalised. Weights sum to exactly
+        100% and no single commodity exceeds 15%.
+      </p>
+      <p><a href="/methodology">Methodology →</a> · <a href="/dashboard">Live dashboard →</a> · <a href="/reports">All reports →</a></p>
+
+      <p class="note">
+        Planet is an unaudited proof of concept on the TON testnet. Nothing here is a price, a
+        valuation, or investment advice; the report describes an on-chain measurement only.
+      </p>
+        </main>
+  </body>
+</html>

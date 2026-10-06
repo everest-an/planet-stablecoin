@@ -1,0 +1,47 @@
+name: Monthly basket report
+
+# Generates the monthly basket report from the live chain, commits it, and lets Vercel publish
+# it (the site is git-connected). Runs on the 1st of each month and on demand.
+#
+# It is deliberately fail-closed: the generator refuses to write a report if it cannot read
+# every commodity, so a rate-limited run leaves the previous month's files untouched.
+
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Overwrite this month's report if it already exists"
+        type: boolean
+        default: false
+  schedule:
+    - cron: "0 6 1 * *" # 06:00 UTC on the 1st
+
+jobs:
+  report:
+    name: Generate monthly basket report
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Generate report
+        env:
+          FORCE: ${{ inputs.force && '1' || '0' }}
+        run: node tools/monthly-report.mjs
+
+      - name: Commit + push if changed
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "no changes to commit"
+            exit 0
+          fi
+          git config user.name "planet-bot"
+          git config user.email "bot@ppppp.space"
+          git add web/reports web/sitemap.xml
+          git commit -m "report: monthly basket report ($(date -u +%Y-%m))"
+          git push

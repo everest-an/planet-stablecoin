@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Planet — monthly basket reports</title>
+    <meta name="description" content="Monthly reports on Planet's on-chain commodity basket: index level, weights and per-commodity moves, with the methodology behind them." />
+    <link rel="canonical" href="https://ppppp.space/reports" />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="Planet" />
+    <meta property="og:url" content="https://ppppp.space/reports" />
+    <meta property="og:title" content="Planet — monthly basket reports" />
+    <meta property="og:description" content="Monthly reports on Planet's on-chain commodity basket: index level, weights and per-commodity moves, with the methodology behind them." />
+    <meta property="og:image" content="https://ppppp.space/icon.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+    <style>
+      .doc { max-width: 980px; margin: 0 auto; padding: 32px 20px 76px; }
+      .doc h1 { font-family: "Space Grotesk", sans-serif; font-size: 28px; margin: 24px 0 6px; }
+      .doc .sub { color: var(--muted, #8a8a8a); font-family: "DM Mono", monospace; font-size: 12px; margin-bottom: 20px; }
+      .doc h2 { font-family: "Space Grotesk", sans-serif; font-size: 18px; margin: 30px 0 10px; }
+      .doc p { line-height: 1.7; }
+      .doc .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 18px 0 24px; }
+      .doc .card { border: 1px solid var(--muted, #2a2a2a); padding: 12px 14px; }
+      .doc .card .k { font-family: "DM Mono", monospace; font-size: 11px; text-transform: uppercase; color: var(--muted, #8a8a8a); }
+      .doc .card .v { font-family: "Space Grotesk", sans-serif; font-size: 22px; margin-top: 6px; }
+      .doc table { width: 100%; border-collapse: collapse; font-family: "DM Mono", monospace; font-size: 12px; margin: 12px 0 18px; }
+      .doc th, .doc td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--muted, #2a2a2a); }
+      .doc th { color: var(--muted, #8a8a8a); font-weight: 400; text-transform: uppercase; letter-spacing: 0.05em; }
+      .doc td.n, .doc th.n { text-align: right; }
+      .doc .up { color: #2f9e44; } .doc .down { color: #e03131; }
+      .doc a { color: inherit; }
+      .doc .note { border-left: 2px solid var(--muted, #2a2a2a); padding-left: 12px; color: var(--muted, #8a8a8a); font-family: "DM Mono", monospace; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="wordmark" href="/">Planet</a>
+      <nav class="nav">
+        <a href="/">home</a>
+        <a href="/dashboard">dashboard</a>
+        <a href="/reports">reports</a>
+        <a href="/docs">docs</a>
+        <a href="/methodology">methodology</a>
+        <a class="btn" href="https://app.ppppp.space">open app</a>
+      </nav>
+    </header>
+    <main class="doc">
+      <p class="notice" style="font-family: 'DM Mono', monospace">[ monthly basket reports · TON testnet PoC ]</p>
+      <h1>Monthly basket reports</h1>
+      <p class="sub">one snapshot per month, generated from the chain and committed by CI — nothing hand-edited</p>
+      <table>
+        <thead><tr><th>month</th><th class="n">PPI</th><th class="n">commodities</th><th>generated</th></tr></thead>
+        <tbody>
+<tr><td><a href="/reports/2026-10">2026-10</a></td><td class="n">1.001311</td><td class="n">14</td><td>2026-10-06</td></tr>
+        </tbody>
+      </table>
+      <p><a href="/methodology">Methodology →</a> · <a href="/dashboard">Live dashboard →</a></p>
+        </main>
+  </body>
+</html>
