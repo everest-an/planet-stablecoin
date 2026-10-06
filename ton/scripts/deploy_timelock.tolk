@@ -18,7 +18,7 @@ import "@wrappers/PlanetCore.gen"
 
 fun main() {
     val deployer = scripts.wallet("deployer");
-    val core = PlanetCore.fromAddress(address("kQA57Fa64OT_MXIqrJD0DGokcNaw36neL-aIWjWJHcIp2QfX"));
+    val core = PlanetCore.fromAddress(address("kQBUZM0RwN4SXnQDO1q9WzmG2aaiOSD6ybkpaG9LSQ1Aj3Jf"));
 
     // 1) production-style timelock (24h reaction window)
     val prod = PlanetTimelock.fromStorage({

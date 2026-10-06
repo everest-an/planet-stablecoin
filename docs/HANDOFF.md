@@ -200,8 +200,8 @@ cd app-tg && npm install && npm run build
 
 | 合约 | 地址 |
 |---|---|
-| **PlanetCore** | `kQA57Fa64OT_MXIqrJD0DGokcNaw36neL-aIWjWJHcIp2QfX`（v1.6 代码：SetOwner + M-of-N 签名集 + M>2 + **治理级篮子管理** GovernanceAddAsset/GovernanceSetWeight） |
-| **PLT Minter** | `kQDh_XQENGiZ7JSzvRYp_G7EvTtTXvpz6FXS65BnYVimGsEJ`（admin = Core） |
+| **PlanetCore** | `kQBUZM0RwN4SXnQDO1q9WzmG2aaiOSD6ybkpaG9LSQ1Aj3Jf`（v1.6 代码：SetOwner + M-of-N 签名集 + M>2 + **治理级篮子管理** GovernanceAddAsset/GovernanceSetWeight（支持 weight=0 软下线）） |
+| **PLT Minter** | `kQCGc7GJHMASpaLEMSjTGEa-NXAZMCk3HywoxFGq7sqSOSM1`（admin = Core） |
 | **PlanetBasket** | `kQAfGKn_UrUW8LQd92ZWy0h0BrCA_QTBhMqDA1M-PZtyv-r_` |
 | **PlanetBond**（稳定债券） | `kQDMxJXroCmuxBw9Sw7oj9LhO9Y0mLxdPS3Tr4vY-sdq65hz`（isOpen=false, premium=5%） |
 | **PlanetFund**（ETF 基金） | `kQAYbx_u7I7yhcYU8yxeewWdh3gnS067IgaWeV8UlYItug1o`（两阶段申购 + 托管 M-of-N 确认按 NAV 铸 + 赎回；含 TEP-74 份额收款/burn 的无信任赎回） |
