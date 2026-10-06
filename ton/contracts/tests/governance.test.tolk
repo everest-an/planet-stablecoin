@@ -92,6 +92,19 @@ get fun `test governance re-weight rejects a bad index and a bad weight`() {
         .toHaveFailedTx({ from: owner.address, to: core.address, exitCode: 107 });
 }
 
+get fun `test governance can soft-remove an asset by zeroing its weight`() {
+    val (core, owner) = deployCore();
+    core.sendGovernanceAddAsset(owner.address, 0, 150000, 1000000, { value: ton("0.05") });
+    core.sendGovernanceAddAsset(owner.address, 0, 150000, 2000000, { value: ton("0.05") });
+    expect(core.assetAt(0).weight).toEqual(150000);
+    // weight 0 = soft-remove (asset no longer contributes to the PPI); base price is untouched
+    core.sendGovernanceSetWeight(owner.address, 0, 0, 0, { value: ton("0.05") });
+    expect(core.assetAt(0).weight).toEqual(0);
+    expect(core.assetAt(0).basePrice).toEqual(1000000);
+    expect(core.assetAt(0).currentPrice).toEqual(1000000);
+    expect(core.assetCount()).toEqual(2); // index is preserved, not reindexed
+}
+
 get fun `test governance ops are owner-only`() {
     val (core, _) = deployCore();
     val mallory = testing.treasury("mallory");

@@ -755,12 +755,14 @@ fun handleGovernanceAddAsset(sender: address, msg: GovernanceAddAsset) {
 }
 
 // Owner re-weights an EXISTING basket asset (allowed after lock; basePrice untouched).
-// The basket must still sum to 100% before the next oracle push (fail-safe).
+// weight == 0 soft-removes the asset (it stops contributing to the PPI) without reindexing,
+// which is the safe way to retire a commodity. The basket must still sum to 100% before the
+// next oracle push (fail-safe), so zeroing one weight requires raising others in the same batch.
 fun handleGovernanceSetWeight(sender: address, msg: GovernanceSetWeight) {
     var storage = lazy Storage.load();
     assert (sender == storage.owner) throw ERR_NOT_OWNER;
     assert (msg.index >= 0 && msg.index < storage.assetCount) throw ERR_BAD_INDEX;
-    assert (msg.weight > 0 && msg.weight <= MAX_ASSET_WEIGHT) throw ERR_BAD_WEIGHTS;
+    assert (msg.weight >= 0 && msg.weight <= MAX_ASSET_WEIGHT) throw ERR_BAD_WEIGHTS;
     val a = storage.assets.mustGet(msg.index);
     storage.assets.set(msg.index, CoreAsset {
         weight: msg.weight,
