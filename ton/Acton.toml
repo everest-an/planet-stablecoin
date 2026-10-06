@@ -40,6 +40,11 @@ src = "contracts/planet_timelock.tolk"
 display-name = "Planet Fund"
 src = "contracts/planet_fund.tolk"
 
+# PLTG governance: staking + pro-rata fee dividends (25% bucket) + parameter voting.
+[contracts.PlanetGov]
+display-name = "Planet Gov (PLTG)"
+src = "contracts/planet_gov.tolk"
+
 [build]
 out-dir = "build"
 output-abi = "build/abi"
