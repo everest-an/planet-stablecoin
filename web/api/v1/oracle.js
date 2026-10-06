@@ -63,9 +63,24 @@ async function runGet(method, stack = [], deadline = Infinity) {
   }
   return null;
 }
+// toncenter returns numbers as strings, and NEGATIVE values as "-0x..." — which BigInt()
+// rejects outright. Decode sign and radix explicitly (a plain BigInt(x) threw here and took
+// the whole endpoint down with a 503).
+function toBig(x) {
+  if (x == null) return null;
+  const s = String(x).trim();
+  if (!s) return null;
+  const neg = s[0] === "-";
+  const body = (neg ? s.slice(1) : s).replace(/^0x/i, "");
+  const v = BigInt("0x" + body);
+  return neg ? -v : v;
+}
 // Values come back as hex strings; convert deliberately. `toN` is safe for our magnitudes
 // (weights, prices, timestamps all sit far below 2^53), while 256-bit signer keys stay BigInt.
-const toN = (x) => (x == null ? null : Number(BigInt(x)));
+const toN = (x) => {
+  const b = toBig(x);
+  return b == null ? null : Number(b);
+};
 const one = async (m, d) => {
   const arr = await runGet(m, [], d);
   return arr && arr.length ? arr[0] : null;
@@ -95,7 +110,7 @@ async function readOracle(full) {
   const signers = signerCount == null ? null : signerCount;
   const thr = threshold == null ? null : threshold;
   // TVM encodes booleans as -1 (true) / 0 (false) — NOT 1. Treat any non-zero as true.
-  const baseLocked = baseLockedH != null && BigInt(baseLockedH) !== 0n;
+  const baseLocked = baseLockedH != null && toBig(baseLockedH) !== 0n;
 
   const now = Math.floor(Date.now() / 1000);
   const ageSeconds = Math.max(0, now - lastOracleUpdate);
@@ -112,7 +127,7 @@ async function readOracle(full) {
   if (!assetCount) warnings.push("empty_basket");
 
   const data = {
-    rev: "o3-hex-fix",
+    rev: "o4-tobig",
     network: "testnet",
     core: ACTIVE,
     isCurrentDeployment: ACTIVE === CORE,
@@ -136,7 +151,7 @@ async function readOracle(full) {
       for (let i = 0; i < Math.min(signers, MAX_SIGNER_KEYS); i++) {
         const st = await runGet("signerAt", [["num", "0x" + i.toString(16)]], deadline);
         // signerAt returns a uint256, which the RPC hands back as a 256-bit num.
-        keys.push(st && st.length ? "0x" + BigInt(st[0]).toString(16).padStart(64, "0") : null);
+        keys.push(st && st.length ? "0x" + toBig(st[0]).toString(16).padStart(64, "0") : null);
         await sleep(120);
       }
     }

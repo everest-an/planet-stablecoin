@@ -56,7 +56,13 @@ function fnv1a(str) {
 function decode(entry) {
   if (!entry) return null;
   const [type, value] = entry;
-  if (type === "num") return BigInt(value).toString();
+  // toncenter returns negative values as "-0x...", which BigInt() rejects — decode explicitly.
+  if (type === "num") {
+    const s = String(value);
+    const neg = s[0] === "-";
+    const v = BigInt("0x" + (neg ? s.slice(1) : s).replace(/^0x/i, ""));
+    return (neg ? -v : v).toString();
+  }
   if (type === "tuple") return value.map(decode);
   return null;
 }

@@ -136,7 +136,14 @@
         }
         throw new Error("rate-limited");
       }
-      const num = (entry) => Number(BigInt(entry[1]));
+      // toncenter numbers: hex strings, and NEGATIVE values as "-0x..." (BigInt() rejects those).
+      const toBig = (x) => {
+        const s = String(x).trim();
+        const neg = s[0] === "-";
+        const v = BigInt("0x" + (neg ? s.slice(1) : s).replace(/^0x/i, ""));
+        return neg ? -v : v;
+      };
+      const num = (entry) => Number(toBig(entry[1]));
 
       async function pickCore() {
         for (const c of CORES) {

@@ -53,7 +53,14 @@ async function runGet(method, stack = [], tries = 8) {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const j = await res.json();
       if (j?.result?.exit_code !== 0) throw new Error(`exit ${j?.result?.exit_code}`);
-      return (j?.result?.stack ?? []).map((e) => (e[0] === "num" ? Number(BigInt(e[1])) : null));
+      // toncenter: hex strings, and negatives as "-0x..." (BigInt() rejects those).
+      return (j?.result?.stack ?? []).map((e) => {
+        if (e[0] !== "num") return null;
+        const s = String(e[1]);
+        const neg = s[0] === "-";
+        const v = BigInt("0x" + (neg ? s.slice(1) : s).replace(/^0x/i, ""));
+        return Number(neg ? -v : v);
+      });
     } catch (e) {
       if (a === tries - 1) throw e;
       await sleep(600 * (a + 1));
