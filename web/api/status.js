@@ -44,7 +44,7 @@ async function runGet(method, stack = [], tries = 8) {
     if (j.error) throw new Error(`runGet ${method}: ${j.error.message}`);
     // A non-zero exit code means the call failed (e.g. the account is not initialised).
     if (j?.result?.exit_code !== 0) throw new Error(`runGet ${method}: exit ${j?.result?.exit_code}`);
-    return decode(j?.result?.stack?.[0]);
+    return (j?.result?.stack ?? []).map(decode);
   }
   throw new Error(`runGet ${method}: rate-limited`);
 }
@@ -63,18 +63,20 @@ export default async function handler(_req, res) {
   let partial = false;
   try {
     ACTIVE = CORE;
-    let assetCount = n(await tryGet("assetCount"));
+    const ac0 = await tryGet("assetCount");
+    let assetCount = n(ac0 ? ac0[0] : null);
     if (assetCount === 0) {
       ACTIVE = CORE_FALLBACK; // current core not configured yet -> serve the previous one
-      assetCount = n(await tryGet("assetCount"));
+      const ac1 = await tryGet("assetCount");
+      assetCount = n(ac1 ? ac1[0] : null);
     }
 
     // Scalars, sequentially (the public RPC rate-limits bursts).
     const scalar = async (m) => {
-      const v = await tryGet(m);
-      if (v == null) partial = true;
+      const arr = await tryGet(m);
+      if (arr == null || arr.length === 0) partial = true;
       await sleep(SPACING_MS);
-      return v;
+      return arr ? arr[0] : null;
     };
     const ppi = await scalar("ppi");
     const supply = await scalar("supply");
@@ -89,25 +91,24 @@ export default async function handler(_req, res) {
     const assets = [];
     for (let i = 0; i < assetCount; i++) {
       // toncenter v2 expects stack entries as ["num","0x<hex>"] (not the v3 {type,value} shape).
+      // A struct return is FLATTENED onto the stack (6 ints for CoreAsset).
       const a = await tryGet("assetAt", [["num", "0x" + i.toString(16)]]);
-      if (a == null) {
+      if (a == null || a.length < 6) {
         partial = true;
         break;
       }
-      if (Array.isArray(a)) {
-        const [weight, basePrice, currentPrice, volatility, liquidity, riskState] = a.map(n);
-        assets.push({
-          index: i,
-          weight,
-          weightPct: weight / (WEIGHT_SCALE / 100),
-          basePrice: basePrice / PPI_SCALE,
-          currentPrice: currentPrice / PPI_SCALE,
-          changePct: basePrice ? (currentPrice / basePrice - 1) * 100 : 0,
-          volatility,
-          liquidity,
-          riskState,
-        });
-      }
+      const [weight, basePrice, currentPrice, volatility, liquidity, riskState] = a.map(n);
+      assets.push({
+        index: i,
+        weight,
+        weightPct: weight / (WEIGHT_SCALE / 100),
+        basePrice: basePrice / PPI_SCALE,
+        currentPrice: currentPrice / PPI_SCALE,
+        changePct: basePrice ? (currentPrice / basePrice - 1) * 100 : 0,
+        volatility,
+        liquidity,
+        riskState,
+      });
       await sleep(SPACING_MS);
     }
 
