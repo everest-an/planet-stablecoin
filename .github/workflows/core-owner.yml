@@ -1,0 +1,34 @@
+name: Core owner -> timelock (testnet)
+
+# Manual, testnet-only: migrates the live PlanetCore's ownership to a PlanetTimelock so
+# privileged actions (basket changes, limits, fees, SetOwner) need Propose -> delay -> Execute.
+# Testnet uses a 60s delay. Requires the TON_WALLET_MNEMONIC secret.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  owner:
+    name: Migrate PlanetCore owner to a timelock
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ton
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Acton
+        run: |
+          curl -LsSf https://github.com/ton-blockchain/acton/releases/latest/download/acton-installer.sh | sh
+          echo "$HOME/.acton/bin" >> "$GITHUB_PATH"
+
+      - name: Build + wrappers
+        run: |
+          acton build
+          acton wrapper --all
+
+      - name: Import deployer wallet (testnet)
+        run: acton wallet import --name deployer --version v4r2 --secure false --local "${{ secrets.TON_WALLET_MNEMONIC }}"
+
+      - name: Migrate core owner
+        run: acton script scripts/deploy_core_owner.tolk --net testnet

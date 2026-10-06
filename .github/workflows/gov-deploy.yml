@@ -1,0 +1,35 @@
+name: Gov deploy (testnet)
+
+# Manual, testnet-only: deploys the PLTG governance stack — a fixed-supply PLTG jetton minter
+# plus PlanetGov (staking + pro-rata fee dividends + stake-weighted parameter voting), wires
+# the gov's own PLTG wallet, and mints the genesis supply to the deployer.
+# Requires the TON_WALLET_MNEMONIC secret.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  gov:
+    name: Deploy PLTG + PlanetGov to TON testnet
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ton
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Acton
+        run: |
+          curl -LsSf https://github.com/ton-blockchain/acton/releases/latest/download/acton-installer.sh | sh
+          echo "$HOME/.acton/bin" >> "$GITHUB_PATH"
+
+      - name: Build + wrappers
+        run: |
+          acton build
+          acton wrapper --all
+
+      - name: Import deployer wallet (testnet)
+        run: acton wallet import --name deployer --version v4r2 --secure false --local "${{ secrets.TON_WALLET_MNEMONIC }}"
+
+      - name: Deploy PLTG + PlanetGov
+        run: acton script scripts/deploy_gov.tolk --net testnet
