@@ -25,6 +25,9 @@ const BAND_RICH = 1030000;         // PPI above this = index rich -> reward mint
 const RISK_SHARE_BPS = 1000;       // 10% of each fee -> risk fund
 const MAX_PRICE_JUMP_PPM = 500000; // reject a single price update that jumps >50%
 const MAX_ASSET_WEIGHT = 150000;   // 15% — no single commodity may exceed this (wp §2.1)
+// Staleness guard: refuse to MINT against an oracle price older than this (6h). Without it a
+// stalled oracle freezes the PPI and anyone can keep minting at that stale price — silently.
+const MAX_ORACLE_AGE = 21600;      // 6 hours, aligned with the relayer's heartbeat ceiling
 
 const ERR_PAUSED = 100;
 const ERR_NOT_OWNER = 101;
@@ -436,6 +439,12 @@ fun handleMint(sender: address, msgValue: coins, msg: Mint) {
     // Reject non-positive deposits: a negative amount would reverse the operation
     // (mint would DECREASE supply/reserve) — TON signed-integer pitfall (NEW-3).
     assert (msg.amount > 0) throw ERR_BAD_AMOUNT;
+    // Freshness guard: never mint against a stale oracle price. Skipped while
+    // lastOracleUpdate == 0 (before the first oracle push) so a fresh deployment can bootstrap.
+    val os = OracleState.fromCell(storage.oracleState);
+    if (os.lastOracleUpdate > 0) {
+        assert ((blockchain.now() as int64) - os.lastOracleUpdate <= MAX_ORACLE_AGE) throw ERR_STALE_PRICE;
+    }
     // stability: reject mint when PPI is far off peg (hard band), and enforce per-tx cap
     assert (diffAbs(storage.currentPpi, PPI_SCALE) <= BAND_FREEZE) throw ERR_DEVIATION;
     val lim = Limits.fromCell(storage.limitsState);

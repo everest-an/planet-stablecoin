@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Planet — live basket dashboard</title>
+    <meta
+      name="description"
+      content="Live on-chain commodity basket: per-asset weights, prices and index for Planet (PLT) on TON testnet. PoC, not a stablecoin."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500&family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="icon" href="/icon.png" />
+    <link rel="stylesheet" href="/styles.css" />
+    <style>
+      .dash {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 32px 20px 64px;
+      }
+      .dash h1 {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 28px;
+        margin: 24px 0 4px;
+      }
+      .dash .sub {
+        color: var(--muted, #8a8a8a);
+        font-family: "DM Mono", monospace;
+        font-size: 12px;
+        margin-bottom: 20px;
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+        margin: 20px 0 28px;
+      }
+      .card {
+        border: 1px solid var(--line, #2a2a2a);
+        padding: 12px 14px;
+      }
+      .card .k {
+        font-family: "DM Mono", monospace;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted, #8a8a8a);
+      }
+      .card .v {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 22px;
+        margin-top: 6px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: "DM Mono", monospace;
+        font-size: 13px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--line, #2a2a2a);
+        white-space: nowrap;
+      }
+      th {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted, #8a8a8a);
+      }
+      td.num {
+        text-align: right;
+      }
+      .up {
+        color: #38a169;
+      }
+      .down {
+        color: #e53e3e;
+      }
+      .risk {
+        color: #dd6b20;
+      }
+      .frozen {
+        color: #e53e3e;
+        font-weight: 500;
+      }
+      .bar {
+        display: inline-block;
+        height: 8px;
+        background: currentColor;
+        opacity: 0.55;
+        vertical-align: middle;
+        margin-left: 8px;
+      }
+      .note {
+        margin-top: 18px;
+        font-family: "DM Mono", monospace;
+        font-size: 11px;
+        color: var(--muted, #8a8a8a);
+        line-height: 1.6;
+      }
+      .warn {
+        border: 1px solid #dd6b20;
+        color: #dd6b20;
+        padding: 10px 12px;
+        font-family: "DM Mono", monospace;
+        font-size: 12px;
+        margin: 16px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="wordmark" href="/">Planet</a>
+      <nav class="nav">
+        <a href="/">home</a>
+        <a href="/whitepaper.html">whitepaper</a>
+        <a class="btn" href="https://app.ppppp.space">open app</a>
+      </nav>
+    </header>
+
+    <main class="dash">
+      <p class="notice" style="font-family: 'DM Mono', monospace">
+        [ PoC · on-chain basket · no reserve, no redemption · not a stablecoin ]
+      </p>
+      <h1>Live basket dashboard</h1>
+      <p class="sub">read live from PlanetCore on TON testnet via <code>/api/status</code></p>
+
+      <div id="err" class="warn" style="display: none"></div>
+
+      <div class="cards" id="cards"></div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>commodity</th>
+            <th>weight</th>
+            <th class="num">base</th>
+            <th class="num">now</th>
+            <th class="num">Δ vs base</th>
+            <th>state</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <p class="note" id="foot"></p>
+      <p class="note">
+        Weights are ppm of the basket (sum = 100%); base = index base price (immutable once
+        locked). The index (PPI) is the weighted average of <b>now / base</b>. Refreshes every 60s.
+      </p>
+    </main>
+
+    <script>
+      const fmt = (n, d = 2) =>
+        n == null || Number.isNaN(n)
+          ? "—"
+          : Number(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+
+      function card(k, v) {
+        return `<div class="card"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+      }
+
+      function ageText(ts) {
+        if (!ts) return "—";
+        const s = Math.max(0, Math.floor(Date.now() / 1000) - ts);
+        if (s < 60) return s + "s ago";
+        if (s < 3600) return Math.floor(s / 60) + "m ago";
+        if (s < 86400) return Math.floor(s / 3600) + "h ago";
+        return Math.floor(s / 86400) + "d ago";
+      }
+
+      function stateOf(a) {
+        if (a.riskState === 2) return '<span class="frozen">frozen</span>';
+        if (a.riskState === 1) return '<span class="risk">caution</span>';
+        return "ok";
+      }
+
+      async function load() {
+        const err = document.getElementById("err");
+        try {
+          const r = await fetch("/api/status", { cache: "no-store" });
+          const j = await r.json();
+          if (!j.ok) throw new Error(j.error || "api error");
+          err.style.display = "none";
+          if (j.partial || !j.isCurrentDeployment) {
+            err.textContent =
+              "NOTE — data is partial or served from the previous deployment (full chain read pending).";
+            err.style.display = "block";
+          }
+
+          document.getElementById("cards").innerHTML = [
+            card("PPI (index)", fmt(j.ppi, 6)),
+            card("assets", j.assetCount),
+            card("supply (PLT)", fmt(j.supply, 0)),
+            card("reserve (units)", fmt(j.reserve, 0)),
+            card("oracle age", ageText(j.lastOracleUpdate)),
+            card("M-of-N threshold", j.signerThreshold),
+          ].join("");
+
+          const maxW = Math.max(150000, ...j.assets.map((a) => a.weight));
+          document.getElementById("rows").innerHTML = j.assets
+            .map((a) => {
+              const chg = a.changePct ?? 0;
+              const cls = chg > 0.0001 ? "up" : chg < -0.0001 ? "down" : "";
+              const sign = chg > 0.0001 ? "+" : "";
+              const w = ((a.weight / maxW) * 90).toFixed(0);
+              return `<tr>
+                <td>${a.index}</td>
+                <td>${a.name}</td>
+                <td>${(a.weightPct ?? 0).toFixed(2)}%<span class="bar" style="width:${w}px"></span></td>
+                <td class="num">${fmt(a.basePrice, 4)}</td>
+                <td class="num">${fmt(a.currentPrice, 4)}</td>
+                <td class="num ${cls}">${sign}${chg.toFixed(3)}%</td>
+                <td>${stateOf(a)}</td>
+              </tr>`;
+            })
+            .join("");
+
+          document.getElementById("foot").textContent =
+            `core ${j.core} · updated ${new Date().toISOString().replace("T", " ").slice(0, 19)} UTC` +
+            (j.isCurrentDeployment ? "" : " · (previous deployment)");
+        } catch (e) {
+          err.textContent = "could not read the live basket: " + String(e.message || e);
+          err.style.display = "block";
+        }
+      }
+
+      load();
+      setInterval(load, 60000);
+    </script>
+  </body>
+</html>

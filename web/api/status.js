@@ -13,6 +13,25 @@ const PPI_SCALE = 1e6;
 const WEIGHT_SCALE = 1e6;
 const SPACING_MS = 600;
 
+// Display names, index-aligned with the on-chain basket (see relayer/assets.example.json).
+// The chain stores weights/prices only, so names live here for the dashboard.
+const NAMES = [
+  "WTI Crude",
+  "Brent Crude",
+  "Natural Gas",
+  "Gold",
+  "Silver",
+  "Copper",
+  "Wheat",
+  "Corn",
+  "Soybean",
+  "Coffee",
+  "Lumber (ETF)",
+  "Lithium (ETF)",
+  "Water (ETF)",
+  "Carbon (ETF)",
+];
+
 let ACTIVE = CORE; // resolved per request (falls back when the current core has no basket)
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -100,6 +119,7 @@ export default async function handler(_req, res) {
       const [weight, basePrice, currentPrice, volatility, liquidity, riskState] = a.map(n);
       assets.push({
         index: i,
+        name: NAMES[i] ?? `asset ${i}`,
         weight,
         weightPct: weight / (WEIGHT_SCALE / 100),
         basePrice: basePrice / PPI_SCALE,
