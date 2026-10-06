@@ -230,8 +230,9 @@ export default async function handler(req, res) {
 
   const body = JSON.stringify(out.data);
   const etag = `W/"${fnv1a(body)}"`;
-  // Short cache: a health reading that is a minute old is still a health reading, but no longer.
-  res.setHeader("Cache-Control", "public, s-maxage=30, stale-while-revalidate=120");
+  // Short-ish cache: a health reading a few minutes old is still a health reading, and the
+  // scheduled warmer keeps this hot so a monitor never pays the cold read either.
+  res.setHeader("Cache-Control", "public, s-maxage=600, stale-while-revalidate=1200");
   res.setHeader("ETag", etag);
   if (req.headers["if-none-match"] === etag) return res.status(304).end();
   res.setHeader("Content-Type", "application/json; charset=utf-8");

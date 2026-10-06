@@ -225,7 +225,11 @@ export default async function handler(req, res) {
 
   const body = JSON.stringify(out.data);
   const etag = `W/"${fnv1a(body)}"`;
-  res.setHeader("Cache-Control", "public, s-maxage=120, stale-while-revalidate=600");
+  // The public RPC is slow (~1 req/s without a key), so the cold read takes ~20s. The cache
+  // window is deliberately wide and a scheduled warmer (see .github/workflows/cache-warmer.yml,
+  // which runs from a CI IP that is not rate-limited) keeps the edge copy hot — users then
+  // always hit the fast cached response. Set TON_API_KEY to make even a cold read fast.
+  res.setHeader("Cache-Control", "public, s-maxage=900, stale-while-revalidate=1800");
   res.setHeader("ETag", etag);
   res.setHeader("Vary", "Accept-Encoding");
   if (req.headers["if-none-match"] === etag) return res.status(304).end();

@@ -1,0 +1,35 @@
+name: Cache warmer
+
+# Keeps the public API's CDN copies hot so real users always get the fast cached response.
+#
+# Why: PlanetCore has ~19 get-methods to read, and toncenter's anonymous limit is 1 request per
+# second — so a COLD /api/v1/status takes ~20s. The responses are CDN-cached, but the cache
+# expires. This job refreshes them from a CI IP (which is not subject to the public RPC rate
+# limit), so the slow read happens here instead of in a user's browser.
+#
+# It is a pure availability measure, not a correctness one: the endpoints still read the chain
+# themselves, and /api/v1/oracle still fails closed if the chain is unhealthy.
+#
+# Note: GitHub can delay scheduled jobs (usually a few minutes) and disables them after 60 days
+# of repository inactivity — the cache windows are sized to tolerate the delay.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/5 * * * *"
+
+jobs:
+  warm:
+    name: Warm API cache
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch the public endpoints
+        run: |
+          set -u
+          for u in "https://ppppp.space/api/v1/status" \
+                   "https://ppppp.space/api/v1/oracle" \
+                   "https://ppppp.space/api/v1/oracle?full=1"; do
+            code=$(curl -s -o /tmp/out.json -w "%{http_code}" --max-time 120 "$u" || echo "000")
+            bytes=$(wc -c < /tmp/out.json | tr -d ' ')
+            echo "$code  ${bytes}B  $u"
+          done
