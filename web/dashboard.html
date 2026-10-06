@@ -17,102 +17,21 @@
     <link rel="icon" href="/icon.png" />
     <link rel="stylesheet" href="/styles.css" />
     <style>
-      .dash {
-        max-width: 1080px;
-        margin: 0 auto;
-        padding: 32px 20px 64px;
-      }
-      .dash h1 {
-        font-family: "Space Grotesk", sans-serif;
-        font-size: 28px;
-        margin: 24px 0 4px;
-      }
-      .dash .sub {
-        color: var(--muted, #8a8a8a);
-        font-family: "DM Mono", monospace;
-        font-size: 12px;
-        margin-bottom: 20px;
-      }
-      .cards {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 12px;
-        margin: 20px 0 28px;
-      }
-      .card {
-        border: 1px solid var(--line, #2a2a2a);
-        padding: 12px 14px;
-      }
-      .card .k {
-        font-family: "DM Mono", monospace;
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: var(--muted, #8a8a8a);
-      }
-      .card .v {
-        font-family: "Space Grotesk", sans-serif;
-        font-size: 22px;
-        margin-top: 6px;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        font-family: "DM Mono", monospace;
-        font-size: 13px;
-      }
-      th,
-      td {
-        text-align: left;
-        padding: 8px 10px;
-        border-bottom: 1px solid var(--line, #2a2a2a);
-        white-space: nowrap;
-      }
-      th {
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: var(--muted, #8a8a8a);
-      }
-      td.num {
-        text-align: right;
-      }
-      .up {
-        color: #38a169;
-      }
-      .down {
-        color: #e53e3e;
-      }
-      .risk {
-        color: #dd6b20;
-      }
-      .frozen {
-        color: #e53e3e;
-        font-weight: 500;
-      }
-      .bar {
-        display: inline-block;
-        height: 8px;
-        background: currentColor;
-        opacity: 0.55;
-        vertical-align: middle;
-        margin-left: 8px;
-      }
-      .note {
-        margin-top: 18px;
-        font-family: "DM Mono", monospace;
-        font-size: 11px;
-        color: var(--muted, #8a8a8a);
-        line-height: 1.6;
-      }
-      .warn {
-        border: 1px solid #dd6b20;
-        color: #dd6b20;
-        padding: 10px 12px;
-        font-family: "DM Mono", monospace;
-        font-size: 12px;
-        margin: 16px 0;
-      }
+      .dash { max-width: 1080px; margin: 0 auto; padding: 32px 20px 64px; }
+      .dash h1 { font-family: "Space Grotesk", sans-serif; font-size: 28px; margin: 24px 0 4px; }
+      .dash .sub { color: var(--muted, #8a8a8a); font-family: "DM Mono", monospace; font-size: 12px; margin-bottom: 20px; }
+      .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 20px 0 28px; }
+      .card { border: 1px solid var(--muted, #2a2a2a); padding: 12px 14px; }
+      .card .k { font-family: "DM Mono", monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted, #8a8a8a); }
+      .card .v { font-family: "Space Grotesk", sans-serif; font-size: 22px; margin-top: 6px; color: var(--ink, #111); }
+      table { width: 100%; border-collapse: collapse; font-family: "DM Mono", monospace; font-size: 13px; }
+      th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--muted, #2a2a2a); color: var(--ink, #111); }
+      th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted, #8a8a8a); }
+      td.num { text-align: right; }
+      .up { color: #2f9e44; } .down { color: #e03131; } .risk { color: #e8590c; } .frozen { color: #e03131; font-weight: 500; }
+      .bar { display: inline-block; height: 8px; background: currentColor; opacity: 0.45; vertical-align: middle; margin-left: 8px; }
+      .note { margin-top: 18px; font-family: "DM Mono", monospace; font-size: 11px; color: var(--muted, #8a8a8a); line-height: 1.6; }
+      .warn { border: 1px solid #e8590c; color: #e8590c; padding: 10px 12px; font-family: "DM Mono", monospace; font-size: 12px; margin: 16px 0; }
     </style>
   </head>
   <body>
@@ -130,53 +49,95 @@
         [ PoC · on-chain basket · no reserve, no redemption · not a stablecoin ]
       </p>
       <h1>Live basket dashboard</h1>
-      <p class="sub">read live from PlanetCore on TON testnet via <code>/api/status</code></p>
+      <p class="sub">read directly from PlanetCore on TON testnet — client-side, no server</p>
 
       <div id="err" class="warn" style="display: none"></div>
 
-      <div class="cards" id="cards">
-        <div class="card"><div class="k">PPI (index)</div><div class="v">…</div></div>
-        <div class="card"><div class="k">assets</div><div class="v">…</div></div>
-        <div class="card"><div class="k">supply (PLT)</div><div class="v">…</div></div>
-        <div class="card"><div class="k">reserve (units)</div><div class="v">…</div></div>
-        <div class="card"><div class="k">oracle age</div><div class="v">…</div></div>
-        <div class="card"><div class="k">M-of-N threshold</div><div class="v">…</div></div>
+      <div class="cards">
+        <div class="card"><div class="k">PPI (index)</div><div class="v" id="c0">…</div></div>
+        <div class="card"><div class="k">assets</div><div class="v" id="c1">…</div></div>
+        <div class="card"><div class="k">supply (PLT)</div><div class="v" id="c2">…</div></div>
+        <div class="card"><div class="k">reserve (units)</div><div class="v" id="c3">…</div></div>
+        <div class="card"><div class="k">oracle age</div><div class="v" id="c4">…</div></div>
+        <div class="card"><div class="k">M-of-N threshold</div><div class="v" id="c5">…</div></div>
       </div>
+
       <table>
         <thead>
           <tr>
-            <th>#</th>
-            <th>commodity</th>
-            <th>weight</th>
-            <th class="num">base</th>
-            <th class="num">now</th>
-            <th class="num">Δ vs base</th>
-            <th>state</th>
+            <th>#</th><th>commodity</th><th>weight</th>
+            <th class="num">base</th><th class="num">now</th><th class="num">Δ vs base</th><th>state</th>
           </tr>
         </thead>
         <tbody id="rows">
-          <tr><td colspan="7" style="color: var(--muted, #8a8a8a)">
-            reading the on-chain basket… (the first load can take ~10s; it is then cached)
-          </td></tr>
+          <tr><td colspan="7" style="color: var(--muted, #8a8a8a)">reading the on-chain basket…</td></tr>
         </tbody>
       </table>
       <p class="note" id="foot"></p>
       <p class="note">
-        Weights are ppm of the basket (sum = 100%); base = index base price (immutable once
-        locked). The index (PPI) is the weighted average of <b>now / base</b>. Refreshes every 60s.
+        Weights are ppm of the basket (sum = 100%); base = index base price (immutable once locked).
+        The index (PPI) is the weighted average of <b>now / base</b>. Refresh every 60s.
       </p>
     </main>
 
     <script>
+      // Addresses, newest first. The page picks the first one that actually has a configured
+      // basket, so it keeps working across a redeploy.
+      const CORES = [
+        "kQAwzh3O-52-QBtB8JFFTjtNaKFhw-uJMkd-zdnoHoGibzcU",
+        "kQBUZM0RwN4SXnQDO1q9WzmG2aaiOSD6ybkpaG9LSQ1Aj3Jf",
+      ];
+      const NAMES = [
+        "WTI Crude", "Brent Crude", "Natural Gas", "Gold", "Silver", "Copper",
+        "Wheat", "Corn", "Soybean", "Coffee", "Lumber (ETF)", "Lithium (ETF)",
+        "Water (ETF)", "Carbon (ETF)",
+      ];
+      const ENDPOINT = "https://testnet.toncenter.com/api/v2/runGetMethod";
+      const SCALE = 1e6;
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+      // Direct toncenter v2 get-method read (raw stack). Retries on 429 / transient errors.
+      async function runGet(address, method, stack = [], tries = 6) {
+        for (let a = 0; a < tries; a++) {
+          try {
+            const res = await fetch(ENDPOINT, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ address, method, stack }),
+            });
+            if (res.status === 429) {
+              await sleep(400 * (a + 1));
+              continue;
+            }
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            const j = await res.json();
+            if (j?.result?.exit_code !== 0) throw new Error("exit_code " + j?.result?.exit_code);
+            return j.result.stack ?? [];
+          } catch (e) {
+            if (a === tries - 1) throw e;
+            await sleep(400 * (a + 1));
+          }
+        }
+        throw new Error("rate-limited");
+      }
+      const num = (entry) => Number(BigInt(entry[1]));
+
+      async function pickCore() {
+        for (const c of CORES) {
+          try {
+            const s = await runGet(c, "assetCount");
+            if (num(s[0]) > 0) return c;
+          } catch (_) {
+            /* try the next */
+          }
+        }
+        return CORES[CORES.length - 1];
+      }
+
       const fmt = (n, d = 2) =>
         n == null || Number.isNaN(n)
           ? "—"
           : Number(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
-
-      function card(k, v) {
-        return `<div class="card"><div class="k">${k}</div><div class="v">${v}</div></div>`;
-      }
-
       function ageText(ts) {
         if (!ts) return "—";
         const s = Math.max(0, Math.floor(Date.now() / 1000) - ts);
@@ -185,37 +146,54 @@
         if (s < 86400) return Math.floor(s / 3600) + "h ago";
         return Math.floor(s / 86400) + "d ago";
       }
-
-      function stateOf(a) {
-        if (a.riskState === 2) return '<span class="frozen">frozen</span>';
-        if (a.riskState === 1) return '<span class="risk">caution</span>';
-        return "ok";
-      }
+      const stateOf = (a) =>
+        a.riskState === 2 ? '<span class="frozen">frozen</span>'
+        : a.riskState === 1 ? '<span class="risk">caution</span>'
+        : "ok";
 
       async function load() {
         const err = document.getElementById("err");
         try {
-          const r = await fetch("/api/status", { cache: "no-store" });
-          const j = await r.json();
-          if (!j.ok) throw new Error(j.error || "api error");
-          err.style.display = "none";
-          if (j.partial || !j.isCurrentDeployment) {
-            err.textContent =
-              "NOTE — data is partial or served from the previous deployment (full chain read pending).";
-            err.style.display = "block";
+          const core = await pickCore();
+          const [acS, ppiS, supS, resS, luS, thrS] = await Promise.all([
+            runGet(core, "assetCount"),
+            runGet(core, "ppi"),
+            runGet(core, "supply"),
+            runGet(core, "reserve"),
+            runGet(core, "lastOracleUpdate"),
+            runGet(core, "threshold"),
+          ]);
+          const ac = num(acS[0]);
+          document.getElementById("c0").textContent = fmt(num(ppiS[0]) / SCALE, 6);
+          document.getElementById("c1").textContent = ac;
+          document.getElementById("c2").textContent = fmt(num(supS[0]), 0);
+          document.getElementById("c3").textContent = fmt(num(resS[0]), 0);
+          document.getElementById("c4").textContent = ageText(num(luS[0]));
+          document.getElementById("c5").textContent = num(thrS[0]);
+
+          const rows = [];
+          for (let i = 0; i < ac; i++) {
+            document.getElementById("rows").innerHTML =
+              '<tr><td colspan="7" style="color: var(--muted, #8a8a8a)">reading asset ' + (i + 1) + " / " + ac + "…</td></tr>";
+            const st = await runGet(core, "assetAt", [["num", "0x" + i.toString(16)]]);
+            if (st.length < 6) break;
+            const [weight, basePrice, currentPrice] = st.map(num);
+            const riskState = num(st[5]);
+            rows.push({
+              index: i,
+              name: NAMES[i] ?? "asset " + i,
+              weight,
+              weightPct: weight / (SCALE / 100),
+              basePrice: basePrice / SCALE,
+              currentPrice: currentPrice / SCALE,
+              changePct: basePrice ? (currentPrice / basePrice - 1) * 100 : 0,
+              riskState,
+            });
+            await sleep(120);
           }
 
-          document.getElementById("cards").innerHTML = [
-            card("PPI (index)", fmt(j.ppi, 6)),
-            card("assets", j.assetCount),
-            card("supply (PLT)", fmt(j.supply, 0)),
-            card("reserve (units)", fmt(j.reserve, 0)),
-            card("oracle age", ageText(j.lastOracleUpdate)),
-            card("M-of-N threshold", j.signerThreshold),
-          ].join("");
-
-          const maxW = Math.max(150000, ...j.assets.map((a) => a.weight));
-          document.getElementById("rows").innerHTML = j.assets
+          const maxW = Math.max(150000, ...rows.map((r) => r.weight));
+          document.getElementById("rows").innerHTML = rows
             .map((a) => {
               const chg = a.changePct ?? 0;
               const cls = chg > 0.0001 ? "up" : chg < -0.0001 ? "down" : "";
@@ -234,10 +212,13 @@
             .join("");
 
           document.getElementById("foot").textContent =
-            `core ${j.core} · updated ${new Date().toISOString().replace("T", " ").slice(0, 19)} UTC` +
-            (j.isCurrentDeployment ? "" : " · (previous deployment)");
+            "core " + core + " · read " + new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC";
+          err.style.display = "none";
         } catch (e) {
-          err.textContent = "could not read the live basket: " + String(e.message || e);
+          err.textContent =
+            "could not read the live basket (" +
+            String(e.message || e) +
+            "). The public TON RPC is rate-limited — retry in a minute.";
           err.style.display = "block";
         }
       }
