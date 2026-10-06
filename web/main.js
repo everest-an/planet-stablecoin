@@ -16,6 +16,9 @@ async function runGet(address, method) {
   });
   if (!res.ok) throw new Error("HTTP " + res.status);
   const j = await res.json();
+  // exit_code != 0 means the get-method failed (e.g. account not initialised) — treat as
+  // a failure so the caller falls back instead of trusting a garbage stack.
+  if (j?.result?.exit_code !== 0) throw new Error("exit " + j?.result?.exit_code);
   const hex = j?.result?.stack?.[0]?.[1];
   if (!hex) throw new Error("no stack");
   return Number(BigInt(hex));

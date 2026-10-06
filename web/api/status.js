@@ -40,6 +40,8 @@ async function runGet(method, stack = [], tries = 6) {
     if (!res.ok) throw new Error(`runGet ${method}: HTTP ${res.status}`);
     const j = await res.json();
     if (j.error) throw new Error(`runGet ${method}: ${j.error.message}`);
+    // A non-zero exit code means the call failed (e.g. the account is not initialised).
+    if (j?.result?.exit_code !== 0) throw new Error(`runGet ${method}: exit ${j?.result?.exit_code}`);
     return decode(j?.result?.stack?.[0]);
   }
   throw new Error(`runGet ${method}: rate-limited`);
