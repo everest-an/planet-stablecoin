@@ -23,6 +23,12 @@ const OP_SIGNED_PRICE = 0x10000010;
 const OP_ASK_TO_BURN = 0x595f07bc;
 const PPI_SCALE = 1000000n; // 1.0 fixed point
 
+// Ton attached to each price push. Measured on testnet: PlanetCore's SignedPriceUpdate
+// costs 0.00226867 TON of gas, so attaching 0.05 parks ~95% of it in the contract (which
+// never spends it). 0.006 keeps a ~2.6x headroom while cutting the wallet spend ~8x.
+// Owner ops (configure/register) keep the larger default below.
+const PUSH_VALUE = process.env.PUSH_VALUE_TON ?? "0.006";
+
 function die(msg) {
   console.error("ERROR: " + msg);
   process.exit(1);
@@ -329,7 +335,7 @@ async function main() {
       .storeRef(payload)
       .endCell();
     console.log(`push #${a.index} ${a.name ?? a.symbol}: price=${price}`);
-    await send(body);
+    await send(body, core, PUSH_VALUE);
     pushed.push({ index: a.index, price });
   }
 
