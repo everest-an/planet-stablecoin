@@ -18,7 +18,7 @@ const PPI_SCALE = 1e6;
 const WEIGHT_SCALE = 1e6;
 
 const CONCURRENCY = 3; // parallel get-methods (the public RPC rate-limits big bursts)
-const BUDGET_MS = 40000; // return whatever we have rather than risk the 30s function limit
+const BUDGET_MS = 50000; // public RPC ~1 req/s; give the basket time to fully land (fn limit 60s)
 const TRIES = 5;
 const BACKOFF_MS = 350;
 
