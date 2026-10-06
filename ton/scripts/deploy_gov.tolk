@@ -22,10 +22,13 @@ fun main() {
     val deployer = scripts.wallet("deployer");
 
     // 1) PLTG jetton minter (admin = deployer, so the genesis supply can be minted below).
+    //    The content cell MUST be unique: an identical storage would otherwise collide with
+    //    another JettonMinter already deployed (same code+storage => same address, and the
+    //    deploy would be ignored). A real TEP-64 JSON metadata URI should replace this marker.
     val minter = JettonMinter.fromStorage({
         totalSupply: 0,
         adminAddress: deployer.address,
-        content: beginCell().endCell(),
+        content: beginCell().storeUint(0x504C5447, 32).storeUint(0x0001, 16).endCell(), // "PLTG" + ver
         jettonWalletCode: build("JettonWallet"),
     });
     minter.deploy(deployer.address, { value: ton("0.15") });
