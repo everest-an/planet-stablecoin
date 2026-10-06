@@ -114,7 +114,7 @@ function payloadCell(p) {
 
 async function main() {
   const cmd = process.argv[2];
-  if (cmd !== "configure" && cmd !== "register" && cmd !== "push" && cmd !== "e2e" && cmd !== "timelock" && cmd !== "check") die("usage: node relayer.mjs configure|register|push|e2e|timelock|check");
+  if (cmd !== "configure" && cmd !== "register" && cmd !== "push" && cmd !== "e2e" && cmd !== "timelock" && cmd !== "check" && cmd !== "fund" && cmd !== "setsigner") die("usage: node relayer.mjs configure|register|push|e2e|timelock|check|fund|setsigner");
   if (!CORE_RAW) die("PLANET_CORE not set");
   if (!MNEMONIC) die("RELAYER_MNEMONIC not set");
 
@@ -226,6 +226,54 @@ async function main() {
     console.log("setting threshold = 1...");
     await send(thr);
     console.log("done: signer registered + threshold set");
+    return;
+  }
+
+  if (cmd === "fund") {
+    // Plain transfer to another address — used once to fund a freshly generated hot key.
+    const to = process.env.FUND_TO ?? "";
+    const amount = process.env.FUND_TON ?? "1";
+    if (!to) die("FUND_TO not set");
+    console.log(`funding ${to} with ${amount} TON`);
+    await send(beginCell().endCell(), Address.parse(to), amount);
+    console.log("done: funded");
+    return;
+  }
+
+  if (cmd === "setsigner") {
+    // Rotate the oracle signer key THROUGH THE TIMELOCK (the core owner is a timelock, so an
+    // owner action cannot be sent directly): Propose -> wait out the delay -> Execute.
+    // Overwriting index 0 also revokes whatever key was there.
+    const TL_RAW = process.env.CORE_TIMELOCK ?? "";
+    const KEY_HEX = (process.env.NEW_SIGNER_KEY ?? "").replace(/^0x/i, "");
+    const DELAY_MS = Number(process.env.TIMELOCK_WAIT_MS ?? "75000");
+    if (!TL_RAW || !KEY_HEX) die("CORE_TIMELOCK / NEW_SIGNER_KEY not set");
+    if (!/^[0-9a-f]{64}$/i.test(KEY_HEX)) die("NEW_SIGNER_KEY must be 64 hex chars");
+    const tl = Address.parse(TL_RAW);
+    // SetSigner { queryId, index, key } = 0x10000011
+    const signerBody = beginCell()
+      .storeUint(0x10000011, 32)
+      .storeInt(0, 64)
+      .storeInt(0, 64) // index 0
+      .storeUint(BigInt("0x" + KEY_HEX), 256)
+      .endCell();
+    // TlPropose { queryId, dest, body } = 0x20000001
+    const propose = beginCell()
+      .storeUint(0x20000001, 32)
+      .storeInt(0, 64)
+      .storeAddress(core)
+      .storeRef(signerBody)
+      .endCell();
+    console.log(`propose SetSigner(index 0, ${KEY_HEX.slice(0, 12)}..) via timelock ${TL_RAW}`);
+    await send(propose, tl, "0.05");
+    console.log(`waiting ${DELAY_MS} ms for the timelock delay...`);
+    await sleep(DELAY_MS);
+    // TlExecute { queryId } = 0x20000002
+    const execute = beginCell().storeUint(0x20000002, 32).storeInt(0, 64).endCell();
+    console.log("execute...");
+    await send(execute, tl, "0.2");
+    await sleep(4000);
+    console.log("done: signer key rotated through the timelock");
     return;
   }
 

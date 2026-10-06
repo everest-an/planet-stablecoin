@@ -18,7 +18,6 @@ jobs:
         working-directory: relayer
     env:
       PLANET_CORE: kQAwzh3O-52-QBtB8JFFTjtNaKFhw-uJMkd-zdnoHoGibzcU
-      RELAYER_MNEMONIC: ${{ secrets.TON_WALLET_MNEMONIC }}
       ASSETS_JSON: assets.example.json
     steps:
       - uses: actions/checkout@v4
@@ -31,9 +30,16 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Configure basket + register signer
+        # Owner actions → the owner key (kept separate from the hot relayer key).
+        env:
+          RELAYER_MNEMONIC: ${{ secrets.TON_WALLET_MNEMONIC }}
         run: |
           node relayer.mjs configure
           node relayer.mjs register
 
       - name: Push live prices
+        # The hot price-signing key. Separate from the owner so a leak here cannot touch
+        # ownership or funds — it can only push prices, which the core validates anyway.
+        env:
+          RELAYER_MNEMONIC: ${{ secrets.RELAYER_MNEMONIC }}
         run: node relayer.mjs push
