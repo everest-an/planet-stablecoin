@@ -134,7 +134,14 @@
 
       <div id="err" class="warn" style="display: none"></div>
 
-      <div class="cards" id="cards"></div>
+      <div class="cards" id="cards">
+        <div class="card"><div class="k">PPI (index)</div><div class="v">…</div></div>
+        <div class="card"><div class="k">assets</div><div class="v">…</div></div>
+        <div class="card"><div class="k">supply (PLT)</div><div class="v">…</div></div>
+        <div class="card"><div class="k">reserve (units)</div><div class="v">…</div></div>
+        <div class="card"><div class="k">oracle age</div><div class="v">…</div></div>
+        <div class="card"><div class="k">M-of-N threshold</div><div class="v">…</div></div>
+      </div>
       <table>
         <thead>
           <tr>
@@ -147,7 +154,11 @@
             <th>state</th>
           </tr>
         </thead>
-        <tbody id="rows"></tbody>
+        <tbody id="rows">
+          <tr><td colspan="7" style="color: var(--muted, #8a8a8a)">
+            reading the on-chain basket… (the first load can take ~10s; it is then cached)
+          </td></tr>
+        </tbody>
       </table>
       <p class="note" id="foot"></p>
       <p class="note">

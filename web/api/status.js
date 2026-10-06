@@ -11,7 +11,7 @@ const ENDPOINT = process.env.TON_ENDPOINT || "https://testnet.toncenter.com/api/
 const API_KEY = process.env.TON_API_KEY || ""; // optional: raises the public RPC rate limit
 const PPI_SCALE = 1e6;
 const WEIGHT_SCALE = 1e6;
-const SPACING_MS = 600;
+const SPACING_MS = 120;
 
 // Display names, index-aligned with the on-chain basket (see relayer/assets.example.json).
 // The chain stores weights/prices only, so names live here for the dashboard.
