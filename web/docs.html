@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Planet — docs (architecture, contracts, API)</title>
+    <meta
+      name="description"
+      content="Developer and auditor documentation for Planet: contract architecture and live testnet addresses, the signed-oracle flow, the PLT token and fund, governance, the public API, how to run it yourself, and a verification checklist."
+    />
+    <link rel="canonical" href="https://ppppp.space/docs" />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="Planet" />
+    <meta property="og:url" content="https://ppppp.space/docs" />
+    <meta property="og:title" content="Planet — docs" />
+    <meta property="og:description" content="Architecture, contracts and live addresses, the oracle flow, the token and fund, governance, the public API, and how to verify it." />
+    <meta property="og:image" content="https://ppppp.space/icon.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Planet — docs" />
+    <meta name="twitter:description" content="Architecture, contracts, the oracle flow, the API, and a verification checklist." />
+    <meta name="twitter:image" content="https://ppppp.space/icon.png" />
+    <link rel="icon" href="/icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500&family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <style>
+      .doc { max-width: 900px; margin: 0 auto; padding: 32px 20px 76px; }
+      .doc h1 { font-family: "Space Grotesk", sans-serif; font-size: 28px; margin: 24px 0 6px; }
+      .doc .sub { color: var(--muted, #8a8a8a); font-family: "DM Mono", monospace; font-size: 12px; margin-bottom: 8px; }
+      .doc .toc { font-family: "DM Mono", monospace; font-size: 12px; color: var(--muted, #8a8a8a); margin: 16px 0 28px; line-height: 1.9; }
+      .doc .toc a { color: inherit; }
+      .doc h2 { font-family: "Space Grotesk", sans-serif; font-size: 18px; margin: 34px 0 10px; }
+      .doc h3 { font-family: "Space Grotesk", sans-serif; font-size: 15px; margin: 20px 0 8px; }
+      .doc p, .doc li { line-height: 1.7; }
+      .doc ul { padding-left: 20px; margin: 0 0 12px; }
+      .doc li { margin-bottom: 6px; }
+      .doc code { font-family: "DM Mono", monospace; font-size: 12px; word-break: break-all; }
+      .doc pre { background: rgba(127, 127, 127, 0.09); padding: 12px 14px; overflow-x: auto; font-family: "DM Mono", monospace; font-size: 12px; line-height: 1.6; }
+      .doc table { width: 100%; border-collapse: collapse; font-family: "DM Mono", monospace; font-size: 12px; margin: 12px 0 18px; }
+      .doc th, .doc td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--muted, #2a2a2a); vertical-align: top; }
+      .doc th { color: var(--muted, #8a8a8a); font-weight: 400; text-transform: uppercase; letter-spacing: 0.05em; }
+      .doc .warn { border: 1px solid #e8590c; color: #e8590c; padding: 10px 12px; font-family: "DM Mono", monospace; font-size: 12px; margin: 18px 0; }
+      .doc .note { border-left: 2px solid var(--muted, #2a2a2a); padding-left: 12px; color: var(--muted, #8a8a8a); font-family: "DM Mono", monospace; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="wordmark" href="/">Planet</a>
+      <nav class="nav">
+        <a href="/">home</a>
+        <a href="/dashboard">dashboard</a>
+        <a href="/methodology">methodology</a>
+        <a href="/faq">faq</a>
+        <a class="btn" href="https://app.ppppp.space">open app</a>
+      </nav>
+    </header>
+
+    <main class="doc">
+      <p class="notice" style="font-family: 'DM Mono', monospace">
+        [ developer docs · TON testnet PoC · unaudited ]
+      </p>
+      <h1>Architecture &amp; interfaces</h1>
+      <p class="sub">v1.7 · October 2026 · everything below is the deployed testnet reality, not a plan</p>
+
+      <p class="toc">
+        <a href="#stack">1. Stack</a> · <a href="#addresses">2. Live contracts</a> ·
+        <a href="#oracle">3. The oracle flow</a> · <a href="#token">4. Token, mint &amp; redeem</a> ·
+        <a href="#fund">5. The fund</a> · <a href="#gov">6. Governance</a> ·
+        <a href="#api">7. Public API</a> · <a href="#run">8. Run it yourself</a> ·
+        <a href="#verify">9. Verification checklist</a> · <a href="#security">10. Security</a>
+      </p>
+
+      <h2 id="stack">1. Stack</h2>
+      <pre>
+   off-chain                       on-chain (TON, Tolk)
+   ─────────                       ─────────────────────
+   Yahoo + Sina  ──► relayer ──►   PlanetCore ──► JettonMinter (PLT)
+   (median, signed ed25519)        │  index, basket, fees, limits
+                                   ├──► PlanetBasket (composition registry)
+                                   ├──► PlanetBond   (stable-bond ledger)
+                                   ├──► PlanetFund   (tokenised fund: NAV, subscribe/redeem)
+                                   └──► PlanetGov    (PLTG staking, dividends, voting)
+                                          ▲
+                                       PlanetTimelock (delayed owner actions)</pre>
+      <p>
+        The core is deliberately small: it holds the basket, verifies signed prices, computes the
+        index, and accounts fees. Everything that does not need to be atomic with that lives in a
+        separate contract. Every privileged action is owner-gated, and the owner can be migrated
+        to a timelock (§6) so changes are proposed, delayed, then executed.
+      </p>
+
+      <h2 id="addresses">2. Live contracts (TON testnet)</h2>
+      <p class="note">Testnet only. These tokens have no value; nothing is listed anywhere.</p>
+      <table>
+        <tbody>
+          <tr><th>PlanetCore</th><td><code>kQAwzh3O-52-QBtB8JFFTjtNaKFhw-uJMkd-zdnoHoGibzcU</code></td></tr>
+          <tr><th>PLT minter</th><td><code>kQAMXsJdK0tklNy5x3Q8Jhw1dAkB6pw6ubREVprusamUcpbq</code></td></tr>
+          <tr><th>PLTG minter</th><td><code>kQDF0ixGco8WW4fqPB3XNdrNJ8vikFNkkyzKbz8hNJiFZ7OD</code></td></tr>
+          <tr><th>PlanetGov</th><td><code>kQD4eBl68N4Udu4YPEFrKSKL99mx0To1ihGd-DQP7b1EpaUV</code></td></tr>
+          <tr><th>Core/Fund owner timelock</th><td><code>kQBo0345y-RGi49-7WWaWAHyyNtiWe-JrT44iO3G9Cyom6YK</code></td></tr>
+        </tbody>
+      </table>
+      <p class="note">
+        Open any address in a TON testnet explorer (e.g. tonviewer) and call the get-methods
+        yourself — see §9.
+      </p>
+
+      <h2 id="oracle">3. The oracle flow</h2>
+      <p>
+        Planet does not depend on a third-party oracle network. Instead it accepts a signed price
+        and verifies the signature on-chain, which means "connecting a real data source" reduces
+        to publishing a public key.
+      </p>
+      <ol>
+        <li>The relayer builds a payload <code>{index, price, volatility, liquidity, riskState, timestamp}</code>.</li>
+        <li>It signs <code>hash(domain_tag ‖ core_address ‖ payload)</code> with its ed25519 key —
+          the domain tag and contract address prevent replaying the payload on another deployment.</li>
+        <li><code>SignedPriceUpdate</code> (or <code>SignedPriceUpdateN</code> for M&gt;2) carries the
+          signature(s) and payload; anyone may relay it — authenticity comes from the signature,
+          not from the sender.</li>
+        <li>The core checks: enough distinct registered signers, strictly increasing timestamp,
+          index in range, basket weights sum to 100%, and the price-jump guard.</li>
+        <li>It recomputes the index over the active basket and stores the new value.</li>
+      </ol>
+      <p>Registration is two owner messages: <code>SetSigner{index, key}</code> and
+        <code>SetThreshold{m}</code>. A registered CAM adapter address can push instead
+        (<code>SetCam</code> + <code>CamUpdate</code>).</p>
+
+      <h2 id="token">4. Token, mint &amp; redeem</h2>
+      <p>
+        PLT is a standard <b>TEP-74</b> jetton; the minter's supply is the source of truth, and
+        the core keeps a mirror for accounting.
+      </p>
+      <ul>
+        <li><b>Mint:</b> <code>Mint{queryId, amount}</code> to the core → the core computes
+          <code>amount·(1−fee)/index</code>, forwards <code>MintNewJettons</code> to the minter,
+          and updates reserve/supply. Minting is refused if the basket is far off peg
+          (<code>ERR_DEVIATION</code>), above the per-tx cap, or if the oracle price is older than
+          six hours (<code>ERR_STALE_PRICE</code>).</li>
+        <li><b>Burn/redeem:</b> the user's own jetton wallet receives a standard
+          <code>AskToBurn</code>; the minter burns and notifies the core, which mirrors the
+          accounting (<code>BurnMirror</code>). The payout rails are the operator's job, handled
+          separately from the burn so a delivery failure cannot desynchronise supply.</li>
+      </ul>
+      <p>
+        Fees are band-based (0.5% near the index, 1% at 3–5% off, 2% beyond, plus a
+        below-peg redemption penalty) and split <b>30% burn / 40% reserve / 20% staking / 10% risk
+        fund</b>.
+      </p>
+
+      <h2 id="fund">5. The fund</h2>
+      <p>
+        <code>PlanetFund</code> is the "real product" shape: subscribers deposit, a custodian set
+        confirms the purchase at the attested NAV (<b>M-of-N</b>, and shares are minted only on
+        that confirmation — never on a deposit alone), and redemption is two-phase. Redemption is
+        <b>trustless about the shares</b>: the subscriber transfers PLT into the <i>fund's own</i>
+        jetton wallet, the transfer notification must come from that wallet
+        (<code>ERR_NOT_FUND_WALLET</code>), the shares are burned, and only then can the custodian
+        confirm the payout (<code>ERR_NOT_FUNDED</code>). Shares that never left the subscriber
+        cannot be paid out.
+      </p>
+
+      <h2 id="gov">6. Governance</h2>
+      <ul>
+        <li><b>PLTG</b> — a fixed-supply (1e9) TEP-74 token. <code>PlanetGov</code> holds stakes and
+          distributes the staking fee bucket pro-rata using a reward-per-share accumulator;
+          voting power is weighted by the staked amount, and a vote is counted once per proposal.</li>
+        <li><b>Basket changes</b> are owner actions on the core: append a commodity, re-weight one
+          (15% cap), or retire one by setting its weight to 0. Base prices can never be changed.</li>
+        <li><b>Delay:</b> on testnet the core owner is a 60-second <code>PlanetTimelock</code>, so
+          every privileged call is <code>Propose → wait → Execute</code>. Production intends a
+          multisig as the timelock's owner and a longer delay.</li>
+      </ul>
+
+      <h2 id="api">7. Public API</h2>
+      <table>
+        <tbody>
+          <tr><th><code>GET /api/v1/status</code></th><td>Live index + full basket + accounting as JSON. Versioned path, <code>ETag</code> + <code>304</code>, one error envelope, <code>503</code>+<code>Retry-After</code> when the RPC is rate-limited.</td></tr>
+          <tr><th><code>GET /openapi.json</code></th><td>The OpenAPI 3.1 contract — generate a client from it instead of hand-parsing.</td></tr>
+          <tr><th><code>/api/status</code></th><td>Deprecated alias; replies <code>308</code> with <code>Deprecation</code> / <code>Sunset</code> / <code>Link</code> headers.</td></tr>
+        </tbody>
+      </table>
+      <p class="note">
+        The API is <b>read-only by design</b>. There is no endpoint that signs or submits a
+        transaction for you: minting and redeeming happen on-chain, signed by the user's own
+        wallet. A custodial write API would be a funds-risk liability, so it does not exist.
+      </p>
+
+      <h2 id="run">8. Run it yourself</h2>
+      <pre>repo layout
+  ton/            Tolk contracts + tests (Acton toolchain; builds in CI)
+    contracts/    planet_core, planet_fund, planet_gov, planet_timelock, jetton/*
+    scripts/      deploy + migration scripts
+  relayer/        the off-chain price relayer (node, no third-party oracle)
+  web/            this site + /dashboard + /faq + /docs + the v1 API
+  app-tg/         the Telegram Mini App (Vite + React + TON Connect)</pre>
+      <ul>
+        <li><b>Contracts:</b> <code>acton build &amp;&amp; acton wrapper --all &amp;&amp; acton test --coverage</code>
+          (Acton needs Linux/WSL; CI does it on every push).</li>
+        <li><b>Relayer:</b> <code>node relayer.mjs configure|register|push</code> with
+          <code>PLANET_CORE</code>, <code>RELAYER_MNEMONIC</code> and <code>ASSETS_JSON</code>.</li>
+        <li><b>Site/app:</b> static + serverless; the Mini App reads <code>VITE_PLANET_ADDRESS</code>
+          and <code>VITE_PLT_MINTER_ADDRESS</code> at build time.</li>
+      </ul>
+
+      <h2 id="verify">9. Verification checklist</h2>
+      <ol>
+        <li>Call <code>ppi()</code>, <code>assetCount()</code>, <code>assetAt(i)</code>,
+          <code>baseLocked()</code>, <code>lastOracleUpdate()</code> on PlanetCore.</li>
+        <li>Check the weights in <code>assetAt(i)</code> sum to exactly <code>1000000</code> and no
+          weight exceeds <code>150000</code> (call <code>maxAssetWeight()</code>).</li>
+        <li>Recompute the index from <code>assetAt(i)</code> with the formula in
+          <a href="/methodology">methodology</a> §5 and compare to <code>ppi()</code>.</li>
+        <li>Compare <code>lastOracleUpdate()</code> against the wall clock — it should be minutes,
+          never days, old.</li>
+        <li>Confirm <code>owner()</code> is the timelock, not a plain wallet.</li>
+        <li>Fetch <code>/api/v1/status</code> and confirm the numbers match your own contract reads.</li>
+      </ol>
+
+      <h2 id="security">10. Security &amp; disclosure</h2>
+      <ul>
+        <li><b>Non-custodial.</b> Planet never holds keys or seed phrases; the app asks the user's
+          own wallet to sign. Any message asking for a seed phrase is not us.</li>
+        <li><b>Unaudited.</b> No third-party audit has been completed; that is the gate before any
+          mainnet deployment. Treat the code as research software.</li>
+        <li><b>Known failure modes are tested:</b> bounced-message handling on every contract,
+          signed-payload domain separation, non-positive amount rejection, a coverage gate in CI,
+          and a staleness guard on minting.</li>
+        <li><b>Disclosure:</b> see <a href="/.well-known/security.txt"><code>/.well-known/security.txt</code></a>.</li>
+      </ul>
+    </main>
+  </body>
+</html>

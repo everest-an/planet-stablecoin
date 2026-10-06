@@ -1,0 +1,9 @@
+Contact: mailto:security@ppppp.space
+Contact: https://t.me/Gavis0bot
+Expires: 2027-12-31T23:59:59.000Z
+Preferred-Languages: en, zh
+Canonical: https://ppppp.space/.well-known/security.txt
+Policy: https://ppppp.space/docs#security
+Acknowledgments: https://ppppp.space/docs#security
+# Planet is an unaudited TON testnet proof of concept. Please report suspected
+# vulnerabilities privately; do not open a public issue for security bugs.

@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Planet — basket &amp; index methodology (PPI)</title>
+    <meta
+      name="description"
+      content="The public rulebook for Planet's commodity basket and purchasing-power index: which commodities, how weights are set and capped, how base prices work, how the index is computed, how prices are validated, how often they update, and how governance changes the basket."
+    />
+    <link rel="canonical" href="https://ppppp.space/methodology" />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="Planet" />
+    <meta property="og:url" content="https://ppppp.space/methodology" />
+    <meta property="og:title" content="Planet — basket & index methodology" />
+    <meta property="og:description" content="The public, reproducible rulebook behind the Planet commodity index: weights, caps, base prices, the formula, data validation, cadence and governance." />
+    <meta property="og:image" content="https://ppppp.space/icon.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Planet — basket & index methodology" />
+    <meta name="twitter:description" content="Weights, caps, the index formula, data validation, cadence and governance — the rulebook." />
+    <meta name="twitter:image" content="https://ppppp.space/icon.png" />
+    <link rel="icon" href="/icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500&family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <style>
+      .doc { max-width: 860px; margin: 0 auto; padding: 32px 20px 76px; }
+      .doc h1 { font-family: "Space Grotesk", sans-serif; font-size: 28px; margin: 24px 0 6px; }
+      .doc .sub { color: var(--muted, #8a8a8a); font-family: "DM Mono", monospace; font-size: 12px; margin-bottom: 24px; }
+      .doc h2 { font-family: "Space Grotesk", sans-serif; font-size: 18px; margin: 34px 0 10px; }
+      .doc h3 { font-family: "Space Grotesk", sans-serif; font-size: 15px; margin: 22px 0 8px; }
+      .doc p, .doc li { line-height: 1.7; }
+      .doc ul { padding-left: 20px; margin: 0 0 12px; }
+      .doc li { margin-bottom: 6px; }
+      .doc code, .doc .mono { font-family: "DM Mono", monospace; font-size: 12px; }
+      .doc pre { background: rgba(127, 127, 127, 0.09); padding: 12px 14px; overflow-x: auto; font-family: "DM Mono", monospace; font-size: 12px; line-height: 1.6; }
+      .doc table { width: 100%; border-collapse: collapse; font-family: "DM Mono", monospace; font-size: 12px; margin: 12px 0 18px; }
+      .doc th, .doc td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--muted, #2a2a2a); }
+      .doc th { color: var(--muted, #8a8a8a); font-weight: 400; text-transform: uppercase; letter-spacing: 0.05em; }
+      .doc td.n, .doc th.n { text-align: right; }
+      .doc .warn { border: 1px solid #e8590c; color: #e8590c; padding: 10px 12px; font-family: "DM Mono", monospace; font-size: 12px; margin: 18px 0; }
+      .doc .note { border-left: 2px solid var(--muted, #2a2a2a); padding-left: 12px; color: var(--muted, #8a8a8a); font-family: "DM Mono", monospace; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="wordmark" href="/">Planet</a>
+      <nav class="nav">
+        <a href="/">home</a>
+        <a href="/dashboard">dashboard</a>
+        <a href="/docs">docs</a>
+        <a href="/faq">faq</a>
+        <a class="btn" href="https://app.ppppp.space">open app</a>
+      </nav>
+    </header>
+
+    <main class="doc">
+      <p class="notice" style="font-family: 'DM Mono', monospace">
+        [ public rulebook · TON testnet PoC · not a stablecoin ]
+      </p>
+      <h1>Basket &amp; index methodology</h1>
+      <p class="sub">version 1.0 · reviewed October 2026 · this page is the rulebook, not marketing</p>
+
+      <p class="warn">
+        Why this page exists: a self-assembled commodity index is only as credible as its
+        rulebook. If the basket were an undisclosed average of coin prices, the number would mean
+        nothing. Everything below is the actual rule the contract enforces today (testnet), plus
+        what is explicitly <b>not</b> claimed.
+      </p>
+
+      <h2>1. What the index is, and what it is not</h2>
+      <p>
+        The <b>purchasing-power index (PPI)</b> is a single number that tracks the price of a
+        fixed basket of commodities, where <b>1.000000</b> is the index value on the base date.
+        It is a measurement, computed on-chain from signed prices.
+      </p>
+      <p>
+        It is <b>not</b> a claim on any commodity, not redeemable for anything, and not backed by
+        a reserve. There is no peg and no target. PLT is a synthetic token that expresses the
+        index; it is not a stablecoin and this is not a yield product.
+      </p>
+
+      <h2>2. Composition</h2>
+      <p>
+        The live basket holds <b>14</b> commodities across four sectors. Each is a liquid,
+        publicly quoted instrument with an independent second source where available.
+      </p>
+      <table>
+        <thead>
+          <tr><th>#</th><th>commodity</th><th>ref</th><th class="n">weight</th><th>sector</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>0</td><td>WTI crude</td><td>CL=F</td><td class="n">14%</td><td>energy</td></tr>
+          <tr><td>1</td><td>Brent crude</td><td>BZ=F</td><td class="n">11%</td><td>energy</td></tr>
+          <tr><td>2</td><td>natural gas</td><td>NG=F</td><td class="n">8%</td><td>energy</td></tr>
+          <tr><td>3</td><td>gold</td><td>GC=F</td><td class="n">12%</td><td>metals</td></tr>
+          <tr><td>4</td><td>silver</td><td>SI=F</td><td class="n">7%</td><td>metals</td></tr>
+          <tr><td>5</td><td>copper</td><td>HG=F</td><td class="n">6%</td><td>metals</td></tr>
+          <tr><td>6</td><td>wheat</td><td>ZW=F</td><td class="n">9%</td><td>agriculture</td></tr>
+          <tr><td>7</td><td>corn</td><td>ZC=F</td><td class="n">7%</td><td>agriculture</td></tr>
+          <tr><td>8</td><td>soybean</td><td>ZS=F</td><td class="n">6%</td><td>agriculture</td></tr>
+          <tr><td>9</td><td>coffee</td><td>KC=F</td><td class="n">4%</td><td>agriculture</td></tr>
+          <tr><td>10</td><td>lumber (ETF)</td><td>WOOD</td><td class="n">4%</td><td>industrial</td></tr>
+          <tr><td>11</td><td>lithium (ETF)</td><td>LIT</td><td class="n">3%</td><td>industrial</td></tr>
+          <tr><td>12</td><td>water (ETF)</td><td>PHO</td><td class="n">5%</td><td>industrial</td></tr>
+          <tr><td>13</td><td>carbon (ETF)</td><td>KRBN</td><td class="n">4%</td><td>industrial</td></tr>
+        </tbody>
+      </table>
+      <p class="note">
+        Weights are stored on-chain in parts-per-million (1e6 = 100%). Source of truth:
+        <code>relayer/assets.example.json</code> in the repository.
+      </p>
+
+      <h2>3. The two rules that make it trustworthy</h2>
+      <ul>
+        <li><b>Cap:</b> no single commodity may exceed <b>15%</b> (150 000 ppm). The contract rejects
+          any add or re-weight above the cap, so no single market can dominate the index.</li>
+        <li><b>Sum:</b> the weights of the active basket must equal exactly <b>100%</b>. The oracle
+          path verifies this on every update, so the index cannot be silently diluted.</li>
+      </ul>
+
+      <h2>4. Base prices are frozen</h2>
+      <p>
+        Each commodity has a <b>base price</b> recorded when the basket is configured. Once the
+        basket is locked, base prices are <b>immutable</b>: the governance actions that change
+        weights cannot touch them. This is deliberate — if base prices were editable, the owner
+        could rewrite the index history.
+      </p>
+
+      <h2>5. The index formula</h2>
+      <p>Over all <b>active</b> commodities:</p>
+      <pre>PPI = Σ ( wᵢ · Pᵢ / Pᵦᵢ )  ÷  Σ wᵢ</pre>
+      <ul>
+        <li><code>wᵢ</code> — the commodity's weight (ppm)</li>
+        <li><code>Pᵢ</code> — its latest accepted price</li>
+        <li><code>Pᵦᵢ</code> — its base price</li>
+      </ul>
+      <p>
+        With nothing frozen this is the plain weighted average of the price ratios. When a
+        commodity is <b>frozen</b> (see §7) it is dropped from both sums, and the remaining
+        weights are <b>renormalised</b> — so a single bad data source cannot pull the whole index.
+        All arithmetic is 1e6 fixed point; there are no floats anywhere on-chain.
+      </p>
+
+      <h2>6. Where prices come from</h2>
+      <p>
+        An off-chain relayer fetches each commodity from <b>two independent sources</b> where one
+        exists (for example a Yahoo Finance futures quote and a Sina quote), converts both to the
+        same unit, and takes the <b>median</b>. It signs the resulting payload with an ed25519 key
+        and submits it to the contract, which <b>verifies the signature on-chain</b> before any
+        state changes.
+      </p>
+
+      <h2>7. Validation gates</h2>
+      <table>
+        <thead><tr><th>gate</th><th>rule</th><th>effect</th></tr></thead>
+        <tbody>
+          <tr><td>source divergence</td><td>two sources differ by &gt; 2%</td><td>commodity marked <b>frozen</b>, excluded from the index</td></tr>
+          <tr><td>single-update jump</td><td>an update moves a price by &gt; 50%</td><td>rejected outright</td></tr>
+          <tr><td>signature set</td><td>M-of-N distinct registered signers (currently 1 on testnet)</td><td>unsigned / under-signed updates rejected</td></tr>
+          <tr><td>domain separation</td><td>signature covers a tag + the contract address</td><td>a payload cannot be replayed on another deployment</td></tr>
+          <tr><td>timestamp</td><td>strictly increasing</td><td>replays rejected</td></tr>
+          <tr><td>staleness (mint)</td><td>index older than 6 hours</td><td><b>minting is refused</b> — the protocol never prices off a stale oracle</td></tr>
+        </tbody>
+      </table>
+
+      <h2>8. Update cadence</h2>
+      <p>
+        A scheduled run pushes a commodity only when its price has moved more than <b>0.1%</b>
+        since the last on-chain value, with a hard ceiling of <b>6 hours</b> so nothing goes
+        stale — even in a completely quiet market every commodity refreshes within six hours.
+        The divergence trigger keeps the cost low without trading away freshness.
+      </p>
+
+      <h2>9. How the basket changes</h2>
+      <p>Governance has exactly three moves, and nothing else:</p>
+      <ul>
+        <li><b>Add</b> a commodity — appended at the next index; existing indices are never
+          overwritten.</li>
+        <li><b>Re-weight</b> an existing commodity — subject to the 15% cap. Base prices are
+          untouched.</li>
+        <li><b>Retire</b> a commodity — set its weight to <b>0</b>. It stops contributing to the
+          index without reordering anything (reordering is the dangerous operation this design
+          avoids).</li>
+      </ul>
+      <p>
+        Because zeroing one weight breaks the 100% sum, a retirement must be paired with
+        offsetting increases in the same batch; until the sum is restored, oracle updates fail
+        loudly rather than producing a wrong index. On testnet the owner is a <b>60-second
+        timelock</b>, so every change is proposed, waits, then executes; production would use a
+        multisig behind a longer delay, and the intent is a quarterly, rules-based re-weight.
+      </p>
+
+      <h2>10. What is explicitly not claimed</h2>
+      <ul>
+        <li>No reserve, no collateral ratio, no redemption for commodities or dollars.</li>
+        <li>No NAV, no yield, no peg and no promise to hold any particular value.</li>
+        <li>No third-party audit yet — this is unaudited proof-of-concept code on testnet.</li>
+        <li>No claim that the on-chain index equals any real tradable basket's return; it is a
+          construction, and constructions have tracking differences.</li>
+      </ul>
+
+      <h2>11. Reproduce it yourself</h2>
+      <p>Nothing here requires trusting this page. Read the chain directly:</p>
+      <ul>
+        <li><code>ppi()</code>, <code>assetCount()</code>, <code>assetAt(i)</code>,
+          <code>baseLocked()</code>, <code>maxAssetWeight()</code>, <code>threshold()</code> — the
+          index and the basket.</li>
+        <li><a href="/dashboard">/dashboard</a> — the same values rendered live.</li>
+        <li><code>/api/v1/status</code> — the same values as JSON, with the contract address and
+          the last oracle timestamp.</li>
+        <li>The contract source and the basket file live in the public repository.</li>
+      </ul>
+      <p class="note">
+        A copy of the index you compute from those values will match the on-chain number exactly,
+        because the formula above is the only arithmetic involved.
+      </p>
+    </main>
+  </body>
+</html>
