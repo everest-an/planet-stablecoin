@@ -1,0 +1,136 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Planet public API",
+    "version": "1.0.0",
+    "summary": "Read-only access to the Planet commodity purchasing-power index (PPI) on TON testnet.",
+    "description": "Planet is an on-chain commodity purchasing-power index on TON. This API exposes the live basket and index. It is READ-ONLY: minting and redemption happen on-chain, signed by the user's own wallet (Planet never holds keys). Phase 1 proof of concept — the index is a synthetic construction, not a stablecoin, and carries no monetary value.",
+    "contact": { "url": "https://ppppp.space/faq" },
+    "license": { "name": "Apache-2.0" }
+  },
+  "servers": [{ "url": "https://ppppp.space", "description": "Production (TON testnet)" }],
+  "tags": [
+    {
+      "name": "status",
+      "description": "Live index, basket weights and accounting."
+    }
+  ],
+  "paths": {
+    "/api/v1/status": {
+      "get": {
+        "tags": ["status"],
+        "summary": "Live index + basket snapshot",
+        "description": "Returns the current PPI, the full basket (weights, base and current prices, risk state) and core accounting. Read live from PlanetCore get-methods (ppi, assetCount, assetAt, supply, reserve, lastOracleUpdate, ...). Responses are CDN-cached for 120s and carry an ETag; send `If-None-Match` to revalidate and get a 304.",
+        "operationId": "getStatus",
+        "parameters": [
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "description": "ETag from a previous response. If it still matches, the API replies 304 Not Modified with no body.",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A live snapshot of the basket and index.",
+            "headers": {
+              "ETag": { "description": "Weak validator; pass it back via If-None-Match.", "schema": { "type": "string" } },
+              "Cache-Control": { "description": "`public, s-maxage=120, stale-while-revalidate=600`.", "schema": { "type": "string" } },
+              "X-Request-Id": { "description": "Correlation id for support.", "schema": { "type": "string" } }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Status" }
+              }
+            }
+          },
+          "304": { "description": "Not Modified — the client's cached copy is still valid. No body." },
+          "405": {
+            "description": "Method not allowed (only GET/HEAD/OPTIONS).",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "503": {
+            "description": "The chain could not be read right now (public RPC rate-limited or unavailable). Retry after the `Retry-After` delay.",
+            "headers": { "Retry-After": { "description": "Seconds to wait before retrying.", "schema": { "type": "integer" } } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Status": {
+        "type": "object",
+        "required": ["ppi", "assetCount", "assets", "core", "network"],
+        "properties": {
+          "network": { "type": "string", "examples": ["testnet"] },
+          "core": { "type": "string", "description": "PlanetCore contract address this snapshot was read from." },
+          "isCurrentDeployment": { "type": "boolean", "description": "False when the snapshot comes from the previous deployment (kept serving during a redeploy)." },
+          "readMs": { "type": "integer", "description": "Wall-clock milliseconds the API spent reading the chain." },
+          "partial": { "type": "boolean", "description": "True when some values could not be read in the time budget (the response is still 200)." },
+          "ppi": { "type": "number", "description": "Purchasing-power index. 1.0 = the base date; 6 decimals on-chain.", "examples": [1.001311] },
+          "supply": { "type": "integer", "description": "Core-side mirrored supply of PLT (the jetton minter is the source of truth)." },
+          "reserve": { "type": "integer", "description": "Core-side reserve accounting units." },
+          "assetCount": { "type": "integer", "description": "Number of registered commodities." },
+          "assetsReturned": { "type": "integer" },
+          "lastOracleUpdate": { "type": "integer", "description": "Unix seconds of the last accepted oracle push." },
+          "riskFund": { "type": "integer" },
+          "signerThreshold": { "type": "integer", "description": "M-of-N distinct signatures required by the oracle." },
+          "fees": {
+            "type": "object",
+            "properties": {
+              "burn": { "type": "integer" },
+              "reserve": { "type": "integer" },
+              "staking": { "type": "integer" }
+            }
+          },
+          "assets": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Asset" }
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "dashboard": { "type": "string", "format": "uri" },
+              "openapi": { "type": "string", "format": "uri" }
+            }
+          }
+        }
+      },
+      "Asset": {
+        "type": "object",
+        "required": ["index", "weight", "basePrice", "currentPrice", "riskState"],
+        "properties": {
+          "index": { "type": "integer", "description": "On-chain basket index (stable; never reordered)." },
+          "name": { "type": "string", "description": "Display name (not stored on-chain)." },
+          "weight": { "type": "integer", "description": "Weight in ppm; 1e6 = 100%. Sums to 1000000 across the basket." },
+          "weightPct": { "type": "number", "description": "Weight as a percentage." },
+          "basePrice": { "type": "number", "description": "Index base price (immutable once locked), 1e6 fixed point." },
+          "currentPrice": { "type": "number", "description": "Latest accepted price, 1e6 fixed point." },
+          "changePct": { "type": "number", "description": "Percentage change of currentPrice vs basePrice." },
+          "volatility": { "type": "integer", "description": "CAM volatility (1e6 fixed point; 0 = unset)." },
+          "liquidity": { "type": "integer", "description": "CAM liquidity (0..1e6; 0 = unset)." },
+          "riskState": { "type": "integer", "enum": [0, 1, 2], "description": "0 normal, 1 caution, 2 frozen (a frozen asset is excluded from the index and the rest renormalised)." }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["code", "message", "request_id"],
+            "properties": {
+              "code": { "type": "string", "description": "Stable, machine-readable. Branch on this, not on the message.", "examples": ["chain_unavailable", "method_not_allowed"] },
+              "message": { "type": "string", "description": "Human-readable; wording may change." },
+              "request_id": { "type": "string", "description": "Correlate with server logs / support." },
+              "details": { "type": "array", "items": {}, "description": "Optional structured context." }
+            }
+          }
+        }
+      }
+    }
+  }
+}
