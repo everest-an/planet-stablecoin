@@ -391,3 +391,15 @@ get fun lastVoteOf(who: address): int64 {
     }
     return lk.loadValue();
 }
+
+// Canonical wire encoding of the stake notification (TEP-74 0x7362d09c), produced by Tolk's
+// own serializer so wallets/integrators (and tests) send EXACTLY what `handleStake` parses:
+// a PLTG transfer to the gov's jetton wallet with queryId | amount | staker | empty payload.
+get fun stakeMessage(queryId: int64, amount: int64, staker: address): cell {
+    return TransferNotificationForRecipient {
+        queryId: queryId as uint64,
+        jettonAmount: amount as coins,
+        transferInitiator: staker,
+        forwardPayload: beginCell().endCell().beginParse(),
+    }.toCell();
+}

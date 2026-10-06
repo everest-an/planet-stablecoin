@@ -7,15 +7,10 @@ import "@wrappers/PlanetGov.gen"
 // PlanetGov (PLTG governance): staking credits + pro-rata dividends + stake-weighted voting.
 // Staking arrives as a TEP-74 transfer notification from the gov's OWN jetton wallet.
 
-// A TransferNotificationForRecipient body with transferInitiator present.
-fun stakeBody(qid: uint64, amt: int, staker: address): cell {
-    return beginCell()
-        .storeUint(0x7362d09c, 32)
-        .storeUint(qid, 64)
-        .storeCoins(amt)
-        .storeUint(1, 1) // transferInitiator is present (originator of the stake)
-        .storeAddress(staker)
-        .endCell();
+// A TransferNotificationForRecipient body — built by the contract itself so the test sends
+// the exact wire encoding the handler parses (no hand-rolled address/maybe encoding).
+fun stakeBody(gov: PlanetGov, qid: int64, amt: int64, staker: address): cell {
+    return gov.stakeMessage(qid, amt, staker);
 }
 
 fun deployGov(): (PlanetGov, Treasury, Treasury, Treasury) {
@@ -42,7 +37,7 @@ fun deployGov(): (PlanetGov, Treasury, Treasury, Treasury) {
 }
 
 fun stake(gov: PlanetGov, gw: Treasury, staker: Treasury, amt: int) {
-    gov.sendAny(gw.address, stakeBody(1, amt, staker.address), { value: ton("0.05") });
+    gov.sendAny(gw.address, stakeBody(gov, 1, amt, staker.address), { value: ton("0.05") });
 }
 
 get fun `test stake credits the staker and the total`() {
@@ -55,7 +50,7 @@ get fun `test stake credits the staker and the total`() {
 
 get fun `test a stake from a non-wallet sender is rejected`() {
     val (gov, _, alice, _) = deployGov();
-    val res = gov.sendAny(alice.address, stakeBody(1, 1000000, alice.address), { value: ton("0.05") });
+    val res = gov.sendAny(alice.address, stakeBody(gov, 1, 1000000, alice.address), { value: ton("0.05") });
     expect(res).toHaveFailedTx({ from: alice.address, to: gov.address, exitCode: 405 });
 }
 
