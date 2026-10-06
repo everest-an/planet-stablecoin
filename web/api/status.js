@@ -8,8 +8,10 @@ const CORE = process.env.PLANET_CORE || "kQA57Fa64OT_MXIqrJD0DGokcNaw36neL-aIWjW
 // Previous deployment, used as a fallback while the current core is being (re)configured.
 const CORE_FALLBACK = "kQAzxh1PoqeXWVYQrABxZky8_bAXddjoGTPbqN4tv8Zsfuul";
 const ENDPOINT = process.env.TON_ENDPOINT || "https://testnet.toncenter.com/api/v2/runGetMethod";
+const API_KEY = process.env.TON_API_KEY || ""; // optional: raises the public RPC rate limit
 const PPI_SCALE = 1e6;
 const WEIGHT_SCALE = 1e6;
+const SPACING_MS = 600;
 
 let ACTIVE = CORE; // resolved per request (falls back when the current core has no basket)
 
@@ -26,15 +28,15 @@ function decode(entry) {
 
 // The public testnet RPC rate-limits aggressively (HTTP 429). Retry with backoff so a
 // burst of get-method calls still resolves; the CDN caches the successful response.
-async function runGet(method, stack = [], tries = 6) {
+async function runGet(method, stack = [], tries = 8) {
   for (let a = 0; a < tries; a++) {
     const res = await fetch(ENDPOINT, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...(API_KEY ? { "X-API-Key": API_KEY } : {}) },
       body: JSON.stringify({ address: ACTIVE, method, stack }),
     });
     if (res.status === 429) {
-      await sleep(350 * (a + 1));
+      await sleep(700 * (a + 1));
       continue;
     }
     if (!res.ok) throw new Error(`runGet ${method}: HTTP ${res.status}`);
@@ -48,8 +50,6 @@ async function runGet(method, stack = [], tries = 6) {
 }
 
 const n = (v) => (v == null ? 0 : Number(v));
-
-const SPACING_MS = 300;
 
 const tryGet = async (method, stack) => {
   try {

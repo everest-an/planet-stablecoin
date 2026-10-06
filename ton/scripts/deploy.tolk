@@ -68,5 +68,12 @@ fun main() {
     basket.deploy(deployer.address, { value: ton("0.2") });
     println("PlanetBasket  -> {}", basket.address);
 
+    // Verify the contracts are ACTUALLY live before declaring success. `deploy()` only
+    // broadcasts; if the wallet is out of gas the messages never land and the account
+    // stays uninitialised — these get-method calls would then fail loudly.
+    println("verify: core.assetCount = {}", core.assetCount());
+    println("verify: core.ppi        = {}", core.ppi());
+    println("verify: minter.supply   = {}", minter.getJettonData().totalSupply);
+
     println("Deploy complete.");
 }
