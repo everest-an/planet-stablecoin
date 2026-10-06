@@ -54,7 +54,8 @@ async function runGet(method, stack = [], deadline = Infinity) {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const j = await res.json();
       if (j?.result?.exit_code !== 0) throw new Error(`exit ${j?.result?.exit_code}`);
-      return (j?.result?.stack ?? []).map((e) => (e[0] === "num" ? Number(BigInt(e[1])) : null));
+      // Keep the raw hex for nums: a uint256 (signer key) would lose precision as a JS number.
+      return (j?.result?.stack ?? []).map((e) => (e[0] === "num" ? e[1] : null));
     } catch {
       if (a === TRIES - 1) return null;
       await sleep(BACKOFF_MS * (a + 1));
