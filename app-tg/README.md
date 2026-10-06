@@ -30,10 +30,10 @@ VITE_PLT_MINTER_ADDRESS=kQAMXsJdK0tklNy5x3Q8Jhw1dAkB6pw6ubREVprusamUcpbq
 ```
 
 The live Core carries a **14-commodity basket** (energy / metals / agriculture / industrial,
-each weight ≤15%, total 100%) — see `../relayer/assets.example.json`. Changing weights is a
-governance action on PlanetCore (`GovernanceSetWeight` / `GovernanceAddAsset`; base prices are
-immutable once locked). **Env vars are read at build time** — after changing them in Vercel,
-trigger a new build (a push to `app-tg/` does it).
+each weight ≤15%, total 100%) — see `../relayer/assets.example.json`. It is the **v1.7** code:
+governance basket management (`GovernanceSetWeight` / `GovernanceAddAsset`, base prices
+immutable) **plus a mint staleness guard** (refuses to mint against an oracle price older than
+6h). Changing weights is a governance action (owner = a 60s timelock on testnet).
 
 ## Features
 
