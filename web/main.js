@@ -1,30 +1,42 @@
 // Live PPI ticker for the landing site. Reads PlanetCore's `ppi()` over the public TON
-// testnet RPC. Degrades gracefully (shows "—" + a note) if the RPC is unavailable.
-const CORE = "kQAzxh1PoqeXWVYQrABxZky8_bAXddjoGTPbqN4tv8Zsfuul";
+// testnet RPC. Falls back to the previous deployment while a freshly redeployed core is
+// still being configured, and degrades gracefully (shows "—") if the RPC is unavailable.
+const CORE = "kQA57Fa64OT_MXIqrJD0DGokcNaw36neL-aIWjWJHcIp2QfX"; // current
+const CORE_FALLBACK = "kQAzxh1PoqeXWVYQrABxZky8_bAXddjoGTPbqN4tv8Zsfuul"; // previous (populated)
 const ENDPOINT = "https://testnet.toncenter.com/api/v2/runGetMethod";
 
-async function readPpi() {
-  const body = JSON.stringify({ address: CORE, method: "ppi", stack: [] });
+const el = document.getElementById("ppi");
+const note = document.getElementById("ppi-note");
+
+async function runGet(address, method) {
   const res = await fetch(ENDPOINT, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body,
+    body: JSON.stringify({ address, method, stack: [] }),
   });
   if (!res.ok) throw new Error("HTTP " + res.status);
   const j = await res.json();
   const hex = j?.result?.stack?.[0]?.[1];
   if (!hex) throw new Error("no stack");
-  return Number(BigInt(hex)) / 1e6;
+  return Number(BigInt(hex));
 }
 
-const el = document.getElementById("ppi");
-const note = document.getElementById("ppi-note");
+// Prefer the current core, but only once it actually has a configured basket.
+async function activeCore() {
+  try {
+    if ((await runGet(CORE, "assetCount")) > 0) return { address: CORE, live: true };
+  } catch (_) {
+    /* fall through to the previous deployment */
+  }
+  return { address: CORE_FALLBACK, live: false };
+}
 
 async function tick() {
   try {
-    const v = await readPpi();
+    const { address, live } = await activeCore();
+    const v = (await runGet(address, "ppi")) / 1e6;
     el.textContent = v.toFixed(6);
-    note.textContent = "live · PlanetCore · TON testnet";
+    note.textContent = "live · PlanetCore · TON testnet" + (live ? "" : " (previous deployment)");
   } catch (e) {
     el.textContent = "—";
     note.textContent = "RPC unavailable (rate-limited) — open the app";

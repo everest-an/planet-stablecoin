@@ -1,0 +1,98 @@
+// Public read API for PlanetCore — white paper appendix III (`/get_ppi`, `/reserves`).
+// GET /api/status  ->  JSON snapshot of the on-chain basket + PPI + reserve/supply/fees.
+//
+// Serverless (Vercel Node runtime), no dependencies: it calls the public TON testnet
+// `runGetMethod` RPC directly and decodes the returned stack (ints + tuples).
+
+const CORE = process.env.PLANET_CORE || "kQA57Fa64OT_MXIqrJD0DGokcNaw36neL-aIWjWJHcIp2QfX";
+// Previous deployment, used as a fallback while the current core is being (re)configured.
+const CORE_FALLBACK = "kQAzxh1PoqeXWVYQrABxZky8_bAXddjoGTPbqN4tv8Zsfuul";
+const ENDPOINT = process.env.TON_ENDPOINT || "https://testnet.toncenter.com/api/v2/runGetMethod";
+const PPI_SCALE = 1e6;
+const WEIGHT_SCALE = 1e6;
+
+let ACTIVE = CORE; // resolved per request (falls back when the current core has no basket)
+
+// Decode one toncenter stack entry: ["num","0x.."] | ["tuple",[..]] | ["cell"/"slice", b64]
+function decode(entry) {
+  if (!entry) return null;
+  const [type, value] = entry;
+  if (type === "num") return BigInt(value).toString();
+  if (type === "tuple") return value.map(decode);
+  return null; // cells/slices (addresses) are not needed here
+}
+
+async function runGet(method, stack = []) {
+  const res = await fetch(ENDPOINT, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ address: ACTIVE, method, stack }),
+  });
+  if (!res.ok) throw new Error(`runGet ${method}: HTTP ${res.status}`);
+  const j = await res.json();
+  if (j.error) throw new Error(`runGet ${method}: ${j.error.message}`);
+  return decode(j?.result?.stack?.[0]);
+}
+
+const n = (v) => (v == null ? 0 : Number(v));
+
+export default async function handler(_req, res) {
+  try {
+    ACTIVE = CORE;
+    let assetCount = n(await runGet("assetCount"));
+    if (assetCount === 0) {
+      ACTIVE = CORE_FALLBACK; // current core not configured yet -> serve the previous one
+      assetCount = n(await runGet("assetCount"));
+    }
+    const [ppi, supply, reserve, lastOracleUpdate, riskFund, threshold, feesBurn, feesReserve, feesStaking] =
+      await Promise.all([
+        runGet("ppi"),
+        runGet("supply"),
+        runGet("reserve"),
+        runGet("lastOracleUpdate"),
+        runGet("riskFund"),
+        runGet("threshold"),
+        runGet("feesBurn"),
+        runGet("feesReserve"),
+        runGet("feesStaking"),
+      ]);
+
+    const assets = [];
+    for (let i = 0; i < assetCount; i++) {
+      const a = await runGet("assetAt", [{ type: "int", value: String(i) }]);
+      if (!Array.isArray(a)) continue;
+      const [weight, basePrice, currentPrice, volatility, liquidity, riskState] = a.map(n);
+      assets.push({
+        index: i,
+        weight,
+        weightPct: weight / (WEIGHT_SCALE / 100),
+        basePrice: basePrice / PPI_SCALE,
+        currentPrice: currentPrice / PPI_SCALE,
+        changePct: basePrice ? (currentPrice / basePrice - 1) * 100 : 0,
+        volatility,
+        liquidity,
+        riskState,
+      });
+    }
+
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Cache-Control", "s-maxage=60, stale-while-revalidate=300");
+    res.status(200).json({
+      ok: true,
+      network: "testnet",
+      core: ACTIVE,
+      isCurrentDeployment: ACTIVE === CORE,
+      ppi: n(ppi) / PPI_SCALE,
+      supply: n(supply),
+      reserve: n(reserve),
+      assetCount,
+      lastOracleUpdate: n(lastOracleUpdate),
+      riskFund: n(riskFund),
+      signerThreshold: n(threshold),
+      fees: { burn: n(feesBurn), reserve: n(feesReserve), staking: n(feesStaking) },
+      assets,
+    });
+  } catch (e) {
+    res.status(502).json({ ok: false, error: String(e?.message ?? e) });
+  }
+}
