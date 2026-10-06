@@ -117,8 +117,10 @@ export default async function handler(_req, res) {
     for (const v of [supply, reserve]) if (v == null) partial = true;
 
     // Per-asset reads through a small worker pool (toncenter v2 stack format: ["num","0x.."];
-    // a struct return is FLATTENED onto the stack — 6 ints for CoreAsset).
-    const assets = [];
+    // a struct return is FLATTENED onto the stack — 6 ints for CoreAsset). A call that fails
+    // (transient 429) is REQUEUED and retried until the budget runs out, so rate limiting
+    // costs latency, not rows.
+    const results = new Map();
     const queue = Array.from({ length: assetCount }, (_, i) => i);
     const worker = async () => {
       for (;;) {
@@ -127,11 +129,20 @@ export default async function handler(_req, res) {
         if (i === undefined) return;
         const a = await tryCall("assetAt", [["num", "0x" + i.toString(16)]], deadline);
         if (a == null || a.length < 6) {
-          partial = true;
+          queue.push(i); // requeue: retry later within the budget instead of dropping the row
+          await sleep(300);
           continue;
         }
+        results.set(i, a);
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, Math.max(1, assetCount)) }, worker));
+
+    const assets = [...results.entries()]
+      .sort((x, y) => x[0] - y[0])
+      .map(([i, a]) => {
         const [weight, basePrice, currentPrice, volatility, liquidity, riskState] = a.map(n);
-        assets.push({
+        return {
           index: i,
           name: NAMES[i] ?? `asset ${i}`,
           weight,
@@ -142,11 +153,8 @@ export default async function handler(_req, res) {
           volatility,
           liquidity,
           riskState,
-        });
-      }
-    };
-    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, Math.max(1, assetCount)) }, worker));
-    assets.sort((x, y) => x.index - y.index);
+        };
+      });
     if (assets.length < assetCount) partial = true;
 
     res.setHeader("Access-Control-Allow-Origin", "*");
