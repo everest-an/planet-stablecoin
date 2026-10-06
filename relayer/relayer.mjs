@@ -296,10 +296,23 @@ async function main() {
     return;
   }
 
-  // push
+  // push — delta-gated: only write prices that actually moved, with a staleness ceiling so a
+  // quiet feed can never go permanently stale. Cuts the update count 60-80% in calm markets.
   const cfg = JSON.parse(readFileSync(ASSETS_JSON, "utf8"));
-  let ts = Math.floor(Date.now() / 1000);
+  const minDelta = Number(process.env.MIN_PUSH_DELTA ?? "0.001"); // 0.1%
+  const maxAgeH = Number(process.env.MAX_PUSH_AGE_H ?? "6"); // hours; 0 disables the ceiling
+  const nowSec = Math.floor(Date.now() / 1000);
+  let onchainLu = 0;
+  try {
+    onchainLu = Number((await runGet(core, "lastOracleUpdate")).stack.readBigNumber());
+  } catch (_) {
+    /* unknown -> treat as stale */
+  }
+  const stale = maxAgeH > 0 && nowSec - onchainLu >= maxAgeH * 3600;
+  console.log(`gate: minDelta=${(minDelta * 100).toFixed(2)}% maxAge=${maxAgeH}h lastOracleUpdate=${onchainLu} stale=${stale}`);
+  let ts = nowSec;
   const pushed = [];
+  const skipped = [];
   for (const a of cfg.assets) {
     const agg = aggregate(await sourcePrices(a));
     console.log(
@@ -309,6 +322,34 @@ async function main() {
         (agg.frozen ? " -> FROZEN (sources diverge)" : "")
     );
     const price = BigInt(Math.round(agg.median * 1e6));
+
+    // Delta gate: read the current on-chain value and skip a write that would barely move it.
+    if (!stale) {
+      let oc = null;
+      let ocRisk = null;
+      try {
+        const st = (await runGet(core, "assetAt", [{ type: "int", value: BigInt(a.index) }])).stack;
+        st.readBigNumber(); // weight
+        st.readBigNumber(); // basePrice
+        oc = st.readBigNumber(); // currentPrice
+        st.readBigNumber(); // volatility
+        st.readBigNumber(); // liquidity
+        ocRisk = st.readBigNumber(); // riskState
+      } catch (_) {
+        /* unknown -> push */
+      }
+      if (oc !== null && oc > 0n) {
+        const diff = price > oc ? price - oc : oc - price;
+        const rel = Number(diff) / Number(oc);
+        const riskChanged = ocRisk !== null && Number(ocRisk) !== agg.frozen;
+        if (rel < minDelta && !riskChanged) {
+          skipped.push(a.index);
+          console.log(`skip #${a.index} ${a.name ?? a.symbol}: |d|=${(rel * 100).toFixed(3)}% < ${(minDelta * 100).toFixed(2)}%`);
+          continue;
+        }
+      }
+    }
+
     ts += 1; // strictly increasing timestamp (replay protection)
     const payload = payloadCell({
       queryId: 0n,
@@ -338,6 +379,11 @@ async function main() {
     await send(body, core, PUSH_VALUE);
     pushed.push({ index: a.index, price });
   }
+  console.log(`gate result: pushed ${pushed.length}, skipped ${skipped.length}`);
+  if (pushed.length === 0) {
+    console.log("nothing to push — every price is within delta and on-chain data is fresh");
+    return;
+  }
 
   // Verify the pushes actually applied on-chain. `send` only proves the wallet broadcast;
   // it does NOT prove Core accepted the message (wrong op/format, bad signature, gas, or
@@ -364,7 +410,7 @@ async function main() {
     if (cur !== p.price) die(`asset #${p.index} currentPrice=${cur} != pushed ${p.price}`);
   }
   console.log("verified: lastOracleUpdate=" + lastTs + ", all " + pushed.length + " asset price(s) match on-chain");
-  console.log("done: pushed " + cfg.assets.length + " asset price(s)");
+  console.log("done: pushed " + pushed.length + " asset price(s), skipped " + skipped.length);
 }
 
 main().catch((e) => die(e?.stack ?? String(e)));

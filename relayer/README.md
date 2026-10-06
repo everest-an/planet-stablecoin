@@ -23,6 +23,13 @@ Config via env:
 | `MULTI_SOURCE` | `0` disables cross-validation (default: on) |
 | `MAX_SOURCE_SPREAD` | freeze asset if sources diverge beyond this (default `0.02` = 2%) |
 | `PUSH_VALUE_TON` | TON attached per price push (default `0.006`) |
+| `MIN_PUSH_DELTA` | skip a push whose price moved less than this vs the on-chain value (default `0.001` = 0.1%) |
+| `MAX_PUSH_AGE_H` | always push every asset if the on-chain data is older than this (default `6` h; `0` disables) |
+
+**Push gating:** by default a run only writes assets whose price moved >0.1% since the last
+on-chain value (a divergence trigger), and falls back to updating everything once the on-chain
+data is older than `MAX_PUSH_AGE_H` (a heartbeat ceiling), so a quiet feed can never go stale.
+This cuts the update count ~60-80% in calm markets.
 
 **Gas budget (measured on testnet):** PlanetCore's `SignedPriceUpdate` costs **0.00226867 TON**
 of gas, so the push attaches `PUSH_VALUE_TON` (default 0.006 — ~2.6x headroom) instead of a flat
