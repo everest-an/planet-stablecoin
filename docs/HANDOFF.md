@@ -202,16 +202,18 @@ cd app-tg && npm install && npm run build
 |---|---|
 | **PlanetCore** | `kQBUZM0RwN4SXnQDO1q9WzmG2aaiOSD6ybkpaG9LSQ1Aj3Jf`（v1.6 代码：SetOwner + M-of-N 签名集 + M>2 + **治理级篮子管理** GovernanceAddAsset/GovernanceSetWeight（支持 weight=0 软下线）） |
 | **PLT Minter** | `kQCGc7GJHMASpaLEMSjTGEa-NXAZMCk3HywoxFGq7sqSOSM1`（admin = Core） |
+| **PLTG Minter**（治理代币） | `kQDF0ixGco8WW4fqPB3XNdrNJ8vikFNkkyzKbz8hNJiFZ7OD`（固定供应 **1e9 PLTG** 已铸给部署钱包；已实测 `totalSupply=1e15`） |
+| **PlanetGov**（质押/投票） | `kQD4eBl68N4Udu4YPEFrKSKL99mx0To1ihGd-DQP7b1EpaUV`（质押 + **按份额分红**（对应费用桶）+ **按质押量投票**；已接 PLTG minter + `SetGovWallet`） |
 | **PlanetBasket** | `kQAfGKn_UrUW8LQd92ZWy0h0BrCA_QTBhMqDA1M-PZtyv-r_` |
 | **PlanetBond**（稳定债券） | `kQDMxJXroCmuxBw9Sw7oj9LhO9Y0mLxdPS3Tr4vY-sdq65hz`（isOpen=false, premium=5%） |
 | **PlanetFund**（ETF 基金） | `kQAYbx_u7I7yhcYU8yxeewWdh3gnS067IgaWeV8UlYItug1o`（两阶段申购 + 托管 M-of-N 确认按 NAV 铸 + 赎回；含 TEP-74 份额收款/burn 的无信任赎回） |
 | **Fund JettonMinter** | `kQCSnnMlGUIEJvlI_NLG_x0wg-_ZX74AYFIxuLU4YpFeg1sk`（admin = PlanetFund） |
-| **Fund owner 时间锁** | `kQBo0345y-RGi49-7WWaWAHyyNtiWe-JrT44iO3G9Cyom6YK`（delay=60；`PlanetFund.owner` 已迁移至此） |
+| **Core / Fund owner 时间锁** | `kQBo0345y-RGi49-7WWaWAHyyNtiWe-JrT44iO3G9Cyom6YK`（delay=**60s**；**`PlanetCore.owner` 已迁移至此**（实测 owner hash=`68d37e39…`）+ `PlanetFund.owner` 同址）→ 特权操作需 `Propose → 60s → Execute` |
 | **PlanetTimelock**（24h，生产用） | `kQDc_iZ7Y8lQ1r_TxXhOXrhKVrjShyyOgp5c2pUwtGGGJGDe`（delay=86400） |
 | **PlanetTimelock**（demo 0s / tl2） | `kQCMwDVPftkUbRWPMzJGCjoC4YXnFGfN3myTJ1rbeCuSdPAt` / `kQAwMedJ1wWbt-zKqw06Ssb7vdeLW_FIbAQd0NmAPjC5v2Mr` |
 | 部署钱包 | `0QBW4GNM-XpAIuIzwrupQKqVOLILHfP6lnD_Xk04L9Yx6Qol`（v4r2；私钥 `ton/.secrets/`，已 gitignore） |
 
-- **链上状态**：**篮子已扩到 14 个商品**（WTI/Brent/NatGas/Gold/Silver/Copper/Wheat/Corn/Soybean/Coffee/Lumber/Lithium/Water/Carbon，权重各 ≤15%、合计 100%），`assetCount=14`、`signerAt(0)=0x9471…0f8f`（relayer 公钥，`threshold=1`）、`lastOracleUpdate` 持续更新、**`ppi≈1.003`（随行情动态变化；基准=建仓价）**。
+- **链上状态**：**篮子已扩到 14 个商品**（WTI/Brent/NatGas/Gold/Silver/Copper/Wheat/Corn/Soybean/Coffee/Lumber/Lithium/Water/Carbon，权重各 ≤15%、合计 100%），`assetCount=14`、**14/14 价格已上链并校验**、`signerAt(0)=0x9471…0f8f`（relayer 公钥，`threshold=1`）、`lastOracleUpdate` 持续更新、**`ppi≈1.000077`（随行情动态变化；基准=建仓价）**。**Core owner = 时间锁（60s）** → 改篮子/费率等特权操作需 `Propose→60s→Execute`。
 - **治理级篮子管理（v1.6）**：`GovernanceAddAsset`（追加新商品，仅追加不覆盖）与 `GovernanceSetWeight`（改权重、**不动 basePrice**）——**在 `baseLocked` 之后仍可调整**，对齐白皮书「权重由 DAO 季度调整」。单类权重上限 `MAX_ASSET_WEIGHT=15%`。
 - **真实推价已上链（含 bug 修复）**：relayer 双源（Yahoo+Sina）**中位数** → `SignedPriceUpdate` → Core 重算 PPI。**修复**：push body 此前仍是旧内联 `(sigR,sigS,payload)` 格式，而合约已改为 `SignedPriceUpdate{sig1: cell, sig2: cell, payload: cell}` → 推价从未生效（`lastOracleUpdate` 恒 0、PPI 恒 1.0、前端把 base 当 Now）。现 `lastOracleUpdate>0`、`assetAt(i).current` = 中位数、`risk=0`。
 - **mint/burn 端到端**：`.github/workflows/e2e-test.yml`（`gh workflow run e2e-test.yml`）→ 铸 1.0 USDC 得 0.995 PLT，`AskToBurn` 0.5 → Core `supply` 995000→495000，链上实测通过。
