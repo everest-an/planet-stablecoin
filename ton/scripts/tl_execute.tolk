@@ -5,7 +5,7 @@ import "@wrappers/PlanetTimelock.gen"
 import "@wrappers/PlanetCore.gen"
 
 const DEMO = "kQCMwDVPftkUbRWPMzJGCjoC4YXnFGfN3myTJ1rbeCuSdPAt";
-const CORE = "kQBUZM0RwN4SXnQDO1q9WzmG2aaiOSD6ybkpaG9LSQ1Aj3Jf";
+const CORE = "kQAwzh3O-52-QBtB8JFFTjtNaKFhw-uJMkd-zdnoHoGibzcU";
 
 // Step 4: execute the pending timelocked action (delay = 0) -> restores deployer as owner.
 fun main() {

@@ -4,9 +4,9 @@
 // Serverless (Vercel Node runtime), no dependencies: it calls the public TON testnet
 // `runGetMethod` RPC directly and decodes the returned stack (ints + tuples).
 
-const CORE = process.env.PLANET_CORE || "kQBUZM0RwN4SXnQDO1q9WzmG2aaiOSD6ybkpaG9LSQ1Aj3Jf";
+const CORE = process.env.PLANET_CORE || "kQAwzh3O-52-QBtB8JFFTjtNaKFhw-uJMkd-zdnoHoGibzcU";
 // Previous deployment, used as a fallback while the current core is being (re)configured.
-const CORE_FALLBACK = "kQAzxh1PoqeXWVYQrABxZky8_bAXddjoGTPbqN4tv8Zsfuul";
+const CORE_FALLBACK = "kQBUZM0RwN4SXnQDO1q9WzmG2aaiOSD6ybkpaG9LSQ1Aj3Jf";
 const ENDPOINT = process.env.TON_ENDPOINT || "https://testnet.toncenter.com/api/v2/runGetMethod";
 const API_KEY = process.env.TON_API_KEY || ""; // optional: raises the public RPC rate limit
 const PPI_SCALE = 1e6;

@@ -25,8 +25,8 @@ npm run build      # -> dist/
 Current live testnet values (see `../docs/HANDOFF.md` §11):
 
 ```
-VITE_PLANET_ADDRESS=kQBUZM0RwN4SXnQDO1q9WzmG2aaiOSD6ybkpaG9LSQ1Aj3Jf
-VITE_PLT_MINTER_ADDRESS=kQCGc7GJHMASpaLEMSjTGEa-NXAZMCk3HywoxFGq7sqSOSM1
+VITE_PLANET_ADDRESS=kQAwzh3O-52-QBtB8JFFTjtNaKFhw-uJMkd-zdnoHoGibzcU
+VITE_PLT_MINTER_ADDRESS=kQAMXsJdK0tklNy5x3Q8Jhw1dAkB6pw6ubREVprusamUcpbq
 ```
 
 The live Core carries a **14-commodity basket** (energy / metals / agriculture / industrial,

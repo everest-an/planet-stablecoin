@@ -200,8 +200,8 @@ cd app-tg && npm install && npm run build
 
 | 合约 | 地址 |
 |---|---|
-| **PlanetCore** | `kQBUZM0RwN4SXnQDO1q9WzmG2aaiOSD6ybkpaG9LSQ1Aj3Jf`（v1.6 代码：SetOwner + M-of-N 签名集 + M>2 + **治理级篮子管理** GovernanceAddAsset/GovernanceSetWeight（支持 weight=0 软下线）） |
-| **PLT Minter** | `kQCGc7GJHMASpaLEMSjTGEa-NXAZMCk3HywoxFGq7sqSOSM1`（admin = Core） |
+| **PlanetCore** | `kQAwzh3O-52-QBtB8JFFTjtNaKFhw-uJMkd-zdnoHoGibzcU`（v1.7 代码：SetOwner + M-of-N 签名集 + M>2 + 治理级篮子管理 + **铸赎新鲜度护栏 MAX_ORACLE_AGE=6h**） |
+| **PLT Minter** | `kQAMXsJdK0tklNy5x3Q8Jhw1dAkB6pw6ubREVprusamUcpbq`（admin = Core） |
 | **PLTG Minter**（治理代币） | `kQDF0ixGco8WW4fqPB3XNdrNJ8vikFNkkyzKbz8hNJiFZ7OD`（固定供应 **1e9 PLTG** 已铸给部署钱包；已实测 `totalSupply=1e15`） |
 | **PlanetGov**（质押/投票） | `kQD4eBl68N4Udu4YPEFrKSKL99mx0To1ihGd-DQP7b1EpaUV`（质押 + **按份额分红**（对应费用桶）+ **按质押量投票**；已接 PLTG minter + `SetGovWallet`） |
 | **PlanetBasket** | `kQAfGKn_UrUW8LQd92ZWy0h0BrCA_QTBhMqDA1M-PZtyv-r_` |
