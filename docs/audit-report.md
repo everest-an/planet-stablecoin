@@ -57,7 +57,7 @@
 |---|---|---|---|---|
 | EC1 | 🔴 | **铸造无真实价值背书**：`Mint.amount` 是**消息体字段**，实际只把 `msgValue`(TON) 转发给 minter；`totalReserve += amount` 是**虚构记账** → **可凭空铸币**、供应无抵押 | `handleMint` | 阶段一 PoC 的 "mock accounting"；**上主网前必须**改为托管真实资产（USDC/RWA）或明确禁止 |
 | EC2 | 🟡 | 阶段一定位应在前端/白皮书**更醒目**标注（App 写 "deposit USDC" 易被误解为真实入金） | app/web | 文案加 "testnet · mock" |
-| EC3 | ✅ | 费率分档（45/30/25）、风险基金抽成、套利返利、赎回非对称费 | core | ✅ 与白皮书一致 |
+| EC3 | ✅ | 费率分档（30/50/20 + 10% 风险基金）、风险基金抽成、套利返利、赎回非对称费 | core | ✅（v1.6 调整比例，见 WHITEPAPER） |
 | EC4 | ⚪ | 熔断仅约束**铸币**（`BAND_FREEZE`），赎回不冻结（配合非对称费） | `handleMint` | 设计选择，记录即可 |
 
 ## 6. 时间锁（Timelock）

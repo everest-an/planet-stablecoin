@@ -40,7 +40,7 @@
   - `TG Mini App`：`npm run build`
   - `Tact PoC`：`npm run build`
 - **测试覆盖**（`ton/contracts/tests/`）：
-  - 单元：`mintAmount` / `burnAmount` / `feeAmount` / `feeSplit`（45/30/25）/ `rebalanceDrift` / `shouldRebalance`
+  - 单元：`mintAmount` / `burnAmount` / `feeAmount` / `feeSplit`（30/50/20）/ `rebalanceDrift` / `shouldRebalance`
   - 集成：`PlanetCore` 部署 + getter 校验
 - **工具链钉版本**：`Acton.toml` 钉 `acton = "1.2.0"`（利于可复现构建）
 

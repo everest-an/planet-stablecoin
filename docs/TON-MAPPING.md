@@ -69,11 +69,11 @@ MigrationState          ->  enum / int 状态位
 - [x] **赎回/销毁设计决策（已定）**：PLT 走标准 TEP-74 —— 用户用**自己的 JettonWallet** 销毁 PLT，`BurnNotificationForMinter` 由钱包发给 **JettonMinter**，由其扣减 `totalSupply`。
   - **单一真相源**：PLT 供应量以 **`JettonMinter.totalSupply`** 为准；`PlanetCore.totalSupply` 降级为**展示用镜像**，不驱动赎回。
   - **USDC 出金**：不与销毁强耦合在同一条消息链（TON 无同步跨合约调用，强耦合会产生难测失败模式）。改为 Phase 1 的**授权赎回流程**（owner/keeper 依据 Minter 供应快照放款）+ 集成测试。
-  - **待办（Phase 1）**：赎回集成测试 + 利率/费率 45/30/25 的链上落账。
-- [x] **PLTG 治理代币（设计定，无需新合约代码）**：复用同一 `JettonMinter`，**部署第二个实例**——admin = 治理地址、genesis totalSupply = 10 亿、mintable 关闭。参数见 `PLAN-TON.md §1.5`。部署待 Phase 1。
+  - **待办（Phase 1）**：赎回集成测试 + 利率/费率 30/50/20（+10% 风险基金）的链上落账。
+- [x] **PLTG 治理代币**：复用同一 `JettonMinter`（**部署第二个实例**：admin = 治理地址、genesis totalSupply = 10 亿、mintable 关闭）；**治理/质押合约 `PlanetGov.tolk` 已实现**（质押 + 按份额分红 + 按质押量投票，见 `docs/competitive-comparison.md`）。参数见 `PLAN-TON.md §1.5`。
 
 - [ ] 商品篮子多资产数据结构在 Tolk 中的表达（map / array / cell）
 - [ ] Jetton 合约（PLT + PLTG）实现方案（参考 `ton-blockchain/acton-contracts`）
 - [ ] RedStone 在 TON 的接入方式（Pull 需合约验签）
-- [ ] `feeSplit`（45/30/25）在 TON 上的落账方式（Jetton 转账 / 金库合约）
+- [ ] `feeSplit`（30/50/20）在 TON 上的落账方式（Jetton 转账 / 金库合约）
 - [x] **Tolk 编译验证通过**：GitHub Actions (`ton-build.yml`) 用 Acton 1.2.0 编译 `planet_core.tolk` 成功（本地 WSL 可选）。已修：Acton.toml manifest、`in` 作用域、`Storage.load/save`、message opcode、`int64` 定宽字段。

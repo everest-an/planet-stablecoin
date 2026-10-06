@@ -66,7 +66,7 @@ L2 CAM 适配层（设计）· L3 稳定/风控（设计，借 AMM 设计、不�
 
 | 编号 | 功能 | 状态 |
 |------|------|------|
-| F1.1 | TON/Tolk 合约 `PlanetCore`（铸赎/费率 45-30-25/暂停/风控） | ✅ |
+| F1.1 | TON/Tolk 合约 `PlanetCore`（铸赎/费率 30-50-20/暂停/风控） | ✅ |
 | F1.2 | **链上多资产 PPI**（篮子 `map<int64,CoreAsset>` + `computePpi`） | ✅ |
 | F1.3 | PLT TEP-74（minter + wallet，vendored） | ✅ |
 | F1.4 | 铸币全链路（core → minter → 钱包，`MintNewJettons`） | ✅ |

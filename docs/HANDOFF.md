@@ -105,7 +105,7 @@ cd app-tg && npm install && npm run build
 ## 5. 已完成（Phase 0 + Phase 1 前端/合约）
 
 - 白皮书全文归档。
-- TON 合约：`PlanetCore`（PPI、铸赎、风控、暂停、费率 45/30/25、**RTRA 再平衡**、**mint→JettonMinter `MintNewJettons` 接线**、`setJettonMinter`）。
+- TON 合约：`PlanetCore`（PPI、铸赎、风控、暂停、**费率 30/50/20 + 10% 风险基金**、**RTRA 再平衡**、**mint→JettonMinter `MintNewJettons` 接线**、`setJettonMinter`）。
 - **预言机接缝**：`SetOracle`/`OracleUpdatePrice`（仅注册 oracle 可推价 + 时间戳单调防重放；状态存 ref cell）。
 - **溢出修复**：PPI 数学（mint/burn/fee/drift）中间量改用 257-bit `int`，消除 int64 在 ~$9M 存款 / ~920 万 PLT / 大额持仓处的静默溢出。
 - **部署脚本** `ton/scripts/deploy.tolk`：部署 PlanetCore + PLT Minter + 接线 + PlanetBasket；emulation 可跑、CI 冒烟验证、`--net testnet` 可上链（需钱包）。

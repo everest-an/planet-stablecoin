@@ -26,7 +26,7 @@ L0 储备/RWA    实物/ETF 储备 + 托管 + 储备证明                      
 ## 主线（TON）
 
 - **合约**：`ton/contracts/`（Tolk，Acton 工具链）
-  - `planet_core.tolk` — **链上多资产 PPI**（篮子 + `computePpi`）/ 铸赎 / **赎回镜像** / 风控 / 费率 45-30-25 / RTRA / Jetton 接线
+  - `planet_core.tolk` — **链上多资产 PPI**（篮子 + `computePpi`）/ 铸赎 / **赎回镜像** / 风控 / 费率 30-50-20(+10 风险基金) / RTRA / Jetton 接线
   - `planet_basket.tolk` — 链上组合注册表（`assetCount()` / `assetAt(i)`）
   - `jetton/*.tolk` — PLT TEP-74（minter + wallet，vendored 自 `ton-blockchain/tolk-bench`）
 - **前端**：`app-tg/`（Telegram Mini App，Vite + React + TON Connect）
