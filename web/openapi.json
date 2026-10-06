@@ -57,6 +57,49 @@
           }
         }
       }
+    },
+    "/api/v1/oracle": {
+      "get": {
+        "tags": ["status"],
+        "summary": "Oracle and index health",
+        "description": "Whether the price feed is alive and sane: the age of the last accepted oracle push measured against the 6-hour limit, the signer set and threshold, whether base prices are locked, and — with `full=1` — the basket weights check plus the frozen/caution commodities and the signer keys. The DEFAULT response is deliberately cheap (a handful of get-methods) so a monitor can poll it frequently; `full=1` adds a per-commodity scan. A 503 means the chain could not be read — this endpoint never reports `healthy` on a failed read.",
+        "operationId": "getOracleHealth",
+        "parameters": [
+          {
+            "name": "full",
+            "in": "query",
+            "required": false,
+            "description": "`1` to also scan every commodity (weights sum, frozen/caution lists, signer keys).",
+            "schema": { "type": "string", "enum": ["0", "1"], "default": "0" }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The oracle health reading.",
+            "headers": {
+              "ETag": { "schema": { "type": "string" } },
+              "Cache-Control": { "description": "`public, s-maxage=30, stale-while-revalidate=120` (shorter than /status: freshness is the point).", "schema": { "type": "string" } }
+            },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OracleHealth" } } }
+          },
+          "304": { "description": "Not Modified — the client's cached copy is still valid." },
+          "405": {
+            "description": "Method not allowed.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "503": {
+            "description": "The chain could not be read right now. Retry after `Retry-After`.",
+            "headers": { "Retry-After": { "schema": { "type": "integer" } } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -113,6 +156,51 @@
           "volatility": { "type": "integer", "description": "CAM volatility (1e6 fixed point; 0 = unset)." },
           "liquidity": { "type": "integer", "description": "CAM liquidity (0..1e6; 0 = unset)." },
           "riskState": { "type": "integer", "enum": [0, 1, 2], "description": "0 normal, 1 caution, 2 frozen (a frozen asset is excluded from the index and the rest renormalised)." }
+        }
+      },
+      "OracleHealth": {
+        "type": "object",
+        "required": ["core", "lastOracleUpdate", "ageSeconds", "fresh", "healthy", "reasons"],
+        "properties": {
+          "network": { "type": "string" },
+          "core": { "type": "string" },
+          "isCurrentDeployment": { "type": "boolean" },
+          "checkedAt": { "type": "integer", "description": "Unix seconds the reading was taken." },
+          "lastOracleUpdate": { "type": "integer", "description": "Unix seconds of the last accepted oracle push (0 = never)." },
+          "ageSeconds": { "type": "integer", "description": "How old the accepted price is right now." },
+          "maxAgeSeconds": { "type": "integer", "description": "The staleness limit the contract enforces on minting (21600 = 6h)." },
+          "fresh": { "type": "boolean", "description": "ageSeconds <= maxAgeSeconds. When false, minting is refused on-chain." },
+          "ppi": { "type": ["number", "null"] },
+          "signers": {
+            "type": "object",
+            "properties": {
+              "count": { "type": ["integer", "null"] },
+              "threshold": { "type": ["integer", "null"] },
+              "configured": { "type": "boolean" }
+            }
+          },
+          "baseLocked": { "type": "boolean", "description": "Base prices frozen (they can never be changed once locked)." },
+          "assetCount": { "type": "integer" },
+          "healthy": { "type": "boolean", "description": "No critical reason. Recommendations and degraded-but-working states appear in `warnings`." },
+          "reasons": { "type": "array", "items": { "type": "string" }, "description": "Critical findings, e.g. `oracle_price_stale:25000s`, `no_oracle_signer_configured`, `threshold_unsatisfiable:2of1`." },
+          "warnings": { "type": "array", "items": { "type": "string" }, "description": "Non-critical findings, e.g. `frozen_commodities:1`, `base_prices_not_locked`." },
+          "signerKeys": {
+            "type": "array",
+            "description": "Only with `full=1`. Registered ed25519 public keys, hex, index order.",
+            "items": { "type": ["string", "null"] }
+          },
+          "basket": {
+            "type": "object",
+            "description": "Only with `full=1`.",
+            "properties": {
+              "weightsSum": { "type": "integer" },
+              "expectedSum": { "type": "integer" },
+              "complete": { "type": "boolean" },
+              "weightsValid": { "type": "boolean" },
+              "frozen": { "type": "array", "items": { "type": "integer" }, "description": "Indices excluded from the index." },
+              "caution": { "type": "array", "items": { "type": "integer" } }
+            }
+          }
         }
       },
       "Error": {

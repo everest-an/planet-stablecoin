@@ -180,6 +180,7 @@
       <table>
         <tbody>
           <tr><th><code>GET /api/v1/status</code></th><td>Live index + full basket + accounting as JSON. Versioned path, <code>ETag</code> + <code>304</code>, one error envelope, <code>503</code>+<code>Retry-After</code> when the RPC is rate-limited.</td></tr>
+          <tr><th><code>GET /api/v1/oracle</code></th><td>Is the price feed alive and sane? The age of the last push against the 6-hour limit, the signer set and threshold, whether base prices are locked, and — with <code>?full=1</code> — the weights check plus frozen/caution commodities and the signer keys. Cheap by default so a monitor can poll it. <b>503</b> means "could not read the chain", never a false "healthy".</td></tr>
           <tr><th><code>GET /openapi.json</code></th><td>The OpenAPI 3.1 contract — generate a client from it instead of hand-parsing.</td></tr>
           <tr><th><code>/api/status</code></th><td>Deprecated alias; replies <code>308</code> with <code>Deprecation</code> / <code>Sunset</code> / <code>Link</code> headers.</td></tr>
         </tbody>
