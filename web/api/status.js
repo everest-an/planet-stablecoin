@@ -47,57 +47,80 @@ async function runGet(method, stack = [], tries = 6) {
 
 const n = (v) => (v == null ? 0 : Number(v));
 
+const SPACING_MS = 300;
+
+const tryGet = async (method, stack) => {
+  try {
+    return await runGet(method, stack);
+  } catch {
+    return null;
+  }
+};
+
 export default async function handler(_req, res) {
+  let partial = false;
   try {
     ACTIVE = CORE;
-    let assetCount = n(await runGet("assetCount"));
+    let assetCount = n(await tryGet("assetCount"));
     if (assetCount === 0) {
       ACTIVE = CORE_FALLBACK; // current core not configured yet -> serve the previous one
-      assetCount = n(await runGet("assetCount"));
+      assetCount = n(await tryGet("assetCount"));
     }
-    const [ppi, supply, reserve, lastOracleUpdate, riskFund, threshold, feesBurn, feesReserve, feesStaking] =
-      await Promise.all([
-        runGet("ppi"),
-        runGet("supply"),
-        runGet("reserve"),
-        runGet("lastOracleUpdate"),
-        runGet("riskFund"),
-        runGet("threshold"),
-        runGet("feesBurn"),
-        runGet("feesReserve"),
-        runGet("feesStaking"),
-      ]);
+
+    // Scalars, sequentially (the public RPC rate-limits bursts).
+    const scalar = async (m) => {
+      const v = await tryGet(m);
+      if (v == null) partial = true;
+      await sleep(SPACING_MS);
+      return v;
+    };
+    const ppi = await scalar("ppi");
+    const supply = await scalar("supply");
+    const reserve = await scalar("reserve");
+    const lastOracleUpdate = await scalar("lastOracleUpdate");
+    const riskFund = await scalar("riskFund");
+    const threshold = await scalar("threshold");
+    const feesBurn = await scalar("feesBurn");
+    const feesReserve = await scalar("feesReserve");
+    const feesStaking = await scalar("feesStaking");
 
     const assets = [];
     for (let i = 0; i < assetCount; i++) {
-      if (i > 0) await sleep(120); // space out calls to stay under the public RPC limit
-      const a = await runGet("assetAt", [{ type: "int", value: String(i) }]);
-      if (!Array.isArray(a)) continue;
-      const [weight, basePrice, currentPrice, volatility, liquidity, riskState] = a.map(n);
-      assets.push({
-        index: i,
-        weight,
-        weightPct: weight / (WEIGHT_SCALE / 100),
-        basePrice: basePrice / PPI_SCALE,
-        currentPrice: currentPrice / PPI_SCALE,
-        changePct: basePrice ? (currentPrice / basePrice - 1) * 100 : 0,
-        volatility,
-        liquidity,
-        riskState,
-      });
+      const a = await tryGet("assetAt", [{ type: "int", value: String(i) }]);
+      if (a == null) {
+        partial = true;
+        break;
+      }
+      if (Array.isArray(a)) {
+        const [weight, basePrice, currentPrice, volatility, liquidity, riskState] = a.map(n);
+        assets.push({
+          index: i,
+          weight,
+          weightPct: weight / (WEIGHT_SCALE / 100),
+          basePrice: basePrice / PPI_SCALE,
+          currentPrice: currentPrice / PPI_SCALE,
+          changePct: basePrice ? (currentPrice / basePrice - 1) * 100 : 0,
+          volatility,
+          liquidity,
+          riskState,
+        });
+      }
+      await sleep(SPACING_MS);
     }
 
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Cache-Control", "s-maxage=60, stale-while-revalidate=300");
     res.status(200).json({
       ok: true,
+      partial,
       network: "testnet",
       core: ACTIVE,
       isCurrentDeployment: ACTIVE === CORE,
-      ppi: n(ppi) / PPI_SCALE,
+      ppi: ppi == null ? null : n(ppi) / PPI_SCALE,
       supply: n(supply),
       reserve: n(reserve),
       assetCount,
+      assetsReturned: assets.length,
       lastOracleUpdate: n(lastOracleUpdate),
       riskFund: n(riskFund),
       signerThreshold: n(threshold),
@@ -105,6 +128,6 @@ export default async function handler(_req, res) {
       assets,
     });
   } catch (e) {
-    res.status(502).json({ ok: false, error: String(e?.message ?? e) });
+    res.status(200).json({ ok: false, partial: true, error: String(e?.message ?? e) });
   }
 }
