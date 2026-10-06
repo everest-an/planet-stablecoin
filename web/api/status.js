@@ -88,7 +88,8 @@ export default async function handler(_req, res) {
 
     const assets = [];
     for (let i = 0; i < assetCount; i++) {
-      const a = await tryGet("assetAt", [{ type: "int", value: String(i) }]);
+      // toncenter v2 expects stack entries as ["num","0x<hex>"] (not the v3 {type,value} shape).
+      const a = await tryGet("assetAt", [["num", "0x" + i.toString(16)]]);
       if (a == null) {
         partial = true;
         break;
