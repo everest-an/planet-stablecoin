@@ -1,0 +1,61 @@
+name: Relayer key rotation (testnet)
+
+# One-shot operational job: fund a freshly generated relayer hot key and rotate the oracle
+# signer to it THROUGH THE TIMELOCK (the core owner is a timelock, so SetSigner cannot be sent
+# directly — it is proposed, waits out the 60s delay, then executes).
+#
+# Why: the relayer key and the owner key used to be the same wallet. A leak of the hot key should
+# only ever be able to push prices (which the core validates), never touch ownership or funds.
+# Overwriting signer index 0 also revokes whatever key was there.
+#
+# Both steps run as the OWNER wallet (it pays the gas and owns the timelock); the new hot key is
+# only written into the RELAYER_MNEMONIC secret, used by the push step of the relayer workflow.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  rotate:
+    name: Fund + rotate the relayer signer
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: relayer
+    env:
+      PLANET_CORE: kQAwzh3O-52-QBtB8JFFTjtNaKFhw-uJMkd-zdnoHoGibzcU
+      RELAYER_MNEMONIC: ${{ secrets.TON_WALLET_MNEMONIC }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install deps
+        run: npm install --no-audit --no-fund
+
+      - name: Fund the new hot key
+        env:
+          FUND_TO: kQC-PU0nxNjX1f1PVPb68Pg_oou-A7AHvFbTTgjdDWJ6_1e7
+          FUND_TON: "1"
+        run: node relayer.mjs fund
+
+      - name: Rotate the signer through the timelock
+        env:
+          CORE_TIMELOCK: kQBo0345y-RGi49-7WWaWAHyyNtiWe-JrT44iO3G9Cyom6YK
+          NEW_SIGNER_KEY: "75bc1c11697f7f2bbb61fd37fdde3dcc9ebdb20a05d3bc27f740cddc53d5c8dc"
+          TIMELOCK_WAIT_MS: "80000"
+        run: node relayer.mjs setsigner
+
+      - name: Show the on-chain signer afterwards
+        run: |
+          node -e '
+            const { TonClient, Address } = require("@ton/ton");
+            (async () => {
+              const c = new TonClient({ endpoint: "https://testnet.toncenter.com/api/v2/jsonRPC" });
+              const r = await c.runMethod(Address.parse(process.env.PLANET_CORE), "signerAt", [{ type: "int", value: 0n }]);
+              console.log("signerAt(0) = 0x" + r.stack.readBigNumber().toString(16).padStart(64, "0"));
+              const sc = await c.runMethod(Address.parse(process.env.PLANET_CORE), "signerCount");
+              console.log("signerCount =", sc.stack.readBigNumber().toString());
+            })().catch((e) => { console.error(String(e)); process.exit(1); });
+          '
