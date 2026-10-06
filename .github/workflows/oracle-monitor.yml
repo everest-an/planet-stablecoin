@@ -1,0 +1,49 @@
+name: Oracle monitor
+
+# Polls the public oracle-health endpoint and alerts Telegram (and fails the run) when the state
+# changes — see tools/oracle-monitor.mjs. One incident produces one alert: the script only
+# messages on a transition, tracked in tools/oracle-state.json.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "15 */2 * * *" # every 2 hours at :15
+
+jobs:
+  monitor:
+    name: Check oracle health
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Check oracle
+        id: check
+        continue-on-error: true
+        env:
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_ALERT_CHAT_ID: ${{ secrets.TG_ALERT_CHAT_ID }}
+        run: node tools/oracle-monitor.mjs
+
+      - name: Persist state if it changed
+        run: |
+          if [ -z "$(git status --porcelain tools/oracle-state.json)" ]; then
+            echo "state unchanged"
+            exit 0
+          fi
+          git config user.name "planet-bot"
+          git config user.email "bot@ppppp.space"
+          git add tools/oracle-state.json
+          git commit -m "monitor: oracle state transition"
+          git push
+
+      - name: Surface the verdict on the run
+        if: steps.check.outcome == 'failure'
+        run: |
+          echo "::error::oracle is degraded (see the check step output and the Telegram alert)"
+          exit 1

@@ -123,12 +123,29 @@ async function reply(chatId, text, extra = {}) {
 
 async function liveStatusLine() {
   try {
-    const res = await fetch("https://ppppp.space/api/v1/status", { headers: { "user-agent": "planet-bot" } });
-    const j = await res.json();
-    if (!j || typeof j.ppi !== "number") return null;
-    const age = j.lastOracleUpdate ? Math.max(0, Math.floor(Date.now() / 1000) - j.lastOracleUpdate) : null;
-    const ageTxt = age == null ? "unknown" : age < 3600 ? `${Math.floor(age / 60)}m ago` : `${Math.floor(age / 3600)}h ago`;
-    return `PPI ${j.ppi.toFixed(6)} · ${j.assetCount} commodities · oracle ${ageTxt}`;
+    const [sRes, oRes] = await Promise.all([
+      fetch("https://ppppp.space/api/v1/status", { headers: { "user-agent": "planet-bot" } }),
+      fetch("https://ppppp.space/api/v1/oracle?full=1", { headers: { "user-agent": "planet-bot" } }),
+    ]);
+    const s = await sRes.json();
+    const o = await oRes.json();
+    if (!s || typeof s.ppi !== "number") return null;
+
+    const age = o?.ageSeconds;
+    const ageTxt =
+      age == null ? "unknown" : age < 3600 ? `${Math.floor(age / 60)}m ago` : `${(age / 3600).toFixed(1)}h ago`;
+    const lines = [`PPI ${s.ppi.toFixed(6)} · ${s.assetCount} commodities`];
+    if (o && !o.error) {
+      lines.push(`oracle: ${o.fresh ? "fresh" : "STALE"} (${ageTxt}, limit 6h) · signers ${o.signers?.count}/${o.signers?.threshold}`);
+      if (o.basket) {
+        const bits = [`weights ${o.basket.weightsValid ? "valid" : "INVALID"}`];
+        bits.push(`${o.basket.frozen?.length ?? 0} frozen`);
+        if (o.warnings?.length) bits.push("warnings: " + o.warnings.join(", "));
+        lines.push("basket: " + bits.join(" · "));
+      }
+      if (o.reasons?.length) lines.push("⚠ " + o.reasons.join(", "));
+    }
+    return lines.join("\n");
   } catch {
     return null;
   }
