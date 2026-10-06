@@ -143,17 +143,18 @@ async function main() {
   }
 
   // Gas guard: a depleted wallet silently rejects external messages (seqno never
-  // bumps, "no seqno confirmation" below). Fail LOUD and early instead.
-  const MIN_GAS = 200000000n; // 0.2 TON
+  // bumps). Fail LOUD and early instead. Threshold covers one full 14-asset push run
+  // (14 * 0.006 ~= 0.084) plus headroom; override with MIN_GAS_TON.
+  const MIN_GAS = BigInt(Math.round(Number(process.env.MIN_GAS_TON ?? "0.1") * 1e9));
   const bal = await rpcRetry("getBalance", () => client.getBalance(wallet.address));
-  console.log("wallet balance: " + (Number(bal) / 1e9).toFixed(4) + " TON");
+  console.log("wallet balance: " + (Number(bal) / 1e9).toFixed(4) + " TON (min " + (Number(MIN_GAS) / 1e9).toFixed(3) + ")");
   if (cmd === "check") {
-    if (bal < MIN_GAS) die("LOW — wallet balance " + (Number(bal) / 1e9).toFixed(4) + " TON < 0.2; top up testnet TON (e.g. @testgiver_ton_bot)");
+    if (bal < MIN_GAS) die("LOW — wallet balance " + (Number(bal) / 1e9).toFixed(4) + " TON < " + (Number(MIN_GAS) / 1e9).toFixed(3) + "; top up testnet TON (e.g. @testgiver_ton_bot)");
     console.log("OK — wallet balance " + (Number(bal) / 1e9).toFixed(4) + " TON");
     return;
   }
   if (bal < MIN_GAS) {
-    die("wallet balance too low (" + (Number(bal) / 1e9).toFixed(4) + " TON < 0.2) — top up testnet TON (e.g. @testgiver_ton_bot)");
+    die("wallet balance too low (" + (Number(bal) / 1e9).toFixed(4) + " TON < " + (Number(MIN_GAS) / 1e9).toFixed(3) + ") — top up testnet TON (e.g. @testgiver_ton_bot)");
   }
 
   // Broadcast once (retry only the broadcast itself, never after it may have landed).

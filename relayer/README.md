@@ -25,6 +25,7 @@ Config via env:
 | `PUSH_VALUE_TON` | TON attached per price push (default `0.006`) |
 | `MIN_PUSH_DELTA` | skip a push whose price moved less than this vs the on-chain value (default `0.001` = 0.1%) |
 | `MAX_PUSH_AGE_H` | always push every asset if the on-chain data is older than this (default `6` h; `0` disables) |
+| `MIN_GAS_TON` | fail the run (and the daily gas check) below this balance (default `0.1` = one full run) |
 
 **Push gating:** by default a run only writes assets whose price moved >0.1% since the last
 on-chain value (a divergence trigger), and falls back to updating everything once the on-chain
