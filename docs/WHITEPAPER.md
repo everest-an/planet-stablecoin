@@ -1,10 +1,42 @@
-# Planet 白皮书 v1.5（工程增补版）
+# Planet 白皮书 v1.6（工程增补版）
 
 > **文档状态**：设计文档（对外可用的白皮书正文草稿）。
-> **与 v1 的关系**：v1 白皮书（`Planet Stablecoin White Paper.pdf` / `whitepaper-extracted.md`）描述完整愿景；
-> 本 v1.5 记录**链上工程层的实现与纠偏**（TON 迁移、链上 PPI、赎回链路、稳定机制、**CAM 隔离**），并**明确区分
-> 「已实现 / 设计中 / 未来」**。**红线不变**（见 §2）。
-> 关联：`docs/PRODUCT-DESIGN.md`、`docs/PRD.md`、`docs/ppi-multiasset.md`、`docs/peg-stability.md`、`docs/commodity-cam.md`。
+> **与 v1 的关系**：v1 白皮书（`Planet Stablecoin White Paper.pdf` / `whitepaper-extracted.md`，Solana/Pyth 版）描述完整愿景；
+> 本 v1.6 记录**链上工程层的实现与纠偏**（TON 迁移、链上 PPI、赎回链路、稳定机制、**CAM 隔离**、**ETF 基金**），
+> 并**明确区分「已实现 / 设计中 / 未来」**。**红线不变**（见 §2）。
+> 关联：`docs/PRODUCT-DESIGN.md`、`docs/PRD.md`、`docs/ppi-multiasset.md`、`docs/peg-stability.md`、`docs/commodity-cam.md`、`docs/tokenized-etf-fund.md`。
+
+---
+
+## 0. 实现对照表（v1.6 新增：白皮书承诺 ↔ 真实代码）
+
+> 本节是**唯一可信的进度对照**；其余章节为机制说明。代码：`ton/contracts/`，CI 绿（**217 测试 / 17 文件**，All files 97.5% 行 / 88.2% 分支 / 94.0% 评分）。
+
+| 白皮书要点 | 状态 | 位置 |
+|---|---|---|
+| 链上 PPI（加权、冻结剔除、重归一化） | ✅ 已实现 | `planet_core.computePpi` |
+| 多商品篮子（白皮书 §2.2：20+、单类 ≤15%） | 🟡 **已落 14 个**（权重合计 100%、单类 ≤15%） | `relayer/assets.example.json` + `GovernanceAddAsset` |
+| 分档费（0.5%/1%/2% + >5% 斜率陡峭化） | ✅ 已实现 | `feeBpsForPpi` |
+| 单笔限额 | ✅ 已实现 | `SetLimits` |
+| 弹性铸赎曲线（>5% 陡峭化） | ✅ 已实现（斜率） | `feeBpsForPpi` |
+| 套利入口（方向正确返还手续费） | ✅ 已实现 | `SetArb` + `arbRebateBps` |
+| 风险基金（手续费划拨 + 补储备） | ✅ 已实现 | `RISK_SHARE_BPS` + `riskFund` + `CoverDeficit` |
+| 稳定债券（PPI<0.95 折价发债） | 🟡 合约就绪（`PlanetBond`，独立账本，**尚未与 Core 自动联动**） | `planet_bond.tolk` |
+| RTRA 实时再平衡（漂移触发） | ✅ 已实现（漂移计算 + 风险自适应触发） | `rebalanceDrift`/`shouldRebalanceRisk` |
+| RTRA **实际成交**（外部 DEX） | ⬜ 设计（协议**不自建 DEX**） | — |
+| CAM 适配层（价格/波动率/流动性/风险 + 隔离） | ✅ 已实现（Phase A） | `SetCam` + `CamUpdate` |
+| 预言机（签名集 M-of-N、域分离、跳变护栏、防重放） | ✅ 已实现 | `SetSigner`/`SetThreshold`/`SignedPriceUpdate(N)` |
+| 治理（owner 迁移到多签+时间锁） | ✅ 已实现 | `SetOwner` + `planet_timelock.tolk` |
+| 治理调权重（白皮书 §2.2「DAO 季度调整」） | ✅ 已实现（锁价后仍可增/改权重） | `GovernanceAddAsset`/`GovernanceSetWeight` |
+| 代币化 ETF 基金（申购/赎回按 NAV） | ✅ 已实现（含 **TEP-74 份额收款/burn 的无信任赎回**） | `planet_fund.tolk` |
+| 储备证明 / 每日 Merkle（§5） | ⬜ 未来（依赖 RWA 托管） | — |
+| PLTG 治理代币（固定 10 亿、质押分红 25%） | ⬜ 设计（未实现） | — |
+| 真实 1:1 实物储备 + 托管 + 牌照 | ⬜ 未来（外部合作） | — |
+| 跨链（Wormhole） | ⬜ 未来 | — |
+
+**一句话**：v1 的「链上机制层」绝大部分已落地并测试；剩下的缺口是 **PLTG 治理代币、真实 RWA/储备证明、跨链、外部 DEX 成交** 与 **第三方审计**。
+
+---
 
 ---
 
@@ -56,12 +88,13 @@ Received = B · PPI · (1 − f)
 - **赎回链路**：用户钱包 `AskToBurn`（TEP-74）→ 铸币合约减供应 → **镜像通知核心**同步记账（供应以
   JettonMinter 为唯一真相源）。
 
-### 3.3 稳定机制（**部分已实现**）
-- **分档费**（已实现）：近锚 0.5%；偏差 3–5% 为 1%；>5% 为 2%；>15% **自动冻结铸币**。
-- **单笔限额**（已实现）：`SetLimits`。
-- **弹性铸赎曲线**（设计）：>5% 后费率线性陡峭化；下行非对称（赎回排队/限额）。
-- **套利入口**（设计）：方向正确时返还部分手续费，激励外部套利者把价拉回 PPI。
-- **稳定债券 + 风险基金**（设计）：`PPI<0.95` 折价发债，回收 PLT、吸收抛压。
+### 3.3 稳定机制（**核心已实现**）
+- **分档费（已实现）**：近锚 0.5%；偏差 3–5% 为 1%；>5% 为 2%（再叠加斜率）；>15% **自动拒绝铸币**。
+- **单笔限额（已实现）**：`SetLimits`（`maxPerTx`）。
+- **弹性铸赎曲线（已实现）**：>5% 后费率**线性陡峭化**（`SLOPE_BPS`）；下行非对称——`PPI<0.97` 追加赎回罚费，且总费率封顶（`MAX_BURN_FEE_BPS`）保证 payout 不为负。
+- **套利入口（已实现）**：`SetArb` 设定返还 bps；当 `PPI>1.03`（index rich）时铸币费按返还下调，激励外部套利者把价拉回 PPI。
+- **风险基金（已实现）**：每笔手续费的 `RISK_SHARE_BPS`（10%）划入 `riskFund`；owner 可用 `CoverDeficit` 把风险基金补进储备。
+- **稳定债券（合约就绪）**：`PlanetBond`（折价认购/赎回账本）已部署，但**尚未与 Core 自动联动**（`PPI<0.95` 自动触发待做）。
 - 详见 `docs/peg-stability.md`。
 
 ### 3.4 CAM 适配层（**Phase A 已实现**）
@@ -91,10 +124,13 @@ Received = B · PPI · (1 − f)
 ## 4. 架构（分层）
 
 ```
-L0 储备 / RWA      实物/ETF 储备 + 托管 + 储备证明                      [未来]
-L1 核心            PlanetCore：篮子 / 链上 PPI / 铸赎 / 费率 / 赎回镜像   [已实现]
-L2 适配层          CAM：每商品标准化 价格/波动率/流动性/风险             [Phase A 已实现]
-L3 稳定 / 风控      分档费 · 弹性曲线 · 套利入口 · 债券 · 风险基金 · 熔断 [部分已实现]
+L0 储备 / RWA      实物/ETF 储备 + 托管 + 储备证明                       [未来]
+L1 核心            PlanetCore：篮子 / 链上 PPI / 铸赎 / 费率 / RTRA / 赎回镜像 / 治理篮子 [已实现]
+L2 适配层          CAM：每商品标准化 价格/波动率/流动性/风险              [Phase A 已实现]
+L3 稳定 / 风控      分档费 · 弹性曲线 · 套利入口 · 风险基金 · 熔断          [已实现]
+                  稳定债券（PlanetBond）                               [合约就绪，未联动]
+                  实际成交（外部 DEX）                                  [设计]
+L4 基金            PlanetFund：申购 / 托管 M-of-N 按 NAV 铸 / 赎回        [已实现]
 （不自建 DEX/AMM；交易走外部场所）
 ```
 
@@ -115,10 +151,12 @@ L3 稳定 / 风控      分档费 · 弹性曲线 · 套利入口 · 债券 · �
 | 阶段 | 内容 | 状态 |
 |---|---|---|
 | P0 | TON 核心 + 铸赎镜像 + 链上 PPI + 稳定机制批次 A + CAM Phase A | ✅ 已实现 |
-| P1 | 稳定机制 C1/C2/C3（费率斜率、套利入口、稳定债券） | 🟡 设计就绪 |
-| P2 | 接外部 DEX（不自建）+ 前端/看板 | ⬜ |
-| P3 | 接入真实数据源（RedStone/DIA）+ 测试网部署 | ⬜（受外部依赖） |
-| P4 | RWA 真实储备 + 合规 → 完整版 PLT | ⬜（外部合作） |
+| P1 | 稳定机制 C1/C2/C3（费率斜率、套利入口、风险基金） | ✅ 已实现；债券 🟡 合约就绪未联动 |
+| P2 | 前端/看板（Mini App + 官网）✅；接外部 DEX（不自建）⬜ | 🟡 |
+| P3 | 接入真实数据源 + 测试网部署（Yahoo+Sina 双源中位数、冻结护栏、M-of-N 签名） | ✅ 已实现 |
+| P3b | 代币化 ETF 基金 `PlanetFund`（申购/赎回按 NAV + 无信任赎回） | ✅ 已实现 |
+| P4 | PLTG 治理代币 | ⬜ 设计 |
+| P5 | RWA 真实储备 + 合规 → 完整版 PLT | ⬜（外部合作） |
 
 ---
 
