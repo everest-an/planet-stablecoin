@@ -162,6 +162,7 @@
         "type": "object",
         "required": ["core", "lastOracleUpdate", "ageSeconds", "fresh", "healthy", "reasons"],
         "properties": {
+          "rev": { "type": "string", "description": "Endpoint build marker (helps confirm which deployment answered)." },
           "network": { "type": "string" },
           "core": { "type": "string" },
           "isCurrentDeployment": { "type": "boolean" },
