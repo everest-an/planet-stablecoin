@@ -65,10 +65,10 @@ get fun `test band fee applies on mint off-peg`() {
     // push PPI to 1.04 (4% dev, elevated band) via owner emergency override
     core.sendUpdatePrice(deployer.address, 0, 1040000, { value: ton("0.05") });
     core.sendMint(alice.address, 0, 1000000, { value: ton("0.5") });
-    // fee = 10000 -> 45/30/25 = 4500/3000/2500
-    expect(core.feesBurn()).toEqual(4500);
-    expect(core.feesReserve()).toEqual(2000);
-    expect(core.feesStaking()).toEqual(2500);
+    // fee = 10000 -> 30/50/20 = 3000/5000/2000 (reserve net 4000 after the 10% risk carve-out)
+    expect(core.feesBurn()).toEqual(3000);
+    expect(core.feesReserve()).toEqual(4000);
+    expect(core.feesStaking()).toEqual(2000);
     expect(core.riskFund()).toEqual(1000);
 }
 
@@ -97,8 +97,8 @@ get fun `test mint fee at 5% without arbitrage`() {
     val (core, deployer, alice) = deployCoreStability();
     core.sendUpdatePrice(deployer.address, 0, 1050000, { value: ton("0.05") });
     core.sendMint(alice.address, 0, 1000000, { value: ton("0.5") });
-    // band fee 100 bps -> fee 10000 -> burn 4500
-    expect(core.feesBurn()).toEqual(4500);
+    // band fee 100 bps -> fee 10000 -> burn 3000
+    expect(core.feesBurn()).toEqual(3000);
 }
 
 get fun `test arbitrage rebate reduces mint fee when rich`() {
@@ -106,8 +106,8 @@ get fun `test arbitrage rebate reduces mint fee when rich`() {
     core.sendSetArb(deployer.address, 0, 50, { value: ton("0.05") });
     core.sendUpdatePrice(deployer.address, 0, 1050000, { value: ton("0.05") });
     core.sendMint(alice.address, 0, 1000000, { value: ton("0.5") });
-    // effective 50 bps -> fee 5000 -> burn 2250
-    expect(core.feesBurn()).toEqual(2250);
+    // effective 50 bps -> fee 5000 -> burn 1500
+    expect(core.feesBurn()).toEqual(1500);
 }
 
 // ---------------- Risk fund (C3) ----------------

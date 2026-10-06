@@ -39,11 +39,11 @@ get fun `test fee is 0.5%`() {
     expect(feeAmount(1000000)).toEqual(5000);
 }
 
-get fun `test fee split is 45/30/25`() {
+get fun `test fee split is 30/50/20`() {
     val (burn, reserve, staking) = feeSplit(10000);
-    expect(burn).toEqual(4500);
-    expect(reserve).toEqual(3000);
-    expect(staking).toEqual(2500);
+    expect(burn).toEqual(3000);
+    expect(reserve).toEqual(5000);
+    expect(staking).toEqual(2000);
 }
 
 get fun `test RTRA drift is zero at target weight`() {

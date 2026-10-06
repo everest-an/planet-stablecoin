@@ -54,9 +54,12 @@ const ERR_BAD_AMOUNT = 122;
 // below-peg PPI inflating the reserve through a negative fee → AR3).
 const MAX_BURN_FEE_BPS = 2000;
 
-// Fee split (white paper §8.4): 45% buyback-burn / 30% reserve / 25% PLTG staking.
-const BURN_SHARE_BPS = 4500;
-const RESERVE_SHARE_BPS = 3000;
+// Fee split (v1.6 tuning): 30% buyback-burn / 50% reserve / 20% PLTG staking, plus a 10%
+// risk-fund carve-out taken from the reserve bucket -> net 30 / 40 / 20 / 10.
+// Reserve is the largest bucket because (in the backed version) backing must grow at least
+// at PPI inflation, otherwise the reserve ratio decays (cf. Frax FPI's 100% CR rule).
+const BURN_SHARE_BPS = 3000;
+const RESERVE_SHARE_BPS = 5000;
 
 // Basket weights (ppm, 1e6 = 100%) and rebalance threshold (0.5%).
 const WEIGHT_SCALE = 1000000;

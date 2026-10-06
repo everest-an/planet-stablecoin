@@ -106,15 +106,15 @@ get fun `test pause blocks mint and unpause restores it`() {
     expect(core.reserve()).toEqual(1000000);
 }
 
-// ---------------- Fee accounting (45/30/25) ----------------
+// ---------------- Fee accounting (30/50/20 + 10% risk) ----------------
 
-get fun `test mint accrues fees split 45-30-25`() {
+get fun `test mint accrues fees split 30-50-20`() {
     val (core, _, alice) = deployCore();
     core.sendMint(alice.address, 0, 1000000, { value: ton("0.5") });
-    // fee = 5000 → burn 2250 / reserve 1000 / staking 1250 / risk fund 500
-    expect(core.feesBurn()).toEqual(2250);
-    expect(core.feesReserve()).toEqual(1000);
-    expect(core.feesStaking()).toEqual(1250);
+    // fee = 5000 → burn 1500 / reserve 2000 (=2500−500 risk) / staking 1000 / risk 500
+    expect(core.feesBurn()).toEqual(1500);
+    expect(core.feesReserve()).toEqual(2000);
+    expect(core.feesStaking()).toEqual(1000);
     expect(core.riskFund()).toEqual(500);
 }
 
