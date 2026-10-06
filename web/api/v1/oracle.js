@@ -87,7 +87,8 @@ async function readOracle(full) {
 
   const signers = signerCount == null ? null : signerCount;
   const thr = threshold == null ? null : threshold;
-  const baseLocked = baseLockedN === 1 || baseLockedN === true;
+  // TVM encodes booleans as -1 (true) / 0 (false) — NOT 1. Treat any non-zero as true.
+  const baseLocked = baseLockedN != null && baseLockedN !== 0;
 
   const now = Math.floor(Date.now() / 1000);
   const ageSeconds = Math.max(0, now - lastOracleUpdate);
