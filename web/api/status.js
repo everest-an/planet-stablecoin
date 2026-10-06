@@ -13,6 +13,8 @@ const WEIGHT_SCALE = 1e6;
 
 let ACTIVE = CORE; // resolved per request (falls back when the current core has no basket)
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 // Decode one toncenter stack entry: ["num","0x.."] | ["tuple",[..]] | ["cell"/"slice", b64]
 function decode(entry) {
   if (!entry) return null;
@@ -22,16 +24,25 @@ function decode(entry) {
   return null; // cells/slices (addresses) are not needed here
 }
 
-async function runGet(method, stack = []) {
-  const res = await fetch(ENDPOINT, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ address: ACTIVE, method, stack }),
-  });
-  if (!res.ok) throw new Error(`runGet ${method}: HTTP ${res.status}`);
-  const j = await res.json();
-  if (j.error) throw new Error(`runGet ${method}: ${j.error.message}`);
-  return decode(j?.result?.stack?.[0]);
+// The public testnet RPC rate-limits aggressively (HTTP 429). Retry with backoff so a
+// burst of get-method calls still resolves; the CDN caches the successful response.
+async function runGet(method, stack = [], tries = 6) {
+  for (let a = 0; a < tries; a++) {
+    const res = await fetch(ENDPOINT, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ address: ACTIVE, method, stack }),
+    });
+    if (res.status === 429) {
+      await sleep(350 * (a + 1));
+      continue;
+    }
+    if (!res.ok) throw new Error(`runGet ${method}: HTTP ${res.status}`);
+    const j = await res.json();
+    if (j.error) throw new Error(`runGet ${method}: ${j.error.message}`);
+    return decode(j?.result?.stack?.[0]);
+  }
+  throw new Error(`runGet ${method}: rate-limited`);
 }
 
 const n = (v) => (v == null ? 0 : Number(v));
@@ -59,6 +70,7 @@ export default async function handler(_req, res) {
 
     const assets = [];
     for (let i = 0; i < assetCount; i++) {
+      if (i > 0) await sleep(120); // space out calls to stay under the public RPC limit
       const a = await runGet("assetAt", [{ type: "int", value: String(i) }]);
       if (!Array.isArray(a)) continue;
       const [weight, basePrice, currentPrice, volatility, liquidity, riskState] = a.map(n);
