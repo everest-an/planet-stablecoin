@@ -11,6 +11,7 @@
 //  - It NEVER asks for a seed phrase / private key and says so explicitly.
 //
 // Env: TG_BOT_TOKEN, TG_WEBHOOK_SECRET, FAQ_URL (default https://ppppp.space/faq)
+// deployed: v1 (FAQ-matched, secret-authenticated)
 
 const TOKEN = process.env.TG_BOT_TOKEN || "";
 const SECRET = process.env.TG_WEBHOOK_SECRET || "";
