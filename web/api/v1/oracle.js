@@ -63,6 +63,9 @@ async function runGet(method, stack = [], deadline = Infinity) {
   }
   return null;
 }
+// Values come back as hex strings; convert deliberately. `toN` is safe for our magnitudes
+// (weights, prices, timestamps all sit far below 2^53), while 256-bit signer keys stay BigInt.
+const toN = (x) => (x == null ? null : Number(BigInt(x)));
 const one = async (m, d) => {
   const arr = await runGet(m, [], d);
   return arr && arr.length ? arr[0] : null;
@@ -71,25 +74,28 @@ const one = async (m, d) => {
 async function readOracle(full) {
   const deadline = Date.now() + BUDGET_MS;
 
-  let assetCount = await one("assetCount", deadline);
+  let assetCount = toN(await one("assetCount", deadline));
   if (assetCount === 0) {
     ACTIVE = CORE_FALLBACK;
-    assetCount = await one("assetCount", deadline);
+    assetCount = toN(await one("assetCount", deadline));
   }
-  const lastOracleUpdate = await one("lastOracleUpdate", deadline);
+  const lastOracleUpdate = toN(await one("lastOracleUpdate", deadline));
   if (assetCount == null || lastOracleUpdate == null) return { unreachable: true };
 
-  const [ppi, signerCount, threshold, baseLockedN] = await Promise.all([
+  const [ppiH, signerH, thresholdH, baseLockedH] = await Promise.all([
     one("ppi", deadline),
     one("signerCount", deadline),
     one("threshold", deadline),
     one("baseLocked", deadline),
   ]);
+  const ppi = toN(ppiH);
+  const signerCount = toN(signerH);
+  const threshold = toN(thresholdH);
 
   const signers = signerCount == null ? null : signerCount;
   const thr = threshold == null ? null : threshold;
   // TVM encodes booleans as -1 (true) / 0 (false) — NOT 1. Treat any non-zero as true.
-  const baseLocked = baseLockedN != null && baseLockedN !== 0;
+  const baseLocked = baseLockedH != null && BigInt(baseLockedH) !== 0n;
 
   const now = Math.floor(Date.now() / 1000);
   const ageSeconds = Math.max(0, now - lastOracleUpdate);
@@ -106,6 +112,7 @@ async function readOracle(full) {
   if (!assetCount) warnings.push("empty_basket");
 
   const data = {
+    rev: "o3-hex-fix",
     network: "testnet",
     core: ACTIVE,
     isCurrentDeployment: ACTIVE === CORE,
@@ -129,7 +136,7 @@ async function readOracle(full) {
       for (let i = 0; i < Math.min(signers, MAX_SIGNER_KEYS); i++) {
         const st = await runGet("signerAt", [["num", "0x" + i.toString(16)]], deadline);
         // signerAt returns a uint256, which the RPC hands back as a 256-bit num.
-        keys.push(st && st.length ? "0x" + BigInt.asUintN(256, BigInt(st[0])).toString(16).padStart(64, "0") : null);
+        keys.push(st && st.length ? "0x" + BigInt(st[0]).toString(16).padStart(64, "0") : null);
         await sleep(120);
       }
     }
@@ -144,9 +151,10 @@ async function readOracle(full) {
       const a = await runGet("assetAt", [["num", "0x" + i.toString(16)]], deadline);
       if (!a || a.length < 6) continue;
       read++;
-      weightSum += a[0];
-      if (a[5] === 2) frozen.push(i);
-      else if (a[5] === 1) caution.push(i);
+      weightSum += toN(a[0]);
+      const risk = toN(a[5]);
+      if (risk === 2) frozen.push(i);
+      else if (risk === 1) caution.push(i);
       await sleep(120);
     }
     const complete = read === assetCount;
