@@ -2,6 +2,7 @@ import "@acton/io"
 import "@acton/emulation/scripts"
 import "@acton/emulation/network"
 import "@acton/build"
+import "@contracts/jetton/messages"
 import "@wrappers/PlanetGov.gen"
 import "@wrappers/JettonMinter.gen"
 import "@wrappers/JettonWallet.gen"
@@ -58,7 +59,8 @@ fun main() {
         forwardTonAmount: 0,
         forwardPayload: beginCell().endCell().beginParse(),
     };
-    minter.sendMintNewJettons(deployer.address, 0, deployer.address, ton("0.05"), step.toCell(), { value: ton("0.2") });
+    // The wrapper's sendMintNewJettons takes the step STRUCT (it wraps it into a cell itself).
+    minter.sendMintNewJettons(deployer.address, 0, deployer.address, ton("0.05"), step, { value: ton("0.2") });
     println("minted PLTG genesis supply = {}", PLTG_SUPPLY);
 
     println("PLTG + PlanetGov deploy done.");
