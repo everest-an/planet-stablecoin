@@ -200,8 +200,8 @@ cd app-tg && npm install && npm run build
 
 | 合约 | 地址 |
 |---|---|
-| **PlanetCore** | `kQAzxh1PoqeXWVYQrABxZky8_bAXddjoGTPbqN4tv8Zsfuul`（v1.5 代码：SetOwner + M-of-N 签名集 + M>2） |
-| **PLT Minter** | `kQB31GEg_GUUQBdvg275a67dkpbcnRdJkE5ov08mNvUZ9QaJ`（admin = Core） |
+| **PlanetCore** | `kQA57Fa64OT_MXIqrJD0DGokcNaw36neL-aIWjWJHcIp2QfX`（v1.6 代码：SetOwner + M-of-N 签名集 + M>2 + **治理级篮子管理** GovernanceAddAsset/GovernanceSetWeight） |
+| **PLT Minter** | `kQDh_XQENGiZ7JSzvRYp_G7EvTtTXvpz6FXS65BnYVimGsEJ`（admin = Core） |
 | **PlanetBasket** | `kQAfGKn_UrUW8LQd92ZWy0h0BrCA_QTBhMqDA1M-PZtyv-r_` |
 | **PlanetBond**（稳定债券） | `kQDMxJXroCmuxBw9Sw7oj9LhO9Y0mLxdPS3Tr4vY-sdq65hz`（isOpen=false, premium=5%） |
 | **PlanetFund**（ETF 基金） | `kQAYbx_u7I7yhcYU8yxeewWdh3gnS067IgaWeV8UlYItug1o`（两阶段申购 + 托管 M-of-N 确认按 NAV 铸 + 赎回；含 TEP-74 份额收款/burn 的无信任赎回） |
@@ -211,7 +211,8 @@ cd app-tg && npm install && npm run build
 | **PlanetTimelock**（demo 0s / tl2） | `kQCMwDVPftkUbRWPMzJGCjoC4YXnFGfN3myTJ1rbeCuSdPAt` / `kQAwMedJ1wWbt-zKqw06Ssb7vdeLW_FIbAQd0NmAPjC5v2Mr` |
 | 部署钱包 | `0QBW4GNM-XpAIuIzwrupQKqVOLILHfP6lnD_Xk04L9Yx6Qol`（v4r2；私钥 `ton/.secrets/`，已 gitignore） |
 
-- **链上状态**：`assetCount=3`、`signerAt(0)=0x9471…0f8f`（relayer 公钥，`threshold=1`）、`lastOracleUpdate` 持续更新、**`ppi≈1.003`（随行情动态变化；基准=建仓价）**。
+- **链上状态**：**篮子已扩到 14 个商品**（WTI/Brent/NatGas/Gold/Silver/Copper/Wheat/Corn/Soybean/Coffee/Lumber/Lithium/Water/Carbon，权重各 ≤15%、合计 100%），`assetCount=14`、`signerAt(0)=0x9471…0f8f`（relayer 公钥，`threshold=1`）、`lastOracleUpdate` 持续更新、**`ppi≈1.003`（随行情动态变化；基准=建仓价）**。
+- **治理级篮子管理（v1.6）**：`GovernanceAddAsset`（追加新商品，仅追加不覆盖）与 `GovernanceSetWeight`（改权重、**不动 basePrice**）——**在 `baseLocked` 之后仍可调整**，对齐白皮书「权重由 DAO 季度调整」。单类权重上限 `MAX_ASSET_WEIGHT=15%`。
 - **真实推价已上链（含 bug 修复）**：relayer 双源（Yahoo+Sina）**中位数** → `SignedPriceUpdate` → Core 重算 PPI。**修复**：push body 此前仍是旧内联 `(sigR,sigS,payload)` 格式，而合约已改为 `SignedPriceUpdate{sig1: cell, sig2: cell, payload: cell}` → 推价从未生效（`lastOracleUpdate` 恒 0、PPI 恒 1.0、前端把 base 当 Now）。现 `lastOracleUpdate>0`、`assetAt(i).current` = 中位数、`risk=0`。
 - **mint/burn 端到端**：`.github/workflows/e2e-test.yml`（`gh workflow run e2e-test.yml`）→ 铸 1.0 USDC 得 0.995 PLT，`AskToBurn` 0.5 → Core `supply` 995000→495000，链上实测通过。
 - **时间锁**：`PlanetTimelock` 已部署（24h prod = `kQDc_iZ7...`，0s demo = `kQCMwDV...`）。
