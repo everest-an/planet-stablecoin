@@ -11,6 +11,10 @@
 //
 // Serverless (Vercel Node runtime), no dependencies: it calls the public TON testnet
 // `runGetMethod` RPC directly and decodes the returned stack (ints + tuples).
+//
+// Rate limits: toncenter allows 1 req/s anonymously and 10 req/s with a key, so TON_API_KEY
+// (set in the Vercel env, sent as the X-API-Key header) turns a ~20s cold read into a couple of
+// seconds. The key lives only here on the server — never in the browser bundle.
 
 const CORE = process.env.PLANET_CORE || "kQAwzh3O-52-QBtB8JFFTjtNaKFhw-uJMkd-zdnoHoGibzcU";
 const CORE_FALLBACK = "kQBUZM0RwN4SXnQDO1q9WzmG2aaiOSD6ybkpaG9LSQ1Aj3Jf";
