@@ -29,6 +29,12 @@ VITE_PLANET_ADDRESS=kQBUZM0RwN4SXnQDO1q9WzmG2aaiOSD6ybkpaG9LSQ1Aj3Jf
 VITE_PLT_MINTER_ADDRESS=kQCGc7GJHMASpaLEMSjTGEa-NXAZMCk3HywoxFGq7sqSOSM1
 ```
 
+The live Core carries a **14-commodity basket** (energy / metals / agriculture / industrial,
+each weight ≤15%, total 100%) — see `../relayer/assets.example.json`. Changing weights is a
+governance action on PlanetCore (`GovernanceSetWeight` / `GovernanceAddAsset`; base prices are
+immutable once locked). **Env vars are read at build time** — after changing them in Vercel,
+trigger a new build (a push to `app-tg/` does it).
+
 ## Features
 
 - **Design system:** monochrome "on-chain ledger / technical terminal" aesthetic (Aptos-inspired,
