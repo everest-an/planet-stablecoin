@@ -234,3 +234,33 @@ cd app-tg && npm install && npm run build
 - **前端已验证**：`app-tg` 浏览器实测读到真实篮子（WTI/Gold/Copper）与 PPI（修了 `Buffer` polyfill + RPC 429 重试）。
 - **自动刷新**：`relayer-push.yml` 带**每日 cron**；`configure`/`register` 已**幂等**（已配置则跳过），只刷新价格。
 - **gas 预算**：relayer 钱包 ~2 TON；每次 push ≈0.15 TON，用尽需重新注资。
+
+## v1.8 rebuild (2026-10-07) - single address set after the contract-review fixes
+
+The 10 contract-review fixes ship as NEW deployments (contracts are immutable; see
+docs/adr/0001-immutable-core-upgradeable-oracle-adapter.md and docs/deploy-runbook.md).
+
+| Contract | Address |
+|---|---|
+| PlanetCore | kQBUIDOcKIQZS_AMXjOL3usH69c3HIo0YudLoo_49eE0X2NJ |
+| PLT Minter (admin = Core) | kQC6zZ83qploNLCy0MdUNhKkBD9Tx25N-xWF7iDHkd3IJ2k3 |
+| PlanetTimelock (60s, Core owner) | kQC_j4CrhPvbAX19_4C-PAoGNWBsaxj4GN5v6mIhGb7ctxQ1 |
+| PlanetGov | kQAK5XcQdykCOrA2-uFraTxqCFD1NNdK5W4QrwCexNcBYJ3 |
+| PlanetBond | kQDYY-LJED5Xi2j-fnsxEqcYsMj0BWU-XrtV3SiSCu_pwizG |
+| PLTG Minter | kQDF0ixGco8WW4fqPB3XNdrNJ8vikFNkkyzKbz8hNJiFZ7OD (UNCHANGED address) |
+| PlanetFund owner | kQBo0345y-RGi49-7WWaWAHyyNtiWe-JrT44iO3G9Cyom6YK (older timelock; Fund was not redeployed) |
+
+Superseded (kept only as history / API fallback): Core kQAwzh3O-52-QBtB8JFFTjtNaKFhw-uJMkd-zdnoHoGibzcU,
+PLT minter kQAMXsJdK0tklNy5x3Q8Jhw1dAkB6pw6ubREVprusamUcpbq, Gov kQD4eBl68N4Udu4YPEFrKSKL99mx0To1ihGd-DQP7b1EpaUV,
+Bond kQDMxJXroCmuxBw9Sw7oj9LhO9Y0mLxdPS3Tr4vY-sdq65hz, Basket kQAfGKn_UrUW8LQd92ZWy0h0BrCA_QTBhMqDA1M-PZtyv-r_ (deprecated, BK-1).
+
+Verified on-chain: assetCount=14, baseLocked=true, signerCount=1/threshold=1, signerAt(0)=the hot key
+(0x75bc1c11...), owner=the new Timelock, 14 prices pushed + verified. Live /api/v1/oracle: healthy=true, fresh=true, maxAgeSeconds=93600 (26h SLA).
+
+Two real bugs were found and fixed during the rebuild:
+1. relayer register would OVERWRITE an existing signer with the owner key (the daily push step would
+   clobber the hot key and every push would fail ERR_BAD_SIG). Now it never overwrites; rotation goes
+   through the timelock (setsigner). Commit d84649a.
+2. deploy_gov.tolk minted the PLTG genesis supply unconditionally; the PLTG minter address is
+   deterministic, so a re-run reused it and DOUBLED the supply (1e15 -> 2e15). Now guarded on
+   totalSupply == 0. Commit 8ac3c6c. A cleanup burn (relayer burnjetton) can restore 1e15 exactly.

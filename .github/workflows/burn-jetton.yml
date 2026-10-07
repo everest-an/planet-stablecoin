@@ -1,0 +1,41 @@
+name: Burn jetton (testnet)
+
+# Operational cleanup: burn a fixed amount of a jetton held by the DEPLOYER wallet.
+# Used to restore the intended PLTG supply after the genesis mint accidentally ran twice
+# (1e15 -> 2e15). AskToBurn is sent to the holder's jetton wallet, never to the minter.
+
+on:
+  workflow_dispatch:
+    inputs:
+      jetton_minter:
+        description: "Jetton minter address"
+        required: true
+      amount:
+        description: "Amount in base units (1000000000000000 = 1e9 PLTG)"
+        required: true
+
+jobs:
+  burn:
+    name: Burn jetton
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: relayer
+    env:
+      PLANET_CORE: kQBUIDOcKIQZS_AMXjOL3usH69c3HIo0YudLoo_49eE0X2NJ
+      JETTON_MINTER: ${{ inputs.jetton_minter }}
+      BURN_AMOUNT: ${{ inputs.amount }}
+      RELAYER_MNEMONIC: ${{ secrets.TON_WALLET_MNEMONIC }}
+      TON_ENDPOINT: https://testnet.toncenter.com/api/v2/jsonRPC?api_key=${{ secrets.TON_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install deps
+        run: npm install --no-audit --no-fund
+
+      - name: Burn
+        run: node relayer.mjs burnjetton

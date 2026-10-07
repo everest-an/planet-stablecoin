@@ -114,7 +114,7 @@ function payloadCell(p) {
 
 async function main() {
   const cmd = process.argv[2];
-  if (cmd !== "configure" && cmd !== "register" && cmd !== "push" && cmd !== "e2e" && cmd !== "timelock" && cmd !== "check" && cmd !== "fund" && cmd !== "setsigner" && cmd !== "setowner" && cmd !== "settimelockowner") die("usage: node relayer.mjs configure|register|push|e2e|timelock|check|fund|setsigner|setowner|settimelockowner");
+  if (cmd !== "configure" && cmd !== "register" && cmd !== "push" && cmd !== "e2e" && cmd !== "timelock" && cmd !== "check" && cmd !== "fund" && cmd !== "setsigner" && cmd !== "setowner" && cmd !== "settimelockowner" && cmd !== "burnjetton") die("usage: node relayer.mjs configure|register|push|e2e|timelock|check|fund|setsigner|setowner|settimelockowner|burnjetton");
   if (!CORE_RAW) die("PLANET_CORE not set");
   if (!MNEMONIC) die("RELAYER_MNEMONIC not set");
 
@@ -384,6 +384,41 @@ async function main() {
     await sleep(4000);
 
     console.log("done: timelock round-trip");
+    return;
+  }
+
+  if (cmd === "burnjetton") {
+    // Operational cleanup: burn a fixed amount of a jetton held by THIS wallet (the deployer).
+    // Used to restore the intended PLTG supply after the genesis mint accidentally ran twice
+    // (1e15 -> 2e15). NOTE: AskToBurn goes to the HOLDER's jetton wallet, never to the minter.
+    const JETTON_RAW = process.env.JETTON_MINTER ?? "";
+    const AMOUNT = BigInt(process.env.BURN_AMOUNT ?? "0");
+    if (!JETTON_RAW) die("JETTON_MINTER not set");
+    if (AMOUNT <= 0n) die("BURN_AMOUNT not set");
+    const jminter = Address.parse(JETTON_RAW);
+    const jw = (
+      await runGet(jminter, "get_wallet_address", [
+        { type: "slice", cell: beginCell().storeAddress(wallet.address).endCell() },
+      ])
+    ).stack.readAddress();
+    const before = (await runGet(jminter, "get_jetton_data")).stack.readBigNumber();
+    console.log("jetton minter : " + JETTON_RAW);
+    console.log("holder wallet : " + jw.toString({ testOnly: true }));
+    console.log("supply before : " + before);
+    const burn = beginCell()
+      .storeUint(OP_ASK_TO_BURN, 32)
+      .storeUint(0, 64)
+      .storeCoins(AMOUNT)
+      .storeAddress(null)
+      .storeMaybeRef(null)
+      .endCell();
+    console.log("burn          : " + AMOUNT + " units via AskToBurn");
+    await send(burn, jw, "0.1");
+    await sleep(8000);
+    const after = (await runGet(jminter, "get_jetton_data")).stack.readBigNumber();
+    console.log("supply after  : " + after + " (delta=" + (after - before) + ")");
+    if (after === before - AMOUNT) console.log("BURN OK: supply reduced by exactly " + AMOUNT);
+    else console.log("WARN: supply did not drop by the requested amount");
     return;
   }
 
