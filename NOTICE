@@ -1,0 +1,32 @@
+# NOTICE
+
+This repository contains both original work and third-party components.
+
+## Original work
+
+Copyright (c) 2026 Everest Holdings Group Co., Ltd.（珠峰控股集团）
+Licensed under the MIT License — see `LICENSE`.
+
+Covers: the Tolk contracts in `ton/contracts/` (excluding the vendored jetton implementation
+noted below), the deployment scripts, the off-chain relayer in `relayer/`, the web front end in
+`web/`, the Telegram Mini App in `app-tg/`, and the documentation in `docs/`.
+
+## Third-party components
+
+| Component | Location | Upstream | Licence |
+|---|---|---|---|
+| TEP-74 jetton minter / wallet (vendored) | `ton/contracts/jetton/` | `ton-blockchain/tolk-bench` | **verify upstream** — see note below |
+| Google Fonts (Space Grotesk, DM Mono) | loaded by the web pages | Google Fonts | SIL Open Font License 1.1 |
+
+> **Action required before publishing:** confirm the exact upstream licence of the vendored jetton
+> implementation and reproduce its notice text here. It is vendored, not written by us, so its
+> terms govern that directory.
+>
+> Likewise, if any Astro/Vite/React dependency is copied rather than installed, add it to the table.
+
+## Not covered
+
+The repository contains historical design documents describing an intended "1:1 commodity reserve"
+product. That product does not exist: the live deployment is a **testnet proof-of-concept synthetic
+index token with no reserve**, is **unaudited**, and is **not a stablecoin**. Nothing in this
+repository is investment advice or an offer of any kind.

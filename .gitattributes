@@ -1,0 +1,45 @@
+# .gitattributes — structural guard for the public mirror
+#
+# `export-ignore` makes `git archive` SKIP these paths. That matters because the public mirror is
+# produced with `git archive` (tracked files only) — which is what keeps the gitignored
+# ton/.secrets/testnet-wallet.json (a 24-word mnemonic) out of any published tree.
+#
+# This is a SAFETY NET, not the only control: docs/grants/public-repo-manifest.md still lists what
+# may be published. But with these rules an accidental `git archive` cannot leak by omission.
+
+# --- secrets (already gitignored; belt and braces) ---
+ton/.secrets/           export-ignore
+wallets.toml            export-ignore
+global.wallets.toml     export-ignore
+
+# --- commercial strategy (never publish) ---
+docs/sales/                          export-ignore
+docs/grants/                         export-ignore
+docs/gtm-tech-service.md             export-ignore
+docs/GTM.md                          export-ignore
+docs/HANDOFF.md                      export-ignore
+
+# --- internal assessments ---
+docs/economics-reality-check.md      export-ignore
+docs/path-forward.md                 export-ignore
+docs/positioning-v2.md               export-ignore
+docs/hack-analysis.md                export-ignore
+docs/AUDIT.md                        export-ignore
+docs/audit-report.md                 export-ignore
+docs/PLAN.md                         export-ignore
+
+# --- documents containing claims that were never true (see the correction notice) ---
+docs/whitepaper-extracted.md             export-ignore
+"Planet Stablecoin White Paper.pdf"      export-ignore
+
+# --- dead code and unpublishable assets ---
+legacy-solana/          export-ignore
+web/pitch/              export-ignore
+planet-v3-academic.png  export-ignore
+planet-v4-aeonik.png    export-ignore
+planet-v5-solana.png    export-ignore
+
+# --- normalise line endings for the published tree ---
+* text=auto eol=lf
+*.png binary
+*.pdf binary
