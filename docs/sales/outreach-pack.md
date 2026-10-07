@@ -74,7 +74,8 @@
 > **Everest An** · Founder
 > **Everest Holdings Group Co., Ltd.（珠峰控股集团）**
 > everest9812@gmail.com · Telegram @EverestAn
-> https://ppppp.space/dashboard
+> Website: https://ppppp.space | Whitepaper: https://ppppp.space/whitepaper | Live product: https://ppppp.space/dashboard
+> If this is not relevant, reply "stop" and I will not contact you again.
 
 ---
 
