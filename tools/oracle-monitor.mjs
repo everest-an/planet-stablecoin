@@ -18,7 +18,12 @@ const STATE_FILE = join(HERE, "oracle-state.json");
 
 const API = process.env.ORACLE_API || "https://ppppp.space/api/v1/oracle?full=1";
 const TOKEN = process.env.TG_BOT_TOKEN || "";
-const CHAT = process.env.TG_ALERT_CHAT_ID || "";
+// Comma-separated list: the community group now, a broadcast channel later — no code change
+// needed when a destination is added.
+const CHATS = (process.env.TG_ALERT_CHAT_ID || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 function signature(o) {
   return JSON.stringify({
@@ -48,18 +53,20 @@ function humanize(o) {
 }
 
 async function alert(text) {
-  if (!TOKEN || !CHAT) {
+  if (!TOKEN || !CHATS.length) {
     console.log("(no TG_BOT_TOKEN / TG_ALERT_CHAT_ID set — printing instead)");
     console.log(text);
     return;
   }
-  const res = await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ chat_id: CHAT, text, disable_web_page_preview: true }),
-  });
-  const j = await res.json().catch(() => ({}));
-  console.log(`telegram sendMessage ok=${j.ok} ${j.description ?? ""}`);
+  for (const chat of CHATS) {
+    const res = await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ chat_id: chat, text, disable_web_page_preview: true }),
+    });
+    const j = await res.json().catch(() => ({}));
+    console.log(`telegram -> ${chat}: ok=${j.ok} ${j.description ?? ""}`);
+  }
 }
 
 async function main() {

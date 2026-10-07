@@ -32,6 +32,8 @@ jobs:
       - name: Generate report
         env:
           FORCE: ${{ inputs.force && '1' || '0' }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_ALERT_CHAT_ID: ${{ secrets.TG_ALERT_CHAT_ID }}
         run: node tools/monthly-report.mjs
 
       - name: Commit + push if changed

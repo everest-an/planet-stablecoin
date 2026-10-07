@@ -361,6 +361,44 @@ async function main() {
   const added = updateSitemap(all.map((s) => s.month));
   console.log(`wrote reports/${month}.json + .html, refreshed reports/index.html, sitemap +${added ?? 0} urls`);
   console.log(`PPI ${snap.ppi.toFixed(6)} · ${all.length} report(s) on file`);
+
+  // Announce it in the community chat(s) if a bot token is available — the report is also a
+  // content loop, and nobody should have to remember to post it.
+  const TOKEN = process.env.TG_BOT_TOKEN || "";
+  const CHATS = (process.env.TG_ALERT_CHAT_ID || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (TOKEN && CHATS.length && prev) {
+    const ppiMom = prev.ppi ? (snap.ppi / prev.ppi - 1) * 100 : 0;
+    const movers = [...snap.assets]
+      .filter((a) => a.riskState === 0)
+      .map((a) => {
+        const p = prev.assets?.find((x) => x.index === a.index);
+        return { name: a.name, mom: p && p.currentPrice ? (a.currentPrice / p.currentPrice - 1) * 100 : a.sinceLaunchPct };
+      })
+      .sort((x, y) => y.mom - x.mom);
+    const best = movers[0];
+    const worst = movers[movers.length - 1];
+    const text =
+      `Planet basket report — ${month}\n` +
+      `PPI ${snap.ppi.toFixed(6)} (${pct(ppiMom)} MoM) · ${snap.assets.length} commodities\n` +
+      (best && worst ? `strongest ${best.name} ${pct(best.mom)} · weakest ${worst.name} ${pct(worst.mom)}\n` : "") +
+      `https://ppppp.space/reports/${month}`;
+    for (const chat of CHATS) {
+      try {
+        const res = await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ chat_id: chat, text, disable_web_page_preview: false }),
+        });
+        const j = await res.json().catch(() => ({}));
+        console.log(`telegram -> ${chat}: ok=${j.ok} ${j.description ?? ""}`);
+      } catch (e) {
+        console.log(`telegram -> ${chat} failed: ${e?.message ?? e}`);
+      }
+    }
+  }
 }
 
 main().catch((e) => {
