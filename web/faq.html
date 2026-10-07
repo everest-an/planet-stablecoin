@@ -143,7 +143,7 @@
         <h2>How often are prices updated?</h2>
         <p>
           A scheduled run pushes a commodity only when its price has moved more than 0.1% since the
-          last on-chain value, with a hard ceiling of <b>6 hours</b> so nothing can go stale. On a
+          last on-chain value, refreshed by a daily scheduled run; the on-chain index is recomputed on every update. On a
           quiet day that means a handful of transactions instead of fourteen — cheap and still
           fresh.
         </p>
@@ -246,7 +246,7 @@
           { "@type": "Question", "name": "How is the index calculated?", "acceptedAnswer": { "@type": "Answer", "text": "Each commodity contributes its weight times the ratio of its current price to its base price; the contributions are summed and divided by the sum of active weights. Frozen commodities are excluded and the remaining weights renormalised." } },
           { "@type": "Question", "name": "What is in the basket and who sets the weights?", "acceptedAnswer": { "@type": "Answer", "text": "The live basket holds 14 commodities including WTI and Brent crude, natural gas, gold, silver, copper, wheat, corn, soybean, coffee and lumber, lithium, water and carbon proxies. No commodity may exceed 15% and weights must sum to 100%; governance sets them and base prices are frozen once locked." } },
           { "@type": "Question", "name": "Where do the prices come from?", "acceptedAnswer": { "@type": "Answer", "text": "An off-chain relayer fetches each commodity from two independent sources, takes the median, signs it with an ed25519 key and pushes it on-chain where the signature is verified. If the sources diverge by more than 2% the commodity is frozen and excluded." } },
-          { "@type": "Question", "name": "How often are prices updated?", "acceptedAnswer": { "@type": "Answer", "text": "A scheduled run pushes a commodity only when its price moved more than 0.1% since the last on-chain value, with a hard six-hour ceiling so nothing goes stale." } },
+          { "@type": "Question", "name": "How often are prices updated?", "acceptedAnswer": { "@type": "Answer", "text": "A scheduled run pushes a commodity only when its price moved more than 0.1% since the last on-chain value, refreshed by a daily scheduled run; minting is refused against prices older than the six-hour on-chain guard." } },
           { "@type": "Question", "name": "How do I mint or redeem PLT?", "acceptedAnswer": { "@type": "Answer", "text": "Open the Mini App at app.ppppp.space and connect a TON wallet. Minting issues PLT at the current index; redeeming burns PLT through the jetton minter. You always sign in your own wallet." } },
           { "@type": "Question", "name": "What fees are there?", "acceptedAnswer": { "@type": "Answer", "text": "A band-based fee of 0.5% near the index, 1% when the index is 3-5% off, and 2% beyond, with an extra penalty for exiting far below. Fees split 30% burn, 40% reserve, 20% staking and 10% risk fund." } },
           { "@type": "Question", "name": "Is there a governance token?", "acceptedAnswer": { "@type": "Answer", "text": "Yes, PLTG: a fixed-supply 1,000,000,000 TEP-74 token with a staking and voting contract. Stakers receive the staking share of fees pro-rata and voting power is weighted by stake. It is testnet-only and not for sale." } },

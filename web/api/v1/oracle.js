@@ -20,7 +20,11 @@ const ENDPOINT = process.env.TON_ENDPOINT || "https://testnet.toncenter.com/api/
 const API_KEY = process.env.TON_API_KEY || "";
 const PPI_SCALE = 1e6;
 const WEIGHT_SCALE = 1e6;
-const MAX_ORACLE_AGE = 21600; // 6h — mirrors the on-chain MAX_ORACLE_AGE (mint staleness guard)
+// Pipeline freshness SLA for the API/monitor (NOT the on-chain guard): how old the on-chain
+// oracle data may grow before the feed is reported UNHEALTHY. PlanetCore keeps its own
+// MAX_ORACLE_AGE (6h) and still refuses to MINT against stale prices, whatever this value is.
+// The scheduled push runs once a day, so 26h means 'the daily run actually missed'.
+const MAX_ORACLE_AGE = 93600; // 26h
 const MAX_SIGNER_KEYS = 8;
 const BUDGET_MS = 45000;
 const TRIES = 6;

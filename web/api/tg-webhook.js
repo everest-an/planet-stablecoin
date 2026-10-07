@@ -136,7 +136,7 @@ async function liveStatusLine() {
       age == null ? "unknown" : age < 3600 ? `${Math.floor(age / 60)}m ago` : `${(age / 3600).toFixed(1)}h ago`;
     const lines = [`PPI ${s.ppi.toFixed(6)} · ${s.assetCount} commodities`];
     if (o && !o.error) {
-      lines.push(`oracle: ${o.fresh ? "fresh" : "STALE"} (${ageTxt}, limit 6h) · signers ${o.signers?.count}/${o.signers?.threshold}`);
+      lines.push(`oracle: ${o.fresh ? "fresh" : "STALE"} (${ageTxt}, limit 26h) · signers ${o.signers?.count}/${o.signers?.threshold}`);
       if (o.basket) {
         const bits = [`weights ${o.basket.weightsValid ? "valid" : "INVALID"}`];
         bits.push(`${o.basket.frozen?.length ?? 0} frozen`);

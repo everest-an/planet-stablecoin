@@ -170,10 +170,7 @@
 
       <h2>8. Update cadence</h2>
       <p>
-        A scheduled run pushes a commodity only when its price has moved more than <b>0.1%</b>
-        since the last on-chain value, with a hard ceiling of <b>6 hours</b> so nothing goes
-        stale — even in a completely quiet market every commodity refreshes within six hours.
-        The divergence trigger keeps the cost low without trading away freshness.
+        A scheduled run refreshes the feed once a day and pushes a commodity only when its price has moved more than <b>0.1%</b> since the last on-chain value. The divergence trigger keeps the cost low without trading away freshness. The on-chain index is recomputed on every price update, and minting is refused against prices older than the six-hour staleness guard.
       </p>
 
       <h2>9. How the basket changes</h2>
