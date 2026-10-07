@@ -3,18 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Planet — whitepaper</title>
-    <meta name="description" content="Planet whitepaper: an on-chain commodity purchasing-power index on TON. Phase 1 synthetic index token." />
+    <title>Planet — whitepaper (light &amp; full)</title>
+    <meta name="description" content="Planet whitepaper: an on-chain commodity purchasing-power index (PPI) on TON. Light version + complete version with the full mathematics. Phase 1 synthetic index token." />
     <link rel="canonical" href="https://ppppp.space/whitepaper" />
     <meta property="og:type" content="article" />
     <meta property="og:site_name" content="Planet" />
     <meta property="og:url" content="https://ppppp.space/whitepaper" />
     <meta property="og:title" content="Planet whitepaper — commodity purchasing-power index on TON" />
-    <meta property="og:description" content="Design, mechanisms and honest 'implemented vs design' status for Planet (PLT). Phase 1 PoC." />
+    <meta property="og:description" content="Design, mechanisms, the full mathematics, and an honest implemented-vs-design status for Planet (PLT). Phase 1 PoC." />
     <meta property="og:image" content="https://ppppp.space/icon.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Planet whitepaper — commodity purchasing-power index on TON" />
-    <meta name="twitter:description" content="Design, mechanisms and implemented-vs-design status. Phase 1 PoC." />
+    <meta name="twitter:description" content="Light + full versions. Mechanisms, mathematics, implemented-vs-design status. Phase 1 PoC." />
     <meta name="twitter:image" content="https://ppppp.space/icon.png" />
     <script type="application/ld+json">
       {
@@ -23,8 +23,20 @@
         "headline": "Planet whitepaper — commodity purchasing-power index on TON",
         "url": "https://ppppp.space/whitepaper",
         "inLanguage": "en",
+        "about": "On-chain commodity purchasing-power index; synthetic index token; TEP-74 on TON",
         "publisher": { "@type": "Organization", "name": "Planet", "url": "https://ppppp.space/" }
       }
+    </script>
+    <script>
+      // Decide the view BEFORE paint so the wrong version never flashes. Without JS both
+      // versions are simply shown in full (graceful degradation, and crawlable).
+      (function () {
+        var h = (location.hash || "").replace("#", "");
+        var saved = null;
+        try { saved = localStorage.getItem("wp-mode"); } catch (e) {}
+        var mode = h === "full" || h === "light" ? h : saved === "full" ? "full" : "light";
+        document.documentElement.setAttribute("data-wp", mode);
+      })();
     </script>
     <link rel="icon" href="/icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -34,6 +46,52 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/styles.css" />
+    <style>
+      /* ---- whitepaper-only: view switch ---- */
+      html[data-wp="light"] #wp-full { display: none; }
+      html[data-wp="full"] #wp-light { display: none; }
+      #wp-toggle { margin-top: 18px; }
+      .segbtn.on { outline: 2px solid currentColor; }
+
+      /* ---- whitepaper-only: dependency-free math typography ----
+         Real markup (not client-rendered), so formulas are indexable and need no CDN. */
+      .eq {
+        margin: 18px 0;
+        padding: 14px 16px;
+        border-left: 2px solid currentColor;
+        background: rgba(127, 127, 127, 0.07);
+        font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.92rem;
+        line-height: 2.1;
+        overflow-x: auto;
+      }
+      .eq .row { display: block; }
+      .eq .lbl { opacity: 0.7; margin-right: 8px; }
+      .eq i, .eq var { font-family: Georgia, "Times New Roman", serif; font-style: italic; }
+      .eq sub, .eq sup { font-size: 0.72em; }
+      .eq .frac {
+        display: inline-flex;
+        flex-direction: column;
+        vertical-align: middle;
+        text-align: center;
+        margin: 0 4px;
+        line-height: 1.25;
+      }
+      .eq .frac > span:first-child { border-bottom: 1px solid currentColor; padding: 0 6px; }
+      .eq .frac > span:last-child { padding: 0 6px; }
+      .eq .big { font-size: 1.25em; line-height: 0; }
+      .eq .cond { margin-left: 24px; }
+      .eq-note { font-size: 0.85rem; opacity: 0.75; margin-top: -8px; }
+      .where { margin: 8px 0 0 0; padding-left: 18px; font-size: 0.9rem; }
+      .where li { margin: 2px 0; }
+      .toc { columns: 2; column-gap: 28px; font-size: 0.92rem; padding-left: 18px; }
+      .toc li { break-inside: avoid; margin: 3px 0; }
+      .tag { font-size: 0.75rem; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.75; }
+      .impl { color: #1a7f37; }
+      .design { color: #9a6700; }
+      .future { color: #6b7280; }
+      @media (max-width: 620px) { .toc { columns: 1; } }
+    </style>
   </head>
   <body>
     <header class="topbar">
@@ -48,15 +106,24 @@
 
     <main>
       <section class="hero">
-        <p class="eyebrow">[ whitepaper · v1.5 · engineering addendum ]</p>
+        <p class="eyebrow">[ whitepaper · v1.8 · testnet ]</p>
         <h1>Planet — an on-chain commodity purchasing-power index.</h1>
         <p class="lede">
-          This page summarises the Planet protocol. The full Chinese manuscript is maintained
-          internally and is available on request to partners. Nothing here is investment advice.
+          Planet (PLT) aggregates the real prices of a basket of global commodities into a single
+          on-chain <b>purchasing-power index (PPI)</b>, expressed as a TEP-74 token on <b>TON</b>.
+          Read the <b>light</b> summary, or the <b>full</b> version with the complete mathematics.
+        </p>
+        <div id="wp-toggle" role="tablist" aria-label="whitepaper version">
+          <button class="segbtn btn" data-wp="light" role="tab">light</button>
+          <button class="segbtn btn" data-wp="full" role="tab">full version (with mathematics)</button>
+        </div>
+        <p class="eyebrow" style="margin-top: 10px">
+          deep-linkable: <a href="#light">#light</a> · <a href="#full">#full</a> · your choice is remembered
         </p>
       </section>
 
-      <article class="doc">
+      <!-- ================= LIGHT ================= -->
+      <article class="doc" id="wp-light">
         <h2>1. Overview</h2>
         <p>
           Planet (PLT) aggregates the real prices of a basket of global commodities — energy,
@@ -75,6 +142,7 @@
         <table class="doc-table">
           <thead><tr><th>Layer</th><th>Component</th><th>Status</th></tr></thead>
           <tbody>
+            <tr><td>L4</td><td>Fund — tokenised ETF shares (subscribe / redeem at NAV)</td><td>implemented</td></tr>
             <tr><td>L3</td><td>Stability &amp; risk — tiered fees, elastic curve, arbitrage, bonds, risk fund, circuit-breakers</td><td>implemented</td></tr>
             <tr><td>L2</td><td>CAM adapter — per-commodity standardisation (price / volatility / liquidity / risk)</td><td>phase A</td></tr>
             <tr><td>L1</td><td>PlanetCore — basket, on-chain PPI, mint/burn, fees, redemption mirror</td><td>implemented</td></tr>
@@ -84,23 +152,26 @@
 
         <h2>3. The index (PPI)</h2>
         <p>
-          The owner configures a weighted basket (e.g. WTI 40% · Gold 35% · Copper 25%) and
-          locks base prices on-chain. A relayer submits signed per-asset prices; PlanetCore
-          recomputes the PPI from the live basket. An asset flagged as frozen is excluded and
-          the remaining weights are re-normalised.
+          The owner configures a weighted basket — currently <b>14 commodities</b> (WTI 14% ·
+          Brent 11% · natural gas 8% · gold 12% · silver 7% · copper 6% · wheat 9% · corn 7% ·
+          soybean 6% · coffee 4% · lumber 4% · lithium 3% · water 5% · carbon 4%) — and locks the
+          base prices on-chain. A relayer submits signed per-asset prices; PlanetCore recomputes
+          the PPI from the live basket. An asset flagged as frozen is excluded and the remaining
+          weights are re-normalised.
         </p>
 
         <h2>4. Mint / burn and fees</h2>
         <p>
-          Minting deposits value and issues PLT at the current PPI, net of a tiered fee
-          (45 / 30 / 25 split across burn / reserve / staking). Burning goes through the TEP-74
-          jetton wallet and is mirrored back to core accounting so supply stays consistent.
+          Minting deposits value and issues PLT at the current PPI, net of a tiered fee. Each fee
+          is routed <b>30% burn · 50% reserve · 20% staking</b>, less a <b>10% risk-fund</b>
+          carve-out. Burning goes through the TEP-74 jetton wallet and is mirrored back to core
+          accounting so supply stays consistent.
         </p>
 
         <h2>5. Stability mechanisms</h2>
         <ul>
-          <li><b>Band circuit-breaker:</b> minting freezes when the PPI deviates &gt;15% from peg.</li>
-          <li><b>Fee slope:</b> fees rise above a 5% deviation; redemption is asymmetric.</li>
+          <li><b>Band circuit-breaker:</b> minting is refused when the index is undefined, and blocked beyond a 15% deviation.</li>
+          <li><b>Fee slope:</b> fees rise above a 5% deviation; redemption is asymmetric and capped.</li>
           <li><b>Arbitrage incentive:</b> a fee rebate when the index is rich, to pull it back.</li>
           <li><b>Stabilisation bonds &amp; risk fund:</b> absorb selling pressure below peg; part of each fee funds a risk reserve.</li>
         </ul>
@@ -110,22 +181,24 @@
           Prices are sourced off-chain from <b>two independent feeds</b>, combined as a
           <b>median</b>, and signed with ed25519. PlanetCore verifies against an
           <b>M-of-N signer set</b> (distinct signers enforced) and applies guards: strictly
-          increasing timestamps, a single-update price-jump limit, and automatic freeze on
-          source divergence.
+          increasing timestamps, a single-update price-jump limit, a freshness ceiling on
+          minting, and automatic freeze on source divergence.
         </p>
 
         <h2>7. Governance</h2>
         <p>
-          All privileged actions require the owner. Ownership can be migrated to a
-          <b>multisig wallet</b> and routed through a <b>timelock</b>:
-          <code>Propose → delay → Execute</code>, giving holders a reaction window. Set the
-          timelock’s owner to a multisig for M-of-N plus delay.
+          All privileged actions require the owner. Ownership is migrated to a <b>timelock</b>
+          and routed through <code>Propose → delay → Execute</code>, giving holders a reaction
+          window; the timelock’s owner should be a <b>multisig</b> for M-of-N plus delay. A
+          staking token (PLTG) distributes fee revenue pro-rata and carries stake-weighted
+          parameter signalling. See §9 of the full version for the original DAO plan and exactly
+          what is live today.
         </p>
 
         <h2>8. Status &amp; roadmap</h2>
         <ul>
-          <li><b>Now:</b> TON testnet; contracts implemented and tested; multi-source oracle live.</li>
-          <li><b>Next:</b> third-party audit; production oracle sources; key separation; multisig owner.</li>
+          <li><b>Now:</b> TON testnet; contracts implemented and tested (239 tests); multi-source oracle live; key separation done.</li>
+          <li><b>Next:</b> third-party audit; multisig owner; production oracle sources; the full PLTG DAO.</li>
           <li><b>Later:</b> 1:1 commodity reserve via an RWA custodian, proof-of-reserve and compliance.</li>
         </ul>
 
@@ -135,13 +208,358 @@
           audited. Commodity prices are volatile and an early-stage index token may diverge
           materially from its theoretical PPI. Do not use with value you cannot afford to lose.
         </p>
+        <p class="eq-note">→ continue to the <a href="#full">full version</a> for the mathematics.</p>
+      </article>
+
+      <!-- ================= FULL ================= -->
+      <article class="doc" id="wp-full">
+        <h2>0. Status, scope and honesty</h2>
+        <p>
+          This document describes <b>Planet v1.8</b>, a working proof-of-concept deployed on the
+          TON testnet. It is written to be falsifiable: every mechanism is marked
+          <span class="tag impl">implemented</span>, <span class="tag design">design</span> or
+          <span class="tag future">future</span>.
+        </p>
+        <p class="callout">
+          <b>Red lines.</b> PLT is a <b>synthetic index token</b>. It has <b>no physical
+          reserve</b>, is <b>not a stablecoin</b>, and is not “fully collateralised”. Market
+          price may diverge materially from the theoretical index. Nothing here is investment
+          advice.
+        </p>
+        <ul class="toc">
+          <li><a href="#f1">1. Problem &amp; design goals</a></li>
+          <li><a href="#f2">2. Architecture and contracts</a></li>
+          <li><a href="#f3">3. The index: PPI</a></li>
+          <li><a href="#f4">4. Mint, redeem and fees</a></li>
+          <li><a href="#f5">5. Stability mechanisms</a></li>
+          <li><a href="#f6">6. CAM adapter layer</a></li>
+          <li><a href="#f7">7. Oracle &amp; price integrity</a></li>
+          <li><a href="#f8">8. Rebalancing (RTRA)</a></li>
+          <li><a href="#f9">9. Governance &amp; the DAO plan</a></li>
+          <li><a href="#f10">10. Tokenomics</a></li>
+          <li><a href="#f11">11. Trust &amp; threat model</a></li>
+          <li><a href="#f12">12. Evidence</a></li>
+          <li><a href="#f13">13. Roadmap, risks, disclaimer</a></li>
+        </ul>
+
+        <h2 id="f1">1. Problem &amp; design goals</h2>
+        <ul>
+          <li>Single commodities (gold, oil) are volatile and concentrated; a multi-commodity
+              exposure is hard to hold on-chain.</li>
+          <li>Inflation hedging exists, but there is no public, verifiable object equal to
+              “one token = a basket of global commodity purchasing power”.</li>
+          <li><b>Design goals:</b> (i) a transparent index whose formula is on-chain;
+              (ii) a token that is redeemable through the commodity layer; (iii) failure
+              isolation, so one bad feed cannot poison the whole index; (iv) no custodian in
+              Phase 1; (v) every parameter change observable and delayed.</li>
+        </ul>
+
+        <h2 id="f2">2. Architecture and contracts</h2>
+        <table class="doc-table">
+          <thead><tr><th>Contract</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td>PlanetCore</td><td>basket, on-chain PPI, mint/burn, fees, limits, oracle state, governance basket ops</td></tr>
+            <tr><td>JettonMinter / JettonWallet</td><td>PLT, a TEP-74 jetton (minter admin = Core)</td></tr>
+            <tr><td>PlanetTimelock</td><td>the owner of Core; <code>Propose → delay → Execute</code></td></tr>
+            <tr><td>PlanetGov</td><td>PLTG staking, pro-rata fee dividends, stake-weighted voting</td></tr>
+            <tr><td>PlanetBond</td><td>stabilisation bonds (subscribe / request / operator-settled redeem)</td></tr>
+            <tr><td>PlanetFund</td><td>tokenised ETF shares; custodian-signed NAV actions; trustless TEP-74 redemption</td></tr>
+          </tbody>
+        </table>
+        <p class="eq-note">
+          Settlement layer: TON. All arithmetic is integer fixed-point (<code>1e6</code> scale for
+          the index; <code>1e12</code> for reward-per-share), because the TVM has no floats.
+        </p>
+
+        <h2 id="f3">3. The index: PPI</h2>
+        <p>
+          Let the basket be assets <i>i</i> = 1…<i>n</i> with weight <i>w<sub>i</sub></i>,
+          base price <i>P<sub>i</sub></i><sup>base</sup> (locked) and current price
+          <i>P<sub>i</sub></i>. Let <i>A</i> be the set of <b>active</b> (non-frozen) assets.
+        </p>
+        <div class="eq">
+          <span class="row">
+            <span class="lbl">(1)</span>PPI =
+            <span class="frac"><span><span class="big">Σ</span><sub><i>i</i>∈<i>A</i></sub> <i>w<sub>i</sub></i> · <span class="frac"><span><i>P<sub>i</sub></i></span><span><i>P<sub>i</sub></i><sup>base</sup></span></span></span><span><span class="big">Σ</span><sub><i>i</i>∈<i>A</i></sub> <i>w<sub>i</sub></i></span></span>
+          </span>
+          <span class="row"><span class="lbl">(2)</span>PPI = 0 &nbsp;if&nbsp; <span class="big">Σ</span><sub><i>i</i>∈<i>A</i></sub> <i>w<sub>i</sub></i> = 0 &nbsp;(no active asset ⇒ the index is <b>undefined</b>)</span>
+        </div>
+        <ul class="where">
+          <li><b>Weights:</b> <span class="big">Σ</span><sub><i>i</i></sub> <i>w<sub>i</sub></i> = 10<sup>6</sup> (= 100%) and 0 ≤ <i>w<sub>i</sub></i> ≤ 150000 (= 15%). Enforced on every price update.</li>
+          <li><b>Re-normalisation:</b> dividing by the <i>active</i> weight sum is what makes a frozen asset disappear cleanly instead of silently biasing the index.</li>
+          <li><b>Equation (2) matters:</b> an earlier implementation returned 1.0 when everything was frozen, which let a caller mint against a fabricated index. It now returns 0 and minting is refused (§4).</li>
+          <li><b>Target price:</b> Price<sub>PLT</sub> = PPI × USD<sub>base</sub>, with USD<sub>base</sub> = $1.00 at genesis — i.e. PLT tracks the <i>ratio</i> of today's basket price to the locked base, not a fixed dollar.</li>
+        </ul>
+
+        <h2 id="f4">4. Mint, redeem and fees</h2>
+        <p>Let <i>D</i> be the value deposited, <i>B</i> the PLT burned, and <i>f</i> the fee rate for the current band (below).</p>
+        <div class="eq">
+          <span class="row"><span class="lbl">(3)</span><i>M</i> = <i>D</i> · (1 − <i>f</i>) / PPI &nbsp;&nbsp;<span class="lbl">PLT minted</span></span>
+          <span class="row"><span class="lbl">(4)</span><i>R</i> = <i>B</i> · PPI · (1 − <i>f</i><sub>burn</sub>) &nbsp;&nbsp;<span class="lbl">value returned</span></span>
+          <span class="row"><span class="lbl">(5)</span><i>F</i> = <i>D</i> · <i>f</i> &nbsp;&nbsp;<span class="lbl">fee collected</span></span>
+        </div>
+        <p><b>Minting is gated by two independent conditions:</b></p>
+        <div class="eq">
+          <span class="row"><span class="lbl">(6)</span><i>t</i><sub>now</sub> − <i>t</i><sub>lastUpdate</sub> ≤ <i>MAX_ORACLE_AGE</i> = 6 h &nbsp;&nbsp;<span class="lbl">freshness</span></span>
+          <span class="row"><span class="lbl">(7)</span>PPI &gt; 0 &nbsp;&nbsp;<span class="lbl">the index is defined (§3 eq. 2)</span></span>
+        </div>
+        <p class="eq-note">
+          (6) means the protocol never mints while the oracle is stale; (7) closes the frozen-basket
+          hole. Together they are the only reason a mint can be refused for “market” reasons.
+        </p>
+        <h3>Fee routing</h3>
+        <div class="eq">
+          <span class="row"><span class="lbl">(8)</span><i>F</i> = <i>F</i><sub>burn</sub> + <i>F</i><sub>reserve</sub> + <i>F</i><sub>stake</sub> + <i>F</i><sub>risk</sub></span>
+          <span class="row"><span class="cond">burn 30% &nbsp;·&nbsp; reserve 50% &nbsp;·&nbsp; staking 20%, then 10% of the fee is carved out into the risk fund (net 30 / 40 / 20 / 10)</span></span>
+        </div>
+        <p class="eq-note">
+          The reserve bucket is the largest deliberately: in the fully-backed future phase the
+          reserve must grow at least as fast as the index, otherwise the collateral ratio decays.
+        </p>
+
+        <h2 id="f5">5. Stability mechanisms</h2>
+        <h3>5.1 Tiered fee and circuit-breakers</h3>
+        <table class="doc-table">
+          <thead><tr><th>|PPI − 1|</th><th>Fee</th><th>Behaviour</th></tr></thead>
+          <tbody>
+            <tr><td>≈ 0 (near peg)</td><td>0.5%</td><td>normal</td></tr>
+            <tr><td>3% – 5%</td><td>1%</td><td>dampened</td></tr>
+            <tr><td>&gt; 5%</td><td>2% + slope</td><td>elastic; slope steepens with deviation</td></tr>
+            <tr><td>&gt; 15%</td><td>—</td><td><b>mint refused</b></td></tr>
+          </tbody>
+        </table>
+        <div class="eq">
+          <span class="row"><span class="lbl">(9)</span><i>f</i>(<i>x</i>) = <i>f</i><sub>base</sub> + <i>SLOPE</i> · max(0, |<i>x</i>| − 0.05) &nbsp;&nbsp;<span class="lbl">elastic curve, x = PPI − 1</span></span>
+          <span class="row"><span class="lbl">(10)</span><i>f</i><sub>burn</sub> ≤ <i>MAX_BURN_FEE</i> &nbsp;&nbsp;<span class="lbl">so the payout R stays ≥ 0</span></span>
+        </div>
+        <h3>5.2 Asymmetry and arbitrage</h3>
+        <div class="eq">
+          <span class="row"><span class="lbl">(11)</span><i>f</i><sub>mint</sub>′ = <i>f</i><sub>mint</sub> − <i>arbRebateBps</i> &nbsp;when PPI &gt; 1.03</span>
+        </div>
+        <p class="eq-note">
+          Redemption is deliberately not symmetric with minting: exiting below peg carries an extra
+          penalty (bounded by (10)), while minting below peg is what re-floats the index. When the
+          index is rich the protocol pays a rebate so an external arbitrageur is rewarded for
+          pushing price back toward PPI.
+        </p>
+        <h3>5.3 Risk fund and bonds</h3>
+        <div class="eq">
+          <span class="row"><span class="lbl">(12)</span><i>F</i><sub>risk</sub> += <i>F</i> · <i>RISK_SHARE</i> &nbsp;&nbsp;<span class="lbl">funded on every fee</span></span>
+          <span class="row"><span class="lbl">(13)</span>reserve += <i>a</i> &nbsp;if&nbsp; <i>riskFund</i> ≥ <i>a</i> &nbsp;&nbsp;<span class="lbl">owner <code>CoverDeficit</code></span></span>
+          <span class="row"><span class="lbl">(14)</span>face = principal · (1 + <i>premiumBps</i>/10<sup>4</sup>) &nbsp;&nbsp;<span class="lbl">bond</span></span>
+        </div>
+        <p class="eq-note">
+          Bonds are requested by the holder and <b>settled by the operator</b> — asking to redeem can
+          never destroy a claim before it has been paid. Per-transaction limits
+          (<code>SetLimits</code>) are the hard circuit-breaker.
+        </p>
+
+        <h2 id="f6">6. CAM adapter layer — failure isolation</h2>
+        <p>
+          Each commodity has a <b>CAM</b> (Commodity Adapter Module) emitting a standardised tuple
+          <i>(price, volatility, liquidity, riskState)</i> with
+          <i>riskState</i> ∈ {<b>normal</b>, <b>caution</b>, <b>frozen</b>}.
+        </p>
+        <div class="eq">
+          <span class="row"><span class="lbl">(15)</span>frozen ⇒ <i>i</i> ∉ <i>A</i> &nbsp;⇒ excluded from (1) <b>and</b> exempt from rebalancing</span>
+        </div>
+        <p class="eq-note">
+          This is the core safety property: a single bad source, price or liquidity event is
+          <b>contained</b>. The protocol propagates the <i>state</i> (raising fees / lowering limits)
+          rather than the <i>error</i>, so the index cannot be poisoned by one commodity.
+        </p>
+
+        <h2 id="f7">7. Oracle &amp; price integrity</h2>
+        <p>
+          The relayer reads two independent sources per commodity, takes the <b>median</b>, and
+          signs a payload with an ed25519 key. Anyone may relay it; authenticity comes from the
+          signature. Let <i>H</i> be the payload hash and <i>S</i> the signer set:
+        </p>
+        <div class="eq">
+          <span class="row"><span class="lbl">(16)</span>accept ⇔ |{ <i>s</i> ∈ <i>S</i> : verify(<i>H</i>, σ<sub>s</sub>, pub<sub>s</sub>) }| ≥ <i>threshold</i> &nbsp;<span class="lbl">distinct signers (bitmask)</span></span>
+          <span class="row"><span class="lbl">(17)</span><i>t</i><sub>payload</sub> &gt; <i>t</i><sub>lastUpdate</sub> &nbsp;<span class="lbl">strictly increasing ⇒ replay is dead</span></span>
+          <span class="row"><span class="lbl">(18)</span>|<i>P</i><sub>new</sub> − <i>P</i><sub>old</sub>| / <i>P</i><sub>old</sub> ≤ 50% &nbsp;<span class="lbl">single-update jump limit</span></span>
+          <span class="row"><span class="lbl">(19)</span>spread(<i>sources</i>) / median &gt; 2% ⇒ freeze &nbsp;<span class="lbl">divergence guard</span></span>
+        </div>
+        <p class="eq-note">
+          Domain separation (<code>PRICE_DOMAIN</code>) prevents cross-deployment or cross-message
+          replay. Keys live in a set: writing slot <i>i</i> revokes whatever was there.
+        </p>
+        <h3>7.1 Freshness model (two different clocks)</h3>
+        <table class="doc-table">
+          <thead><tr><th>Clock</th><th>Value</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td>On-chain mint guard</td><td>6 h</td><td>minting is <b>refused</b> on stale prices (safety, eq. 6)</td></tr>
+            <tr><td>API/monitor health SLA</td><td>26 h</td><td>when the feed is reported UNHEALTHY — i.e. “the scheduled push actually missed”</td></tr>
+          </tbody>
+        </table>
+        <p class="eq-note">
+          They are intentionally different: the first is a safety property, the second is a
+          monitoring threshold matched to the daily push cadence. Consequence, stated plainly:
+          with a daily push, minting is only available within 6 h of a push.
+        </p>
+
+        <h2 id="f8">8. Rebalancing (RTRA)</h2>
+        <div class="eq">
+          <span class="row"><span class="lbl">(20)</span>Δ<i>A<sub>i</sub></i> = ( <i>w<sub>i</sub></i> − <i>V<sub>i</sub></i> / <span class="big">Σ</span><sub><i>j</i></sub> <i>V<sub>j</sub></i> ) · <i>T</i></span>
+        </div>
+        <ul class="where">
+          <li><i>ΔA<sub>i</sub></i> — value to trade in asset <i>i</i>; <i>w<sub>i</sub></i> — target weight; <i>V<sub>i</sub></i> — current holding; <i>T</i> — total reserve.</li>
+          <li><b>Trigger:</b> drift-based, and risk-adaptive — a frozen asset is not traded, and high volatility / low liquidity raises the trigger threshold.</li>
+          <li><b>Execution is deliberately out of scope:</b> Planet does <b>not</b> build a DEX/AMM/order-book. Trades happen on external venues.</li>
+        </ul>
+
+        <h2 id="f9">9. Governance &amp; the DAO plan</h2>
+        <h3>9.1 What the original whitepaper (v1.0) planned</h3>
+        <p>
+          The first whitepaper (v1.0, Solana era) specified a governance token <b>PLTG</b>, fixed at
+          <b>1,000,000,000</b> units, with a published allocation and vesting schedule:
+        </p>
+        <table class="doc-table">
+          <thead><tr><th>Bucket</th><th>Share</th><th>Vesting</th></tr></thead>
+          <tbody>
+            <tr><td>Community incentives</td><td>40%</td><td>5-year linear (liquidity mining)</td></tr>
+            <tr><td>Protocol treasury</td><td>25%</td><td>DAO-controlled, ecosystem</td></tr>
+            <tr><td>Core team</td><td>15%</td><td>2-year lock + 3-year linear</td></tr>
+            <tr><td>Investors</td><td>12%</td><td>1-year lock + 2-year linear</td></tr>
+            <tr><td>Public sale</td><td>8%</td><td>fully released at TGE</td></tr>
+          </tbody>
+        </table>
+        <p>The DAO was to control, by PLTG vote:</p>
+        <ul>
+          <li><b>commodity weights</b> <i>w<sub>i</sub></i> — “adjusted quarterly by DAO vote”;</li>
+          <li><b>fee rates</b> (stated range 0.3%–0.8%);</li>
+          <li><b>the PPI deviation thresholds</b> (±3% default);</li>
+          <li><b>the choice of reserve custodian</b>.</li>
+        </ul>
+        <p>
+          PLTG was to capture value two ways: <b>staking dividends</b> — a share of fees paid
+          periodically in USDC — and <b>voting power</b>. Liquidity providers of the PLT/USDC pool
+          were to receive PLTG rewards. The roadmap scheduled <b>DAO governance launch in Q2 2026</b>.
+          Anti-fragility commitments included spreading reserve assets across 10+ venues and a
+          minimum collateral ratio of <b>105%</b>.
+        </p>
+        <p class="eq-note">
+          Note the v1 fee split was <b>45 / 30 / 25</b> (buyback-burn / reserve / staking); the
+          implemented split is now <b>30 / 50 (+10 risk) / 20</b>, i.e. the reserve bucket was
+          re-weighted upward. This is a deliberate change, not an oversight.
+        </p>
+
+        <h3>9.2 What is live today (and what is not)</h3>
+        <table class="doc-table">
+          <thead><tr><th>v1 DAO element</th><th>Today</th></tr></thead>
+          <tbody>
+            <tr><td>PLTG token, fixed supply 1e9</td><td><span class="tag impl">implemented</span> — deployed; supply verified on-chain</td></tr>
+            <tr><td>PLTG staking</td><td><span class="tag impl">implemented</span> — <code>stake</code>/<code>unstake</code></td></tr>
+            <tr><td>Staking dividends (fee revenue share)</td><td><span class="tag impl">implemented</span> — pro-rata reward-per-share, owner-notified</td></tr>
+            <tr><td>Stake-weighted parameter voting</td><td><span class="tag impl">implemented</span> — but <b>advisory</b>: proposals record the outcome and do not execute on-chain</td></tr>
+            <tr><td>DAO actually controlling weights / fees / thresholds</td><td><span class="tag design">design</span> — parameter control is currently the <b>owner (timelock)</b>; the vote only signals</td></tr>
+            <tr><td>DAO choosing the reserve custodian</td><td><span class="tag future">future</span> — no custodian exists yet</td></tr>
+            <tr><td>1e9 allocation &amp; vesting schedule (40/25/15/12/8)</td><td><span class="tag future">future</span> — the full supply is currently held by the deployer</td></tr>
+          </tbody>
+        </table>
+        <p class="callout">
+          <b>Honest summary.</b> The <b>economic layer</b> of the DAO (PLTG staking and fee
+          dividends) is implemented and tested. The <b>decision layer</b> is not: votes are
+          advisory, and real parameter authority sits with the owner behind a 60-second timelock on
+          testnet. Closing that gap — binding, executed proposals — is a deliberate design step, not
+          a claim we make today.
+        </p>
+
+        <h3>9.3 Privileged actions and the timelock</h3>
+        <div class="eq">
+          <span class="row"><span class="lbl">(21)</span>Execute possible ⇔ now ≥ <i>eta</i> = proposeTime + <i>delay</i> &nbsp;∧&nbsp; ∃ a pending (dest, body)</span>
+        </div>
+        <p class="eq-note">
+          Owner-gated operations: basket weights / add-asset, fee parameters, limits, oracle
+          signer set, pause, and ownership itself. Ownership changes must themselves go through
+          <code>Propose → delay → Execute</code>; a direct owner call is rejected. The delay gives
+          holders a reaction window, and the timelock’s owner should be a <b>multisig</b> (M-of-N
+          <i>plus</i> delay).
+        </p>
+        <h4>9.3.1 Staking dividend mathematics</h4>
+        <div class="eq">
+          <span class="row"><span class="lbl">(22)</span>accRPS ← accRPS + ⌊ <i>R</i> · 10<sup>12</sup> / <i>S</i> ⌋ &nbsp;&nbsp;<span class="lbl">R = reward, S = total staked</span></span>
+          <span class="row"><span class="lbl">(23)</span>claimable = ⌊ <i>s</i><sub>i</sub> · accRPS / 10<sup>12</sup> ⌋ − debt<sub>i</sub></span>
+          <span class="row"><span class="lbl">(24)</span>debt<sub>i</sub> ← ⌊ <i>s</i><sub>i</sub> · accRPS / 10<sup>12</sup> ⌋ &nbsp;&nbsp;<span class="lbl">on every stake/unstake/claim</span></span>
+        </div>
+        <p class="eq-note">
+          A classic reward-per-share accumulator. Note (22) floors: dust stays in the pool rather
+          than being minted. Reconciling that dust is one of the things an auditor should check.
+        </p>
+
+        <h2 id="f10">10. Tokenomics</h2>
+        <table class="doc-table">
+          <thead><tr><th>Token</th><th>Symbol</th><th>Function</th><th>Supply</th></tr></thead>
+          <tbody>
+            <tr><td>Index token</td><td>PLT</td><td>payment / store / unit of account for the index</td><td><b>elastic</b> (mint/burn)</td></tr>
+            <tr><td>Governance token</td><td>PLTG</td><td>parameter voting + fee dividends</td><td><b>fixed</b> 1,000,000,000</td></tr>
+          </tbody>
+        </table>
+        <div class="eq">
+          <span class="row"><span class="lbl">(25)</span>supply<sub>PLT</sub> = <span class="big">Σ</span> minted − <span class="big">Σ</span> burned &nbsp;&nbsp;<span class="lbl">the jetton minter is the single source of truth</span></span>
+        </div>
+        <p class="eq-note">
+          Redemption accounting is mirrored back to core so that the two never drift; the mirror is
+          the one asymmetry the review flagged as by-design (see §11).
+        </p>
+
+        <h2 id="f11">11. Trust &amp; threat model</h2>
+        <table class="doc-table">
+          <thead><tr><th>Actor</th><th>Can</th><th>Cannot</th></tr></thead>
+          <tbody>
+            <tr><td>User</td><td>mint / redeem / stake / vote / transfer — always signing in their own wallet</td><td>—</td></tr>
+            <tr><td>Hot signing key</td><td>submit price payloads (bounded by eq. 16–19)</td><td>touch ownership, parameters or funds</td></tr>
+            <tr><td>Owner</td><td>change parameters after the timelock delay</td><td>act instantly; bypass <code>Propose → delay → Execute</code></td></tr>
+          </tbody>
+        </table>
+        <ul>
+          <li><b>Owner-key compromise</b> is the dominant risk; the delay is the only mitigation —
+              hence multisig + a longer delay before mainnet.</li>
+          <li><b>Hot-key compromise</b> is bounded: the attacker can only push prices inside the
+              jump band and divergence freeze, and can never move funds.</li>
+          <li><b>Payload replay</b> is defeated by the strictly increasing timestamp (eq. 17).</li>
+          <li><b>By design, not fixed:</b> the redemption mirror has no freshness guard (asymmetric
+              with minting), the burn bucket is accounting-only, and proposals do not execute. These
+              are documented, not hidden.</li>
+        </ul>
+
+        <h2 id="f12">12. Evidence</h2>
+        <ul>
+          <li><b>239 tests / 19 files</b>; coverage <b>95.9% lines / 85.1% branches / 91.8% score</b>, with a CI gate that can only ratchet up.</li>
+          <li>An <b>emulation dry-run</b> job validates the deploy scripts before any funds are committed.</li>
+          <li>On-chain verification of the live testnet build: 14 assets, base prices locked, signer = the hot key, owner = the timelock, 14 prices written and read back identical.</li>
+          <li>Independently reproducible from <code>docs/deploy-runbook.md</code>.</li>
+        </ul>
+
+        <h2 id="f13">13. Roadmap, risks and disclaimer</h2>
+        <table class="doc-table">
+          <thead><tr><th>Phase</th><th>Content</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>P0–P3</td><td>TON core, PPI, mint/redeem mirror, stability batch A, CAM phase A, real feeds</td><td><span class="tag impl">done</span></td></tr>
+            <tr><td>P3b</td><td>tokenised ETF fund; trustless redemption</td><td><span class="tag impl">done</span></td></tr>
+            <tr><td>P4</td><td>PLTG DAO — binding, executed proposals; allocation &amp; vesting</td><td><span class="tag design">design</span></td></tr>
+            <tr><td>P5</td><td>RWA reserve + custody + proof-of-reserve + compliance ⇒ the “1:1” variant</td><td><span class="tag future">future</span></td></tr>
+            <tr><td>—</td><td>third-party audit, multisig, bug bounty</td><td><span class="tag design">pending</span></td></tr>
+          </tbody>
+        </table>
+        <p><b>Risks.</b> Divergence from the theoretical index (no reserve); oracle coverage and
+          availability on TON; thin liquidity at cold start; regulatory treatment once real
+          mint/redeem is enabled; and the fact that “soft” stability tools (fees, bonds) are not a
+          substitute for real reserves.</p>
+        <p class="callout">
+          <b>Disclaimer.</b> This document is a technical proposal and a proof-of-concept, not
+          investment advice. It is unaudited. PLT is a synthetic index token with no physical
+          backing; its market price may diverge materially from the theoretical PPI. Do not use it
+          with value you cannot afford to lose.
+        </p>
       </article>
     </main>
 
     <footer class="foot">
       <div class="foot-row">
         <span class="wordmark">Planet</span>
-        <span class="ver">[ v0.1 · TON testnet ]</span>
+        <span class="ver">[ v1.8 · TON testnet ]</span>
       </div>
       <nav class="foot-nav">
         <a href="/">home</a>
@@ -149,5 +567,33 @@
         <a href="/#status">status</a>
       </nav>
     </footer>
+
+    <script>
+      (function () {
+        var btns = Array.prototype.slice.call(document.querySelectorAll("[data-wp]"));
+        var views = { light: document.getElementById("wp-light"), full: document.getElementById("wp-full") };
+        function apply(mode, push) {
+          if (!views[mode]) mode = "light";
+          document.documentElement.setAttribute("data-wp", mode);
+          btns.forEach(function (b) {
+            var on = b.getAttribute("data-wp") === mode;
+            b.classList.toggle("on", on);
+            b.setAttribute("aria-selected", on ? "true" : "false");
+          });
+          try { localStorage.setItem("wp-mode", mode); } catch (e) {}
+          if (push && history.replaceState) history.replaceState(null, "", "#" + mode);
+        }
+        btns.forEach(function (b) {
+          b.addEventListener("click", function () {
+            apply(b.getAttribute("data-wp"), true);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          });
+        });
+        var h = (location.hash || "").replace("#", "");
+        var saved = null;
+        try { saved = localStorage.getItem("wp-mode"); } catch (e) {}
+        apply(h === "full" || h === "light" ? h : saved === "full" ? "full" : "light", false);
+      })();
+    </script>
   </body>
 </html>
