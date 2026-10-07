@@ -53,18 +53,26 @@ fun main() {
     // 3) point the gov at its OWN PLTG jetton wallet (verified on stake receipt).
     gov.sendSetGovWallet(deployer.address, 0, minter.getWalletAddress(gov.address), { value: ton("0.05") });
 
-    // 4) mint the genesis supply to the deployer (the distributor).
-    val step = InternalTransferStep {
-        queryId: 0,
-        jettonAmount: PLTG_SUPPLY as coins,
-        transferInitiator: null,
-        sendExcessesTo: null,
-        forwardTonAmount: 0,
-        forwardPayload: beginCell().endCell().beginParse(),
-    };
-    // The wrapper's sendMintNewJettons takes the step STRUCT (it wraps it into a cell itself).
-    minter.sendMintNewJettons(deployer.address, 0, deployer.address, ton("0.05"), step, { value: ton("0.2") });
-    println("minted PLTG genesis supply = {}", PLTG_SUPPLY);
+    // 4) mint the genesis supply to the deployer (the distributor) — ONCE ONLY.
+    //    The PLTG minter's address is DETERMINISTIC (its code and storage are unchanged), so a
+    //    re-run REUSES the existing minter instead of creating a new one. An unconditional mint
+    //    therefore silently doubles the supply — which actually happened (1e15 -> 2e15). Guard on
+    //    the live totalSupply so the genesis allocation is minted exactly once.
+    if ((minter.getJettonData().totalSupply as int) == 0) {
+        val step = InternalTransferStep {
+            queryId: 0,
+            jettonAmount: PLTG_SUPPLY as coins,
+            transferInitiator: null,
+            sendExcessesTo: null,
+            forwardTonAmount: 0,
+            forwardPayload: beginCell().endCell().beginParse(),
+        };
+        // The wrapper's sendMintNewJettons takes the step STRUCT (it wraps it into a cell itself).
+        minter.sendMintNewJettons(deployer.address, 0, deployer.address, ton("0.05"), step, { value: ton("0.2") });
+        println("minted PLTG genesis supply = {}", PLTG_SUPPLY);
+    } else {
+        println("PLTG genesis supply already minted (totalSupply = {}); skipping", minter.getJettonData().totalSupply);
+    }
 
     // Verify the deploys ACTUALLY landed. deploy()/send only broadcast: a drained wallet
     // leaves the accounts uninitialised (and the mint silently un-applied), so read them
