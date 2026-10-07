@@ -114,7 +114,7 @@ function payloadCell(p) {
 
 async function main() {
   const cmd = process.argv[2];
-  if (cmd !== "configure" && cmd !== "register" && cmd !== "push" && cmd !== "e2e" && cmd !== "timelock" && cmd !== "check" && cmd !== "fund" && cmd !== "setsigner") die("usage: node relayer.mjs configure|register|push|e2e|timelock|check|fund|setsigner");
+  if (cmd !== "configure" && cmd !== "register" && cmd !== "push" && cmd !== "e2e" && cmd !== "timelock" && cmd !== "check" && cmd !== "fund" && cmd !== "setsigner" && cmd !== "setowner") die("usage: node relayer.mjs configure|register|push|e2e|timelock|check|fund|setsigner|setowner");
   if (!CORE_RAW) die("PLANET_CORE not set");
   if (!MNEMONIC) die("RELAYER_MNEMONIC not set");
 
@@ -276,6 +276,42 @@ async function main() {
     await send(execute, tl, "0.2");
     await sleep(4000);
     console.log("done: signer key rotated through the timelock");
+    return;
+  }
+
+  if (cmd === "setowner") {
+    // Migrate core ownership (typically to a TON multisig wallet) THROUGH THE CURRENT TIMELOCK:
+    // Propose -> wait out the delay -> Execute. After this the timelock's own owner must be the
+    // multisig, so governance is M-of-N *and* delayed.
+    const TL_RAW = process.env.CORE_TIMELOCK ?? "";
+    const NEW_OWNER = process.env.NEW_OWNER ?? "";
+    const DELAY_MS = Number(process.env.TIMELOCK_WAIT_MS ?? "75000");
+    if (!TL_RAW || !NEW_OWNER) die("CORE_TIMELOCK / NEW_OWNER not set");
+    const tl = Address.parse(TL_RAW);
+    const newOwner = Address.parse(NEW_OWNER);
+    // SetOwner { queryId, newOwner } = 0x10000014
+    const setOwnerBody = beginCell()
+      .storeUint(0x10000014, 32)
+      .storeInt(0, 64)
+      .storeAddress(newOwner)
+      .endCell();
+    // TlPropose { queryId, dest, body } = 0x20000001
+    const propose = beginCell()
+      .storeUint(0x20000001, 32)
+      .storeInt(0, 64)
+      .storeAddress(core)
+      .storeRef(setOwnerBody)
+      .endCell();
+    console.log(`propose SetOwner(${newOwner.toString({ testOnly: true })}) via timelock ${TL_RAW}`);
+    await send(propose, tl, "0.05");
+    console.log(`waiting ${DELAY_MS} ms for the timelock delay...`);
+    await sleep(DELAY_MS);
+    // TlExecute { queryId } = 0x20000002
+    const execute = beginCell().storeUint(0x20000002, 32).storeInt(0, 64).endCell();
+    console.log("execute...");
+    await send(execute, tl, "0.2");
+    await sleep(4000);
+    console.log("done: core ownership migrated through the timelock");
     return;
   }
 
