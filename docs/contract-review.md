@@ -17,13 +17,15 @@
 | 2 | **时间锁 `TlSetOwner` 立即生效**（且这是唯一能改 owner 的路径 → 我们的迁移命令此前不可用） | `planet_timelock.tlHandleSetOwner` | ✅ **已修**：只接受**时间锁自身**为发送者（即只能 `Propose→delay→Execute`）。测试重写为 `ownership changes only through propose + execute`（直接调用被拒 101 ✓ + 走流程成功 ✓） |
 | 3 | **Execute 用 NoBounce，内层失败静默** | `planet_timelock.handleExecute` | ✅ **已修**：改为 `BounceMode.Only256BitsOfBody` → 失败会弹回（交易树可见，可重新提案）。⚠️ 待办：加 `lastBounced` 标记 + getter，让 `oracle-monitor` 能直接巡检 |
 
-**已一并修**：`GV-1` 投票后撤资（`Unstake` 在"最近投过的提案未结束"前锁仓，`ERR_VOTE_LOCKED=411`，含"没投票者不受影响"的测试）· `BD-2` premium 上界 · `BD-3` `totalIssued` 下溢断言。
+**已一并修**：`GV-1` 投票后撤资（`Unstake` 在"最近投过的提案未结束"前锁仓，`ERR_VOTE_LOCKED=411`，含"没投票者不受影响"的测试）· `GV-3` 提案门槛（须持 ≥1% 已质押量，`ERR_PROPOSAL_THRESHOLD=412`）· `TL-3` 延时不可被重置为 0（0→N 允许，N→0 拒绝）· `BD-1` 债券赎回改为**请求 + 运营结算**（用户只能标记 `requested`，只有 owner 能 `SettleRedeem` 置 `redeemed` 并减 `totalIssued` —— 误点不再销毁债权）· `BD-2` premium 上界 · `BD-3` `totalIssued` 下溢断言 · `BK-1` `PlanetBasket` 标注 deprecated + 从站点合约表移除。
 
-**验证**：CI 全绿 —— **238 测试 / 19 文件**，All files 95.9% 行 / 85.7% 分支 / 92.0% 评分。
+**验证**：CI 全绿 —— **239 测试 / 19 文件**，All files 95.9% 行 / 85.1% 分支 / 91.8% 评分（`planet_bond` 98.6% 行）。
 
-**未修（有意留待或已记录）**：`BD-1`（bond 赎回不付款却置位 —— 接真钱前必改，已在合约注释与本文标注）· `C-2`（burn 镜像无新鲜度护栏，需权衡不同步风险）· `C-3`（burn 桶仅记账）· `TL-3`（delay 可为 0）· `GV-2/GV-3`（提案不链上执行 / 无提案门槛）· `BK-1`（PlanetBasket 空壳）。
+**未改代码（有意，已记录）**：
+- `C-2` burn 镜像无新鲜度护栏 —— **不能简单加断言**（镜像来自 minter，PLT 已销毁，拒绝会导致 core 与 minter 供应不同步 ✗）；需专门设计（过期镜像单独记账 / 允许运营修正）。
+- `C-3` burn 桶仅记账、`GV-2` 提案不链上执行 —— **文案/流程问题**，已在 `/docs`、`/methodology`、白皮书如实标注为"运营/咨询性质"。
 
-> ⚠️ **重要**：以上修复**只在代码与 CI 里**，**尚未部署** —— 每个合约改动都意味着**新地址**，需要一次**批量重部署**（Core 新地址 + 重配 14 商品篮子 + 重注册签名者 + 时间锁 owner 迁移 + 全站地址更新）。
+> ⚠️ **重要**：以上修复**只在代码与 CI 里**，**尚未部署** —— 每个合约改动都意味着**新地址**，需要一次**批量重部署**（Core 新地址 + 重配 14 商品篮子 + 重注册签名者 + 新时间锁 + owner 迁移 + 全站地址更新）。
 
 
 ---
