@@ -124,13 +124,14 @@ get fun `test redeem below penalty threshold charges the extra fee`() {
     expect(core.reserve()).toEqual(59200); // 1e6 - 1e6*0.96*(1-0.02)
 }
 
-// all assets frozen -> computePpi falls back to 1.0 (den == 0 branch).
-get fun `test ppi falls back when all assets are frozen`() {
+// all assets frozen -> the index is UNDEFINED (0), not a fake 1.0 peg (C-1).
+get fun `test ppi is undefined when all assets are frozen`() {
     val (core, deployer, minter) = coreWith(1000000, false, 0, 0, false, 0, 0);
     core.sendSetBasketAsset(deployer.address, 0, 0, 1000000, 1000000, { value: ton("0.05") });
     core.sendSetCam(deployer.address, 0, 0, minter.address, { value: ton("0.05") });
     core.sendCamUpdate(minter.address, 0, 0, 1000000, 0, 1000000, 2, 1000, { value: ton("0.05") });
-    expect(core.ppi()).toEqual(1000000);
+    // C-1: 1.0 used to slip through handleMint's band check and let minting proceed.
+    expect(core.ppi()).toEqual(0);
     expect(core.assetAt(0).riskState).toEqual(2);
 }
 

@@ -76,6 +76,8 @@ get fun `test ownership changes only through propose + execute`() {
     // The only path: propose TlSetOwner (0x20000005) against the timelock itself, then execute.
     // Execute replays the body from the timelock, so the sender is the timelock — which is the
     // one sender allowed to change ownership.
+    // (Put the delay back to 0 so the proposal can actually execute inside the test.)
+    tl.sendTlSetDelay(owner.address, 0, 0, { value: ton("0.05") });
     val body = beginCell()
         .storeUint(0x20000005, 32)
         .storeInt(0, 64)
