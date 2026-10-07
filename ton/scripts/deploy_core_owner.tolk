@@ -13,7 +13,7 @@ import "@wrappers/PlanetCore.gen"
 
 fun main() {
     val deployer = scripts.wallet("deployer");
-    val core = PlanetCore.fromAddress(address("kQAwzh3O-52-QBtB8JFFTjtNaKFhw-uJMkd-zdnoHoGibzcU"));
+    val core = PlanetCore.fromAddress(address("kQBUIDOcKIQZS_AMXjOL3usH69c3HIo0YudLoo_49eE0X2NJ"));
 
     // Timelock: 60s reaction window, owned by the deployer (production: a multisig).
     val tl = PlanetTimelock.fromStorage({

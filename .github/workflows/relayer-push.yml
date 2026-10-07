@@ -21,6 +21,7 @@ jobs:
       run:
         working-directory: relayer
     env:
+      TON_ENDPOINT: ${{ secrets.TON_API_KEY != '' && format('https://testnet.toncenter.com/api/v2/jsonRPC?api_key={0}', secrets.TON_API_KEY) || 'https://testnet.toncenter.com/api/v2/jsonRPC' }}
       PLANET_CORE: ${{ inputs.core || 'kQAwzh3O-52-QBtB8JFFTjtNaKFhw-uJMkd-zdnoHoGibzcU' }}
       ASSETS_JSON: assets.example.json
     steps:

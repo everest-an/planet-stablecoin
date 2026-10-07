@@ -48,3 +48,4 @@ relayer/.env
 
 # vite dev log
 app-tg/dev.log
+relayer/_check.mjs
