@@ -78,3 +78,23 @@
 
 **不要"把私有仓直接转公开"** ✗ —— git 历史里的密钥、客户名单、内部判断**都会跟着一起公开** ✗✓。
 **用"裁剪快照 + 干净镜像"** ✓ —— 多花 30 分钟，省掉不可逆的损失 ✓。
+
+---
+
+## 9. Incident note (PRIVATE - this file is export-ignore'd, never published)
+
+**2026-10-07 - Telegram bot token (@Gavis0bot)**
+
+- The bot token 865...HTk has been **pasted into a chat transcript twice**. It is therefore
+  **public knowledge** and must be treated as compromised.
+- **Checked at the time:** getMe returned ok (token live); getWebhookInfo url was **empty**
+  (no attacker webhook redirect); getMyCommands / descriptions were **unchanged**. So the leak had
+  **not been exploited** as of that check.
+- **Decision (owner):** acceptable for the testnet phase, because the bot holds no value and executes
+  no on-chain action. **Rotate before mainnet** - tracked as B9 in docs/mainnet-readiness.md.
+- **Separate real defect found during the check:** the webhook is **not registered**, so the bot
+  **receives no messages at all** - /status, /faq etc. do not work. Fix by calling setWebhook to
+  /api/tg-webhook with a secret_token, and set the same value in Vercel as TG_WEBHOOK_SECRET.
+- **Rule going forward:** never let a live secret pass through a chat. Either set it yourself in a
+  terminal, or write it to a file and let the tooling read the file (the path may be logged; the
+  value must not be).

@@ -37,6 +37,7 @@
 | B6 | 监控/告警 | ✅ | **`/api/v1/oracle` 健康端点**（新鲜度/签名阈值/权重和/frozen）+ `oracle-monitor.yml` 每 2 小时巡检，**状态翻转才告警**（TG + 工作流失败双信号） |
 | B7 | 应急预案（pause/熔断） | 🟡 | 合约有 `SetPaused`/偏离冻结/新鲜度护栏；需成文 runbook + 值班 |
 | B8 | 部署脚本"假成功"防护 | ✅ | `deploy.tolk` / `deploy_gov.tolk` 部署后**读回校验**（gas 不足会响亮失败） |
+| B9 | **Bot token 轮换 + webhook 注册** | 🟡 | 上线前**轮换 Telegram bot token**（Vercel env `TG_BOT_TOKEN` + GH secret 同步更新）；并**注册 webhook 到 `/api/tg-webhook`**（当前 webhook 未设置 ⇒ bot 收不到消息）；webhook 应带 `secret_token` 并同步 Vercel `TG_WEBHOOK_SECRET` |
 
 ## C. 预言机与数据
 
