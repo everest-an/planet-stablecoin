@@ -1,6 +1,6 @@
 # TON Grant Application — Commodity / RWA Tokenisation Stack
 
-> **Draft.** Fill the ⟨bracketed⟩ fields, then submit through the current TON Foundation grant form.
+> **Draft.** Applicant entity: **Everest Holdings Group（珠峰控股集团）**. Submit through the TON Builders Portal — see the appendix for the verified 2026 route.
 > **Strategy note:** grants favour **public goods**. This submission is therefore framed as *"an open-source,
 > audit-ready RWA/commodity tokenisation stack for TON"* — not as "fund our company", even though the
 > milestones happen to be exactly what the roadmap needs.
@@ -42,7 +42,7 @@ A deployed, tested stack — **not a plan**:
 | Deployment runbook + **audit-preparation pack** (scope, invariants, trust/threat model, findings register) | ✅ published |
 
 **Live demo:** `https://ppppp.space/dashboard` · **Whitepaper:** `https://ppppp.space/whitepaper`
-**Repo:** ⟨GitHub URL⟩
+**Repo:** a curated public mirror of the code and public docs — see `docs/grants/public-repo-manifest.md` for exactly what is included (link to be filled after publishing).
 
 ## 5. Why TON specifically
 
@@ -78,7 +78,7 @@ infrastructure burn.
 
 ## 8. Team & track record
 
-⟨Name / handle / location⟩ — built and shipped: the contracts (239 tests, CI-gated), the signed
+**Everest Holdings Group（珠峰控股集团）** — built and shipped: the contracts (239 tests, CI-gated), the signed
 multi-source oracle, the timelock, the live dashboard/API, the Telegram Mini App, and the deployment
 runbook. Prior work is public in the repository.
 
@@ -104,7 +104,7 @@ where the trade-finance gap is **$74–92bn** and only ~25% of West African trad
   **unaudited**, and is explicitly *not* a stablecoin and *not* fully collateralised.
 - Regulatory treatment of tokenised commodities varies by jurisdiction and remains with the
   issuer/licensed partners; nothing here is legal advice.
-- ⟨Anything you want to add or omit.⟩
+- The maintainer entity (Everest Holdings Group，珠峰控股集团) is disclosed and prepared to complete KYC with the programme.
 
 ---
 
