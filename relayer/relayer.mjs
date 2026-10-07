@@ -215,11 +215,11 @@ async function main() {
     // Multi-source oracle: register this key at slot 0, then set threshold 1.
     const cnt = Number((await runGet(core, "signerCount")).stack.readBigNumber());
     if (cnt > 0) {
-      const existing = (await runGet(core, "signerAt", [{ type: "int", value: 0n }])).stack.readBigNumber();
-      if (existing === pubKey) {
-        console.log("signer already at slot 0; skipping");
-        return;
-      }
+      // A signer is already configured: NEVER silently overwrite it. Once a signer exists,
+      // rotation must go through the timelock (setsigner) - overwriting here would clobber
+      // the dedicated hot key with the owner key in the same run (breaking key separation).
+      console.log("signer already configured (signerCount=" + cnt + "); skipping - rotate via the timelock instead");
+      return;
     }
     const set = beginCell().storeUint(OP_SET_SIGNER, 32).storeInt(0, 64).storeInt(0, 64).storeUint(pubKey, 256).endCell();
     console.log("registering signer key at slot 0...");
