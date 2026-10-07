@@ -11,11 +11,20 @@
 
 ## 0. 摘要（先修这三个）
 
-| 排名 | 发现 | 位置 | 为什么先修 |
+| 排名 | 发现 | 位置 | 状态 |
 |---|---|---|---|
-| 1 | **全冻结时 PPI 回落 1.0，且铸造照样通过** | `planet_core.computePpi` + `handleMint` | 数据全坏时仍能按**伪造指数**铸币，储备/供应被错误记价 |
-| 2 | **时间锁的 `TlSetOwner` 立即生效** | `planet_timelock.tlHandleSetOwner` | 当前 owner（或被盗 owner）可**绕过 60s 窗口**换 owner；且**这也是唯一能改 owner 的路径** → 顺带说明我们的迁移命令此前不可用 |
-| 3 | **时间锁 Execute 用 NoBounce，内层失败静默** | `planet_timelock.handleExecute` | 提案被 Core 拒绝时**无人知晓**，`hasPending` 还已清空 |
+| 1 | **全冻结时 PPI 回落 1.0，且铸造照样通过** | `planet_core.computePpi` + `handleMint` | ✅ **已修**：`den == 0` 返回 **0**；`handleMint` 增加 `assert (currentPpi > 0) throw ERR_NO_ACTIVE_ASSETS(123)`。测试：`ppi is undefined when every asset is frozen`（纯函数）、`mint is rejected when the index is undefined`（部署）、并把旧测试 `ppi falls back…` 改为断言 **0** |
+| 2 | **时间锁 `TlSetOwner` 立即生效**（且这是唯一能改 owner 的路径 → 我们的迁移命令此前不可用） | `planet_timelock.tlHandleSetOwner` | ✅ **已修**：只接受**时间锁自身**为发送者（即只能 `Propose→delay→Execute`）。测试重写为 `ownership changes only through propose + execute`（直接调用被拒 101 ✓ + 走流程成功 ✓） |
+| 3 | **Execute 用 NoBounce，内层失败静默** | `planet_timelock.handleExecute` | ✅ **已修**：改为 `BounceMode.Only256BitsOfBody` → 失败会弹回（交易树可见，可重新提案）。⚠️ 待办：加 `lastBounced` 标记 + getter，让 `oracle-monitor` 能直接巡检 |
+
+**已一并修**：`GV-1` 投票后撤资（`Unstake` 在"最近投过的提案未结束"前锁仓，`ERR_VOTE_LOCKED=411`，含"没投票者不受影响"的测试）· `BD-2` premium 上界 · `BD-3` `totalIssued` 下溢断言。
+
+**验证**：CI 全绿 —— **238 测试 / 19 文件**，All files 95.9% 行 / 85.7% 分支 / 92.0% 评分。
+
+**未修（有意留待或已记录）**：`BD-1`（bond 赎回不付款却置位 —— 接真钱前必改，已在合约注释与本文标注）· `C-2`（burn 镜像无新鲜度护栏，需权衡不同步风险）· `C-3`（burn 桶仅记账）· `TL-3`（delay 可为 0）· `GV-2/GV-3`（提案不链上执行 / 无提案门槛）· `BK-1`（PlanetBasket 空壳）。
+
+> ⚠️ **重要**：以上修复**只在代码与 CI 里**，**尚未部署** —— 每个合约改动都意味着**新地址**，需要一次**批量重部署**（Core 新地址 + 重配 14 商品篮子 + 重注册签名者 + 时间锁 owner 迁移 + 全站地址更新）。
+
 
 ---
 
