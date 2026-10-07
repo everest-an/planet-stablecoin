@@ -23,6 +23,7 @@ const ERR_BAD_PROPOSAL = 407;
 const ERR_ALREADY_VOTED = 408;
 const ERR_VOTE_CLOSED = 409;
 const ERR_NO_PROPOSAL = 410;
+const ERR_VOTE_LOCKED = 411; // stake still locked by an unclosed proposal you voted on (GV-1)
 
 // ---------------- Storage ----------------
 
@@ -178,6 +179,16 @@ fun handleUnstake(sender: address, msg: Unstake) {
     var storage = lazy GovStorage.load();
     assert (!storage.paused) throw ERR_PAUSED;
     assert (msg.amount > 0) throw ERR_BAD_AMOUNT;
+    // GV-1: a vote must not be free. Voting power is read from the CURRENT stake, so without a
+    // lock a staker could vote and immediately withdraw, keeping the vote and losing nothing.
+    // The stake stays locked until the proposal they last voted on has closed.
+    val lv = storage.lastVote.get(sender);
+    if (lv.isFound) {
+        val pl = storage.proposals.get(lv.loadValue());
+        if (pl.isFound) {
+            assert ((blockchain.now() as int64) > pl.loadValue().endTs) throw ERR_VOTE_LOCKED;
+        }
+    }
     val lk = storage.stakes.get(sender);
     assert (lk.isFound) throw ERR_NOT_STAKER;
     val s = lk.loadValue();

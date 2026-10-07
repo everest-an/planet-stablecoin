@@ -52,6 +52,7 @@ const ERR_BAD_THRESHOLD = 119;
 const ERR_BAD_OWNER = 120;
 const ERR_BAD_RISK = 121;
 const ERR_BAD_AMOUNT = 122;
+const ERR_NO_ACTIVE_ASSETS = 123; // no priced (non-frozen) asset: the index is undefined (C-1)
 
 // Cap the redeem fee so the payout can never go negative (defends against a far
 // below-peg PPI inflating the reserve through a negative fee → AR3).
@@ -365,6 +366,11 @@ fun weightsSum(assets: map<int64, CoreAsset>, assetCount: int64): int64 {
 //   PPI = Σ_active w_i·(P_i/Pb_i) / Σ_active w_i
 // Frozen assets (riskState == 2) are excluded so a bad feed cannot pollute the index;
 // with nothing frozen this reduces to the plain weighted index.
+//
+// C-1: with NO active asset the index is UNDEFINED and we return 0 — never 1.0. Returning 1.0
+// used to look like a healthy peg: `handleMint`'s band check (|PPI-1| <= 15%) passed and the
+// protocol happily minted against a fabricated index. 0 is a visible "no valid price" that
+// every consumer (mint guard, API, dashboard) can act on.
 fun computePpi(assets: map<int64, CoreAsset>, assetCount: int64): int64 {
     var num: int = 0;   // Σ_active w_i·(P_i/Pb_i)
     var den: int = 0;   // Σ_active w_i
@@ -378,7 +384,7 @@ fun computePpi(assets: map<int64, CoreAsset>, assetCount: int64): int64 {
         i += 1;
     }
     if (den == 0) {
-        return PPI_SCALE;   // all assets frozen: fall back to 1.0
+        return 0;   // all assets frozen / empty basket: no valid index
     }
     return (num * PPI_SCALE / den) as int64;
 }
@@ -446,6 +452,8 @@ fun handleMint(sender: address, msgValue: coins, msg: Mint) {
         assert ((blockchain.now() as int64) - os.lastOracleUpdate <= MAX_ORACLE_AGE) throw ERR_STALE_PRICE;
     }
     // stability: reject mint when PPI is far off peg (hard band), and enforce per-tx cap
+    // C-1: an undefined index (all assets frozen -> 0) must block minting outright.
+    assert (storage.currentPpi > 0) throw ERR_NO_ACTIVE_ASSETS;
     assert (diffAbs(storage.currentPpi, PPI_SCALE) <= BAND_FREEZE) throw ERR_DEVIATION;
     val lim = Limits.fromCell(storage.limitsState);
     assert (lim.maxPerTx == 0 || msg.amount <= lim.maxPerTx) throw ERR_LIMIT;

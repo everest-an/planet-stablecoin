@@ -106,11 +106,16 @@ fun handleExecute(sender: address, msg: TlExecute) {
     // rights on Core). Carry the attached value so the inner message is funded.
     // Clear pending BEFORE sending: if the send reverts, the timelock is not left in a
     // stuck "pending" state (the action can simply be re-proposed) — TL2.
+    //
+    // TL-2: the inner message is BOUNCING, not NoBounce. If the target rejects the action the
+    // failure must come back on-chain instead of vanishing — a silent failure here means the
+    // proposer believes a privileged change happened when it did not. The bounce is the signal
+    // (visible in the transaction tree) and the action can be re-proposed.
     storage.hasPending = false;
     storage.save();
 
     val out = createMessage({
-        bounce: BounceMode.NoBounce,
+        bounce: BounceMode.Only256BitsOfBody,
         value: 0,
         dest: storage.dest,
         body: storage.body,
@@ -136,7 +141,11 @@ fun handleSetDelay(sender: address, msg: TlSetDelay) {
 
 fun tlHandleSetOwner(sender: address, msg: TlSetOwner) {
     var storage = lazy TimelockStorage.load();
-    assert (sender == storage.owner) throw TL_ERR_NOT_OWNER;
+    // TL-1: ownership may ONLY change through Propose -> delay -> Execute. Execute replays the
+    // body from THIS contract back to itself, so the sender here is the timelock. Accepting the
+    // owner directly would let a (possibly stolen) owner key hand over ownership with no delay
+    // window at all — the whole point of the contract.
+    assert (sender == contract.getAddress()) throw TL_ERR_NOT_OWNER;
     storage.owner = msg.newOwner;
     storage.save();
 }

@@ -12,6 +12,7 @@ const ERR_NOT_OPEN = 200;
 const ERR_NO_BOND = 201;
 const ERR_ALREADY_REDEEMED = 202;
 const ERR_ZERO_AMOUNT = 203;
+const ERR_BAD_PREMIUM = 204;
 
 struct BondRec {
     principal: int64    // USDC contributed (mock units)
@@ -90,6 +91,8 @@ fun handleSetOpen(sender: address, msg: SetOpen) {
 fun handleSetPremium(sender: address, msg: SetPremium) {
     var storage = lazy BondStorage.load();
     assert (sender == storage.owner) throw ERR_NOT_OWNER;
+    // BD-2: an unbounded premium could inflate every face value without limit.
+    assert (msg.premiumBps >= 0 && msg.premiumBps <= BPS_DENOM) throw ERR_BAD_PREMIUM;
     storage.premiumBps = msg.premiumBps;
     storage.save();
 }
@@ -123,6 +126,12 @@ fun handleRedeem(sender: address, msg: Redeem) {
     assert (lookup.isFound) throw ERR_NO_BOND;
     val b = lookup.loadValue();
     assert (!b.redeemed) throw ERR_ALREADY_REDEEMED;
+    // BD-3: guard the subtraction (an int64 underflow would wrap to a huge positive number).
+    assert (storage.totalIssued >= b.face) throw ERR_ZERO_AMOUNT;
+    // BD-1: NOTE — this path marks the claim redeemed WITHOUT paying anything, so a holder who
+    // calls it loses the claim permanently. It is harmless only because PlanetBond is an
+    // unwired mock ledger with no funds today. Before ANY real value is attached, redemption
+    // must become operator-settled (pay first, then mark) — see docs/contract-review.md.
     storage.bonds.set(sender, BondRec {
         principal: b.principal,
         face: b.face,

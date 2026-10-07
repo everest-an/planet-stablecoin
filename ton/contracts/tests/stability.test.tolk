@@ -72,6 +72,14 @@ get fun `test band fee applies on mint off-peg`() {
     expect(core.riskFund()).toEqual(1000);
 }
 
+get fun `test mint is rejected when the index is undefined`() {
+    val (core, deployer, alice) = deployCoreStability();
+    // C-1: an undefined index (0) must block minting outright — previously 1.0 slipped through.
+    core.sendUpdatePrice(deployer.address, 0, 0, { value: ton("0.05") });
+    expect(core.sendMint(alice.address, 0, 1000000, { value: ton("0.5") }))
+        .toHaveFailedTx({ from: alice.address, to: core.address, exitCode: 123 });
+}
+
 get fun `test extreme deviation freezes mint`() {
     val (core, deployer, alice) = deployCoreStability();
     core.sendUpdatePrice(deployer.address, 0, 1200000, { value: ton("0.05") }); // 20% dev

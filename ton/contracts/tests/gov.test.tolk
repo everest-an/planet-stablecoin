@@ -91,6 +91,22 @@ get fun `test unstake reduces the stake and total`() {
     expect(gov.stakeOf(alice.address).amount).toEqual(600000);
 }
 
+get fun `test a staker cannot unstake before the voted proposal closes`() {
+    // GV-1: voting power is the CURRENT stake, so without a lock a staker could vote and
+    // immediately withdraw — keeping the vote and risking nothing.
+    val (gov, _, alice, gw) = deployGov();
+    stake(gov, gw, alice, 1000000);
+    gov.sendPropose(alice.address, 0, 1, 1, 5, 4102444800, { value: ton("0.05") });
+    gov.sendVote(alice.address, 0, 1, true, { value: ton("0.05") });
+    expect(gov.sendUnstake(alice.address, 0, 400000, { value: ton("0.1") }))
+        .toHaveFailedTx({ from: alice.address, to: gov.address, exitCode: 411 });
+
+    // Someone who never voted is unaffected.
+    val bob = testing.treasury("bob2");
+    stake(gov, gw, bob, 1000000);
+    expect(gov.sendUnstake(bob.address, 0, 100000, { value: ton("0.1") })).toHaveSuccessfulTx();
+}
+
 get fun `test unstake beyond the stake is rejected`() {
     val (gov, _, alice, gw) = deployGov();
     stake(gov, gw, alice, 1000000);

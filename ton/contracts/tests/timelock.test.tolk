@@ -63,11 +63,26 @@ get fun `test second propose while one is pending is rejected`() {
     expect(res).toHaveFailedTx({ from: owner.address, to: tl.address, exitCode: 211 });
 }
 
-get fun `test owner can set delay and transfer ownership`() {
+get fun `test ownership changes only through propose + execute`() {
     val (tl, owner, other) = deployTimelock(0);
     tl.sendTlSetDelay(owner.address, 0, 3600, { value: ton("0.05") });
     expect(tl.delay()).toEqual(3600);
-    tl.sendTlSetOwner(owner.address, 0, other.address, { value: ton("0.05") });
+
+    // TL-1: a direct owner call must be rejected — accepting it would let a (possibly stolen)
+    // owner key hand over ownership with no delay window at all.
+    expect(tl.sendTlSetOwner(owner.address, 0, other.address, { value: ton("0.05") }))
+        .toHaveFailedTx({ from: owner.address, to: tl.address, exitCode: 101 });
+
+    // The only path: propose TlSetOwner (0x20000005) against the timelock itself, then execute.
+    // Execute replays the body from the timelock, so the sender is the timelock — which is the
+    // one sender allowed to change ownership.
+    val body = beginCell()
+        .storeUint(0x20000005, 32)
+        .storeInt(0, 64)
+        .storeAddress(other.address)
+        .endCell();
+    tl.sendTlPropose(owner.address, 0, tl.address, body, { value: ton("0.05") });
+    tl.sendTlExecute(owner.address, 0, { value: ton("0.2") });
     expect(tl.tlOwner()).toEqual(other.address);
 }
 

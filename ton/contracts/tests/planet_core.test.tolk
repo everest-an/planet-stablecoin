@@ -64,6 +64,23 @@ get fun `test fee split has no dust loss`() {
     expect(burn + reserve + staking).toEqual(999);
 }
 
+// C-1: with every asset frozen the index is UNDEFINED. It used to fall back to 1.0, which
+// looked like a healthy peg and let minting proceed against a fabricated index.
+get fun `test ppi is undefined when every asset is frozen`() {
+    var assets: map<int64, CoreAsset> = [];
+    assets.set(0, CoreAsset { weight: 500000, basePrice: 1000000, currentPrice: 1000000, volatility: 0, liquidity: 0, riskState: 2 });
+    assets.set(1, CoreAsset { weight: 500000, basePrice: 1000000, currentPrice: 1000000, volatility: 0, liquidity: 0, riskState: 2 });
+    expect(computePpi(assets, 2)).toEqual(0);
+}
+
+get fun `test ppi renormalises over the active assets only`() {
+    // asset 0 frozen, asset 1 active at twice its base -> index reads 2.0 (weight-renormalised)
+    var assets: map<int64, CoreAsset> = [];
+    assets.set(0, CoreAsset { weight: 500000, basePrice: 1000000, currentPrice: 1000000, volatility: 0, liquidity: 0, riskState: 2 });
+    assets.set(1, CoreAsset { weight: 500000, basePrice: 1000000, currentPrice: 2000000, volatility: 0, liquidity: 0, riskState: 0 });
+    expect(computePpi(assets, 2)).toEqual(2000000);
+}
+
 get fun `test RTRA drift sign: underweight is positive`() {
     // target 50%, actual 40% -> positive drift (buy)
     expect(rebalanceDrift(500000, 400, 1000)).toEqual(100000);
