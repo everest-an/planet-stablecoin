@@ -190,7 +190,11 @@
         const chainPpi = num(ppiS[0]) / SCALE;
         const sumW = rows.reduce((a, x) => a + x.weight, 0);
         const recomputed = sumW ? rows.reduce((a, x) => a + x.weight * (x.currentPrice / x.basePrice), 0) / sumW : 0;
-        const near = (a, b) => Math.abs(a - b) <= Math.max(1e-6, Math.abs(b) * 1e-6);
+        // The chain computes the index with INTEGER fixed-point arithmetic; this page recomputes
+        // it with floats from the displayed prices. A drift of a few parts-per-million is
+        // therefore expected (observed: 4e-6). The tolerance is relative (0.01%) so the check
+        // still catches anything that actually disagrees.
+        const near = (a, b) => Math.abs(a - b) <= Math.max(1e-4, Math.abs(b) * 1e-4);
         return {
           chainPpi,
           recomputed,
