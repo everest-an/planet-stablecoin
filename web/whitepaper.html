@@ -31,12 +31,7 @@
       // Decide the view BEFORE paint so the wrong version never flashes. Without JS both
       // versions are simply shown in full (graceful degradation, and crawlable).
       (function () {
-        // Same-document hash changes do NOT re-run the head script, so the "#light"/"#full"
-        // links would do nothing without this listener.
-        window.addEventListener("hashchange", function () {
-          var m = (location.hash || "").replace("#", "");
-          if (m === "light" || m === "full") apply(m, false);
-        });
+
         var h = (location.hash || "").replace("#", "");
         var saved = null;
         try { saved = localStorage.getItem("wp-mode"); } catch (e) {}
