@@ -64,3 +64,38 @@ git remote add origin <新公开仓 URL> && git push -u origin main
 - [ ] `NOTICE` 里需要补 **vendored TEP-74 的上游许可证**（`ton-blockchain/tolk-bench` ✓ 需核实 ✓）
 - [ ] `SECURITY.md` 里的安全联系邮箱还是占位符 ✓
 - [ ] 建议**每年**复跑一次本构建 + 扫描（依赖/文件会变 ✓）
+
+---
+
+## 6. INCIDENT 2026-10-07 - wrong push target, and the rule that prevents it
+
+**What happened.** After building the mirror I copied the PRIVATE repo's `.git` into the mirror
+directory so I could commit and push it. The mirror directory therefore inherited `origin` =
+`everest-an/planet-stablecoin` (private), and the "public mirror" commit was pushed **to the private
+repo**. Its remote `main` briefly became the mirror tree (150 files) instead of the full private
+tree (206 files).
+
+**Impact.** Private documents disappeared from the private repo's REMOTE. No secret was exposed: the
+tree that was pushed was the mirror, which had already been verified clean. The public repo was not
+affected.
+
+**Repair.** `git push --force origin <known-good-sha>:main` from the intact local clone, then verified
+by file counts and by checking that `docs/HANDOFF.md` and `docs/sales/` were back.
+
+**The rule (why it happened).** Never share or copy a `.git` directory between two repos. A `.git`
+carries the remote URL, so the target of a push is decided by whatever `.git` happens to be present -
+not by your intention.
+
+**The correct procedure (now the only one to use).**
+
+1. `git archive --format=tar -o <tmp>.tar HEAD` in the private repo (tracked files only; no `.git`).
+2. Extract to a scratch directory. **Never** copy `.git` into it.
+3. `git clone https://github.com/everest-an/planet.git <pub>` - clone the PUBLIC repo.
+4. Copy in ONLY the files that actually changed, then `git diff --stat` to confirm the sync.
+5. `git add -A && git commit && git push` - a normal fast-forward. **No --force needed.**
+
+**Checks to run after every publish.**
+- `git -C <pub> ls-files | Measure-Object` -> the expected count (149)
+- `git -C <pub> ls-files | Select-String 'testnet-wallet|\.secrets|docs/sales|docs/grants|HANDOFF|\.pdf` -> must be empty
+- `git -C <pub> log --oneline -1` -> confirm the commit landed on the PUBLIC repo
+- `git -C <private> ls-tree -r --name-only origin/main | Measure-Object` -> the FULL private count (206)
