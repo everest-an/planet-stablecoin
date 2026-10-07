@@ -1,9 +1,10 @@
 # 上线主网检查清单（Mainnet Readiness）
 
-> 状态：**未达主网条件** —— 当前为 TON 测试网 PoC。本清单是**与「上不上主网」直接挂钩**的门槛，
+> 状态：**未达主网条件** —— 当前为 TON 测试网 PoC（**v1.8 已部署：10 项合约审查修复全部上链**）。本清单是**与「上不上主网」直接挂钩**的门槛，
 > 区分 **代码/合约（可自控）** 与 **外部依赖（需第三方/RWA/合规）**。
-> 关联：`docs/HANDOFF.md`（唯一可信状态）、`docs/security.md`（威胁模型）、`docs/real-asset-1to1.md`、
-> `docs/competitive-comparison.md`、`docs/audit-report.md`。
+> 关联：**`docs/audit-prep.md`（审计准备包 —— 审计从这里开始）**、`docs/HANDOFF.md`（唯一可信状态）、
+> `docs/adr/0001-immutable-core-upgradeable-oracle-adapter.md`（升级模型）、`docs/deploy-runbook.md`（迁移 runbook）、
+> `docs/contract-review.md`（10 项发现与修复）、`docs/security.md`、`docs/competitive-comparison.md`。
 
 图例：✅ 已就绪 · 🟡 部分/进行中 · ⬜ 未做（阻塞上线）
 
@@ -13,16 +14,16 @@
 
 | # | 项 | 状态 | 说明 |
 |---|---|---|---|
-| A1 | 测试覆盖 + CI 门禁 | ✅ | **234 测试 / 19 文件**，All files **95.9% 行 / 88.2% 分支 / 94.0% 评分**（门禁 90，棘轮只升不降），CI 全绿 |
+| A1 | 测试覆盖 + CI 门禁 | ✅ | **239 测试 / 19 文件**，All files **95.9% 行 / 85.1% 分支 / 91.8% 评分**（门禁 90，棘轮只升不降），CI 全绿 |
 | A2 | 链上多资产 PPI + 铸赎 + 赎回镜像 | ✅ | 篮子 **14 商品**、权重各 ≤15% 且和 = 100%（链上强制） |
 | A3 | 预言机**多源 + 门限** | ✅ | Yahoo+Sina 双源中位数；M-of-N 签名集（`SetSigner`/`SetThreshold`，含 M>2）；**域分离**防跨部署重放 |
 | A4 | 价格篡改防护 | ✅ | 时间戳单调 + 50% 跳变护栏 + 源间 >2% 冻结（frozen 剔除并重归一化） |
 | A5 | owner 治理 | ✅ | `SetOwner` + `PlanetTimelock`（Propose→delay→Execute，链上往返验证）；**治理级篮子管理** `GovernanceAddAsset`/`GovernanceSetWeight`（支持 `weight=0` 软下线，basePrice 永不可改） |
 | A6 | **铸赎新鲜度护栏** | ✅ | `MAX_ORACLE_AGE = 6h`：预言机停摆时 **拒绝按陈旧价铸币**（此前是静默风险） |
 | A7 | 跨合约 bounce 处理 | ✅ | 所有自研合约 `onBouncedMessage` 忽略弹回体（防误解析） |
-| A8 | **第三方审计** | ⬜ | **阻塞项**。审计 PPI 数学/铸赎/镜像/护栏/CAM/Fund/Gov + 形式化不变量 |
+| A8 | **第三方审计** | ⬜ | **阻塞项**。**审计准备包已完成**（`docs/audit-prep.md`：范围 / 不变量 / 信任模型 / 发现登记册 / 证据 / 待答问题）；待采购外部审计 |
 | A9 | 漏洞赏金 | ⬜ | 建议审计后启动 |
-| A10 | 升级/迁移 runbook | ⬜ | 合约不可变；需成文「迁移 = 新合约 + `SetOwner` 切流」（每次都是新地址 + 重配篮子） |
+| A10 | 升级/迁移 runbook | ✅ | **ADR-0001**（核心不可变 + 逻辑变更走迁移）+ **`docs/deploy-runbook.md`**（顺序 / 地址刷新 / 验证 / 幂等陷阱）；v1.8 重建已按它完整演练一次 |
 
 ## B. 密钥与运营安全
 
