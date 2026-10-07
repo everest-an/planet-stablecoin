@@ -22,7 +22,7 @@ jobs:
       run:
         working-directory: relayer
     env:
-      PLANET_CORE: kQAwzh3O-52-QBtB8JFFTjtNaKFhw-uJMkd-zdnoHoGibzcU
+      PLANET_CORE: kQBUIDOcKIQZS_AMXjOL3usH69c3HIo0YudLoo_49eE0X2NJ
       RELAYER_MNEMONIC: ${{ secrets.TON_WALLET_MNEMONIC }}
     steps:
       - uses: actions/checkout@v4
@@ -42,7 +42,7 @@ jobs:
 
       - name: Rotate the signer through the timelock
         env:
-          CORE_TIMELOCK: kQBo0345y-RGi49-7WWaWAHyyNtiWe-JrT44iO3G9Cyom6YK
+          CORE_TIMELOCK: kQC_j4CrhPvbAX19_4C-PAoGNWBsaxj4GN5v6mIhGb7ctxQ1
           NEW_SIGNER_KEY: "75bc1c11697f7f2bbb61fd37fdde3dcc9ebdb20a05d3bc27f740cddc53d5c8dc"
           TIMELOCK_WAIT_MS: "80000"
         run: node relayer.mjs setsigner
