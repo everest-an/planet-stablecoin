@@ -17,7 +17,7 @@ jobs:
       run:
         working-directory: relayer
     env:
-      PLANET_CORE: kQAwzh3O-52-QBtB8JFFTjtNaKFhw-uJMkd-zdnoHoGibzcU
+      PLANET_CORE: kQBUIDOcKIQZS_AMXjOL3usH69c3HIo0YudLoo_49eE0X2NJ
       DEMO_TIMELOCK: kQCMwDVPftkUbRWPMzJGCjoC4YXnFGfN3myTJ1rbeCuSdPAt
       RELAYER_MNEMONIC: ${{ secrets.TON_WALLET_MNEMONIC }}
     steps:

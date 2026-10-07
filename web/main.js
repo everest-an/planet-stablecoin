@@ -1,7 +1,7 @@
 // Live PPI ticker for the landing site. Reads PlanetCore's `ppi()` over the public TON
 // testnet RPC. Falls back to the previous deployment while a freshly redeployed core is
 // still being configured, and degrades gracefully (shows "—") if the RPC is unavailable.
-const CORE = "kQAwzh3O-52-QBtB8JFFTjtNaKFhw-uJMkd-zdnoHoGibzcU"; // current (v1.7, 14-asset basket + staleness guard)
+const CORE = "kQBUIDOcKIQZS_AMXjOL3usH69c3HIo0YudLoo_49eE0X2NJ"; // current (v1.7, 14-asset basket + staleness guard)
 const CORE_FALLBACK = "kQBUZM0RwN4SXnQDO1q9WzmG2aaiOSD6ybkpaG9LSQ1Aj3Jf"; // previous (populated)
 const ENDPOINT = "https://testnet.toncenter.com/api/v2/runGetMethod";
 

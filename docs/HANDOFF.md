@@ -200,15 +200,15 @@ cd app-tg && npm install && npm run build
 
 | 合约 | 地址 |
 |---|---|
-| **PlanetCore** | `kQAwzh3O-52-QBtB8JFFTjtNaKFhw-uJMkd-zdnoHoGibzcU`（v1.7 代码：SetOwner + M-of-N 签名集 + M>2 + 治理级篮子管理 + **铸赎新鲜度护栏 MAX_ORACLE_AGE=6h**） |
-| **PLT Minter** | `kQAMXsJdK0tklNy5x3Q8Jhw1dAkB6pw6ubREVprusamUcpbq`（admin = Core） |
+| **PlanetCore** | `kQBUIDOcKIQZS_AMXjOL3usH69c3HIo0YudLoo_49eE0X2NJ`（v1.7 代码：SetOwner + M-of-N 签名集 + M>2 + 治理级篮子管理 + **铸赎新鲜度护栏 MAX_ORACLE_AGE=6h**） |
+| **PLT Minter** | `kQC6zZ83qploNLCy0MdUNhKkBD9Tx25N-xWF7iDHkd3IJ2k3`（admin = Core） |
 | **PLTG Minter**（治理代币） | `kQDF0ixGco8WW4fqPB3XNdrNJ8vikFNkkyzKbz8hNJiFZ7OD`（固定供应 **1e9 PLTG** 已铸给部署钱包；已实测 `totalSupply=1e15`） |
-| **PlanetGov**（质押/投票） | `kQD4eBl68N4Udu4YPEFrKSKL99mx0To1ihGd-DQP7b1EpaUV`（质押 + **按份额分红**（对应费用桶）+ **按质押量投票**；已接 PLTG minter + `SetGovWallet`） |
+| **PlanetGov**（质押/投票） | `kQAK5XcQdykCOrA2-uFraTxq9CFD1NNdK5W4QrwCexNcBYJ3`（质押 + **按份额分红**（对应费用桶）+ **按质押量投票**；已接 PLTG minter + `SetGovWallet`） |
 | **PlanetBasket** | `kQAfGKn_UrUW8LQd92ZWy0h0BrCA_QTBhMqDA1M-PZtyv-r_` |
-| **PlanetBond**（稳定债券） | `kQDMxJXroCmuxBw9Sw7oj9LhO9Y0mLxdPS3Tr4vY-sdq65hz`（isOpen=false, premium=5%） |
+| **PlanetBond**（稳定债券） | `kQDYY-LJED5Xi2j-fnsxEqcYsMj0BWU-XrtV3SiSCu_pwizG`（isOpen=false, premium=5%） |
 | **PlanetFund**（ETF 基金） | `kQAYbx_u7I7yhcYU8yxeewWdh3gnS067IgaWeV8UlYItug1o`（两阶段申购 + 托管 M-of-N 确认按 NAV 铸 + 赎回；含 TEP-74 份额收款/burn 的无信任赎回） |
 | **Fund JettonMinter** | `kQCSnnMlGUIEJvlI_NLG_x0wg-_ZX74AYFIxuLU4YpFeg1sk`（admin = PlanetFund） |
-| **Core / Fund owner 时间锁** | `kQBo0345y-RGi49-7WWaWAHyyNtiWe-JrT44iO3G9Cyom6YK`（delay=**60s**；**`PlanetCore.owner` 已迁移至此**（实测 owner hash=`68d37e39…`）+ `PlanetFund.owner` 同址）→ 特权操作需 `Propose → 60s → Execute` |
+| **Core / Fund owner 时间锁** | `kQC_j4CrhPvbAX19_4C-PAoGNWBsaxj4GN5v6mIhGb7ctxQ1`（delay=**60s**；**`PlanetCore.owner` 已迁移至此**（实测 owner hash=`68d37e39…`）+ `PlanetFund.owner` 同址）→ 特权操作需 `Propose → 60s → Execute` |
 | **PlanetTimelock**（24h，生产用） | `kQDc_iZ7Y8lQ1r_TxXhOXrhKVrjShyyOgp5c2pUwtGGGJGDe`（delay=86400） |
 | **PlanetTimelock**（demo 0s / tl2） | `kQCMwDVPftkUbRWPMzJGCjoC4YXnFGfN3myTJ1rbeCuSdPAt` / `kQAwMedJ1wWbt-zKqw06Ssb7vdeLW_FIbAQd0NmAPjC5v2Mr` |
 | 部署钱包 | `0QBW4GNM-XpAIuIzwrupQKqVOLILHfP6lnD_Xk04L9Yx6Qol`（v4r2；私钥 `ton/.secrets/`，已 gitignore） |

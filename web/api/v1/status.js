@@ -16,7 +16,7 @@
 // (set in the Vercel env, sent as the X-API-Key header) turns a ~20s cold read into a couple of
 // seconds. The key lives only here on the server — never in the browser bundle.
 
-const CORE = process.env.PLANET_CORE || "kQAwzh3O-52-QBtB8JFFTjtNaKFhw-uJMkd-zdnoHoGibzcU";
+const CORE = process.env.PLANET_CORE || "kQBUIDOcKIQZS_AMXjOL3usH69c3HIo0YudLoo_49eE0X2NJ";
 const CORE_FALLBACK = "kQBUZM0RwN4SXnQDO1q9WzmG2aaiOSD6ybkpaG9LSQ1Aj3Jf";
 const ENDPOINT = process.env.TON_ENDPOINT || "https://testnet.toncenter.com/api/v2/runGetMethod";
 const API_KEY = process.env.TON_API_KEY || "";

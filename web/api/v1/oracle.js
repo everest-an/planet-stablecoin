@@ -14,7 +14,7 @@
 // Conventions match /api/v1/status: versioned path, one error envelope, ETag/304,
 // Retry-After on 503. Cache is shorter here (30s) because freshness is the whole point.
 
-const CORE = process.env.PLANET_CORE || "kQAwzh3O-52-QBtB8JFFTjtNaKFhw-uJMkd-zdnoHoGibzcU";
+const CORE = process.env.PLANET_CORE || "kQBUIDOcKIQZS_AMXjOL3usH69c3HIo0YudLoo_49eE0X2NJ";
 const CORE_FALLBACK = "kQBUZM0RwN4SXnQDO1q9WzmG2aaiOSD6ybkpaG9LSQ1Aj3Jf";
 const ENDPOINT = process.env.TON_ENDPOINT || "https://testnet.toncenter.com/api/v2/runGetMethod";
 const API_KEY = process.env.TON_API_KEY || "";
