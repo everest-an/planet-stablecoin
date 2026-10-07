@@ -10,7 +10,7 @@ welcome regardless.
 
 Please **do not** open a public issue for a security problem.
 
-- Email: everest9812@gmail.com
+- Email: e@ppppp.space
 - Or use GitHub's private *"Report a vulnerability"* (Security tab → Advisories).
 
 Please include: the affected contract or file, a description, and a reproduction (a failing test is

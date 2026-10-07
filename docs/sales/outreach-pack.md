@@ -1,6 +1,6 @@
 # 外联包（P0 客户 + P1 伙伴）— 可直接发
 
-> 主体：**Everest Holdings Group Co., Ltd.（珠峰控股集团）** · **Everest An** · `everest9812@gmail.com` · **@EverestAn**
+> 主体：**Everest Holdings Group Co., Ltd.（珠峰控股集团）** · **Everest An** · `e@ppppp.space` · **@EverestAn**
 > 公开仓：**https://github.com/everest-an/planet** · 演示：**https://ppppp.space/dashboard**
 > ⚠️ 全部内容基于**公开信息**（2026-10 检索 ✓）—— **发出前请再核实**（人是否在职 ✓、公司是否仍活跃 ✓）。**不要群发** ✗。
 
@@ -73,7 +73,7 @@
 > Best regards,
 > **Everest An** · Founder
 > **Everest Holdings Group Co., Ltd.（珠峰控股集团）**
-> everest9812@gmail.com · Telegram @EverestAn
+> e@ppppp.space · Telegram @EverestAn
 > Website: https://ppppp.space | Whitepaper: https://ppppp.space/whitepaper | Live product: https://ppppp.space/dashboard
 > If this is not relevant, reply "stop" and I will not contact you again.
 
@@ -113,7 +113,7 @@
 > Best regards,
 > **Everest An** · Founder
 > **Everest Holdings Group Co., Ltd.（珠峰控股集团）**
-> everest9812@gmail.com · Telegram @EverestAn
+> e@ppppp.space · Telegram @EverestAn
 
 ---
 
@@ -148,7 +148,7 @@
 > Best regards,
 > **Everest An** · Founder
 > **Everest Holdings Group Co., Ltd.（珠峰控股集团）**
-> everest9812@gmail.com · Telegram @EverestAn
+> e@ppppp.space · Telegram @EverestAn
 
 ---
 
@@ -180,7 +180,7 @@
 > Best regards,
 > **Everest An** · Founder
 > **Everest Holdings Group Co., Ltd.（珠峰控股集团）**
-> everest9812@gmail.com · Telegram @EverestAn
+> e@ppppp.space · Telegram @EverestAn
 
 ---
 
