@@ -42,7 +42,7 @@ A deployed, tested stack — **not a plan**:
 | Deployment runbook + **audit-preparation pack** (scope, invariants, trust/threat model, findings register) | ✅ published |
 
 **Live demo:** `https://ppppp.space/dashboard` · **Whitepaper:** `https://ppppp.space/whitepaper`
-**Repo:** a curated public mirror of the code and public docs — see `docs/grants/public-repo-manifest.md` for exactly what is included (link to be filled after publishing).
+**Repo:** https://github.com/everest-an/planet — a curated public mirror (see `docs/grants/public-repo-manifest.md` for exactly what is included and what deliberately stays private).
 
 ## 5. Why TON specifically
 
