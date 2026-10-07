@@ -114,3 +114,43 @@ where the trade-finance gap is **$74–92bn** and only ~25% of West African trad
 - Emphasise **public goods** (audit report, docs, templates, reusable primitives).
 - Cite the **DMCC–VARA** framework as market validation and as the reason a **TON-native** option matters.
 - Never promise returns, yields or price stability.
+
+---
+
+# ⚠️ 附：真实申请路径（2026-10 查证，覆盖上文 §"submit through the current form"）
+
+> 上文正文作为**内容素材**仍然可用 ✓；但**投递路径**必须按下面来，否则投错门 ✓。
+
+## A. 机制现状（已核实）
+
+1. **TON Foundation 已不再运行传统的开放 Grant 项目** ✗。一切从 **TON Builders Portal**（eco.ton.org / uilders.ton.org）**注册**开始 —— **注册是强制第一步** ✓。
+2. 两条轨：
+   - **Champion**：高触达（Vertical Lead 带教 + **grants** + **合约审计** + 流量包）——**无公开申请** ✗，靠生态活跃度被识别 ✓。
+   - **Emerging**：经 Portal 申请各支持项目 ✓（优先级随评分而定 ✓）。
+3. ⭐ **一条专门的"非商业轨"持续支持开源工具 / 公共品 / 基础基础设施** ✓ —— **本项目的最佳落点** ✓。
+4. **Simplified DeFi** 垂直的官方描述**点名 RWAs** ✓ —— 与我们的定位直接吻合 ✓。
+5. 评分维度（类 VC）：垂直契合 · 生态影响 · 团队 · **资金与收入** · 产品成熟度 ·  traction ⇒ **"已有可运行产品 + 有营收"能显著加分** ✓（我们的 B2B 收费模式正好补这一项的短板 ✓）。
+
+## B. 立刻可申请的"伙伴资源"（比 grant 更快见效 ✓）
+
+| 资源 | 提供方 | 对我们的价值 |
+|---|---|---|
+| **折扣合约审计** ⭐ | **TonBit** | **直接覆盖 M1（ 审计）的大部分成本** ✓✓ |
+| AWS 最高 **** credits | AWS | 基础设施成本 → 0 |
+| TON API / RPC credits | TON API | 运行成本 → 0 |
+| 钱包集成 + 联合营销 | SafePal | 分发 |
+| **最高  USDT** | **STON.fi grants**（滚动申请） | 小额现金流 ✓ |
+
+## C. 行动顺序（建议）
+
+1. **注册 TON Builders Portal** ✓（强制第一步；把仓库、demo、白皮书、Grant 稿内容填进项目页）。
+2. **提交"非商业轨 / 公共品"申请** ✓（用上文 M1–M3：审计 + 预言机加固 + 开发者套件）。
+3. **同时单独申请 TonBit 的折扣审计** ✓（这是**最快能拿到实质资源**的一条 ✓）。
+4. 领取 **AWS / TON API credits** ✓（立刻降低烧钱 ✓）。
+5. 持续参与生态（Hubs / Demo Days / 开发者频道）→ 争取被识别为 **Champion** ✓。
+
+## D. ⚠️ 一个前置阻塞项（必须先解决）
+
+**仓库目前是私有（private）** ✗ —— 而 grant 评审与审计**都要看代码** ✓。
+⇒ 必须先决定：**① 开源**（推荐 ✓ —— "公共品"叙事本身要求开源 ✓，且这是加分项 ✓）或 **② 只读快照/受限访问**（可接受但弱 ✓）。
+未决定前，申请无法真正投递 ✓。
