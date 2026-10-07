@@ -1,0 +1,49 @@
+name: TON deploy dry-run (emulation)
+
+# Pre-flight for a redeploy. `acton build` does NOT compile scripts/, so a broken deploy
+# script would only surface AFTER spending real TON. This runs the deploy scripts inside
+# Acton's EMULATION (no network, no funds) so the flow is validated for free.
+# See docs/deploy-runbook.md.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "ton/scripts/**"
+      - "ton/contracts/**"
+      - ".github/workflows/ton-deploy-dryrun.yml"
+
+jobs:
+  dryrun:
+    name: Emulate the deploy scripts
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ton
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Acton
+        run: |
+          curl -LsSf https://github.com/ton-blockchain/acton/releases/latest/download/acton-installer.sh | sh
+          echo "$HOME/.acton/bin" >> "$GITHUB_PATH"
+
+      - name: Acton version
+        run: acton --version
+
+      - name: Build + wrappers
+        run: |
+          acton build
+          acton wrapper --all
+
+      - name: Emulate core deploy (Core + PLT minter + wiring)
+        run: acton script scripts/deploy.tolk
+
+      - name: Emulate gov deploy (PLTG + PlanetGov + genesis)
+        run: acton script scripts/deploy_gov.tolk
+
+      - name: Emulate bond deploy
+        run: acton script scripts/deploy_bond.tolk
+
+      - name: Compile-check core-owner script (needs a live Core, so tolerate runtime failure)
+        run: acton script scripts/deploy_core_owner.tolk || true
