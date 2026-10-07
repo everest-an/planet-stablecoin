@@ -17,7 +17,8 @@ const ERR_BAD_PREMIUM = 204;
 struct BondRec {
     principal: int64    // USDC contributed (mock units)
     face: int64         // claim to be repaid (principal + premium)
-    redeemed: bool
+    requested: bool     // the holder asked to redeem — asking never destroys the claim
+    redeemed: bool      // the operator settled it (after paying)
 }
 
 struct BondStorage {
@@ -58,7 +59,14 @@ struct (0x20000013) Redeem {
     queryId: int64
 }
 
-type BondMessage = SetOpen | SetPremium | Subscribe | Redeem
+// BD-1: settlement is an OPERATOR action. The holder asking to redeem must never be able to
+// mark their own claim dead before anyone has paid (that used to lose the claim permanently).
+struct (0x20000014) SettleRedeem {
+    queryId: int64
+    holder: address
+}
+
+type BondMessage = SetOpen | SetPremium | Subscribe | Redeem | SettleRedeem
 
 contract PlanetBond {
     storage: BondStorage
@@ -72,6 +80,7 @@ fun onInternalMessage(in: InMessage) {
         SetPremium => { handleSetPremium(in.senderAddress, msg); }
         Subscribe => { handleSubscribe(in.senderAddress, msg); }
         Redeem => { handleRedeem(in.senderAddress, msg); }
+        SettleRedeem => { handleSettleRedeem(in.senderAddress, msg); }
         else => { assert (in.body.isEmpty()) throw 0xFFFF; }
     }
 }
@@ -114,27 +123,45 @@ fun handleSubscribe(sender: address, msg: Subscribe) {
     storage.bonds.set(sender, BondRec {
         principal: principal,
         face: face + newFace,
+        requested: false,
         redeemed: false,
     });
     storage.totalIssued += newFace;
     storage.save();
 }
 
+// The holder asks to redeem. This is a REQUEST only: it flips `requested` and nothing else, so
+// a mis-click can never destroy a claim (BD-1). The operator settles it after paying.
 fun handleRedeem(sender: address, msg: Redeem) {
     var storage = lazy BondStorage.load();
     val lookup = storage.bonds.get(sender);
     assert (lookup.isFound) throw ERR_NO_BOND;
     val b = lookup.loadValue();
     assert (!b.redeemed) throw ERR_ALREADY_REDEEMED;
-    // BD-3: guard the subtraction (an int64 underflow would wrap to a huge positive number).
-    assert (storage.totalIssued >= b.face) throw ERR_ZERO_AMOUNT;
-    // BD-1: NOTE — this path marks the claim redeemed WITHOUT paying anything, so a holder who
-    // calls it loses the claim permanently. It is harmless only because PlanetBond is an
-    // unwired mock ledger with no funds today. Before ANY real value is attached, redemption
-    // must become operator-settled (pay first, then mark) — see docs/contract-review.md.
     storage.bonds.set(sender, BondRec {
         principal: b.principal,
         face: b.face,
+        requested: true,
+        redeemed: false,
+    });
+    storage.save();
+}
+
+// Operator settles a redemption (after the payout has been made off-chain) and releases the
+// face value from `totalIssued`.
+fun handleSettleRedeem(sender: address, msg: SettleRedeem) {
+    var storage = lazy BondStorage.load();
+    assert (sender == storage.owner) throw ERR_NOT_OWNER;
+    val lookup = storage.bonds.get(msg.holder);
+    assert (lookup.isFound) throw ERR_NO_BOND;
+    val b = lookup.loadValue();
+    assert (!b.redeemed) throw ERR_ALREADY_REDEEMED;
+    // BD-3: guard the subtraction (an int64 underflow would wrap to a huge positive number).
+    assert (storage.totalIssued >= b.face) throw ERR_ZERO_AMOUNT;
+    storage.bonds.set(msg.holder, BondRec {
+        principal: b.principal,
+        face: b.face,
+        requested: true,
         redeemed: true,
     });
     storage.totalIssued -= b.face;

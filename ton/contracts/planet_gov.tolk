@@ -12,6 +12,8 @@
 import "jetton/messages"
 
 const RPS_SCALE = 1000000000000; // 1e12 reward-per-share fixed point
+const BPS_DENOM = 10000;
+const PROPOSE_MIN_BPS = 100;     // GV-3: a proposal must hold at least 1% of the staked supply
 
 const ERR_NOT_OWNER = 401;
 const ERR_PAUSED = 402;
@@ -24,6 +26,7 @@ const ERR_ALREADY_VOTED = 408;
 const ERR_VOTE_CLOSED = 409;
 const ERR_NO_PROPOSAL = 410;
 const ERR_VOTE_LOCKED = 411; // stake still locked by an unclosed proposal you voted on (GV-1)
+const ERR_PROPOSAL_THRESHOLD = 412; // proposer holds too little of the staked supply (GV-3)
 
 // ---------------- Storage ----------------
 
@@ -256,7 +259,11 @@ fun handlePropose(sender: address, msg: Propose) {
     var storage = lazy GovStorage.load();
     assert (!storage.paused) throw ERR_PAUSED;
     val lk = storage.stakes.get(sender);
-    assert (lk.isFound && lk.loadValue().amount > 0) throw ERR_NOT_STAKER;
+    assert (lk.isFound) throw ERR_NOT_STAKER;
+    val amount = lk.loadValue().amount;
+    // GV-3: requiring only `amount > 0` lets anyone spam proposals. Demand a minimum share of
+    // the staked supply. (totalStaked > 0 is guaranteed here: `sender` is a staker.)
+    assert (amount > 0 && (amount as int) * BPS_DENOM / (storage.totalStaked as int) >= PROPOSE_MIN_BPS) throw ERR_PROPOSAL_THRESHOLD;
     assert (msg.id > 0) throw ERR_BAD_PROPOSAL;
     assert (msg.endTs > blockchain.now() as int64) throw ERR_BAD_PROPOSAL;
     storage.proposals.set(msg.id, Proposal {

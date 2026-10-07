@@ -1,4 +1,10 @@
 // PlanetBasket.tolk — on-chain commodity basket registry (Phase 1)
+//
+// DEPRECATED (BK-1): the live basket belongs to PlanetCore (`SetBasketAsset` /
+// `GovernanceAddAsset`, read via `assetAt`). Nothing writes to this registry any more, so it
+// stays empty — kept only because it is deployed and cannot be removed. Do not surface it as
+// the source of the basket; `PlanetCore.assetAt(i)` is the source of truth.
+//
 // Exposes each basket asset (weight/basePrice/currentPrice/positionValue) so users
 // and the TG Mini App can read the token's underlying composition directly on-chain.
 

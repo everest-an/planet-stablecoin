@@ -135,6 +135,12 @@ fun handleSetDelay(sender: address, msg: TlSetDelay) {
     var storage = lazy TimelockStorage.load();
     assert (sender == storage.owner) throw TL_ERR_NOT_OWNER;
     assert (msg.delay >= 0) throw TL_ERR_BAD_DELAY;
+    // TL-3: a real delay must not be removable. 0 -> N is fine (demo/test timelocks start at 0),
+    // but once a delay exists it can never be lowered back to 0 — otherwise the owner could
+    // silently disarm the reaction window immediately before proposing something.
+    if (storage.delay > 0) {
+        assert (msg.delay > 0) throw TL_ERR_BAD_DELAY;
+    }
     storage.delay = msg.delay;
     storage.save();
 }

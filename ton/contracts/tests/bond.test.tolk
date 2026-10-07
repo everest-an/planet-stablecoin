@@ -64,23 +64,32 @@ get fun `test subscribe when closed is rejected`() {
     expect(res).toHaveFailedTx({ from: alice.address, to: bond.address, exitCode: 200 });
 }
 
-get fun `test redeem marks bond and reduces total issued`() {
+get fun `test redeem is a request; only settlement reduces total issued`() {
     val (bond, owner, alice) = deployBond();
     bond.sendSetOpen(owner.address, 0, true, { value: ton("0.05") });
     bond.sendSetPremium(owner.address, 0, 500, { value: ton("0.05") });
     bond.sendSubscribe(alice.address, 0, 1000000, { value: ton("0.05") });
+    // BD-1: asking to redeem must NOT destroy the claim.
     bond.sendRedeem(alice.address, 0, { value: ton("0.05") });
-    expect(bond.totalIssued()).toEqual(0);
+    expect(bond.bondAt(alice.address).requested).toEqual(true);
+    expect(bond.bondAt(alice.address).redeemed).toEqual(false);
+    expect(bond.totalIssued()).toEqual(1050000); // still outstanding
+    // Only the operator settles it (after paying).
+    bond.sendSettleRedeem(owner.address, 0, alice.address, { value: ton("0.05") });
     expect(bond.bondAt(alice.address).redeemed).toEqual(true);
+    expect(bond.totalIssued()).toEqual(0);
 }
 
-get fun `test double redeem is rejected`() {
+get fun `test a holder cannot settle a redemption themselves`() {
     val (bond, owner, alice) = deployBond();
     bond.sendSetOpen(owner.address, 0, true, { value: ton("0.05") });
     bond.sendSubscribe(alice.address, 0, 1000000, { value: ton("0.05") });
+    // Asking twice is harmless (a request, not a settlement) …
     bond.sendRedeem(alice.address, 0, { value: ton("0.05") });
-    val res = bond.sendRedeem(alice.address, 0, { value: ton("0.05") });
-    expect(res).toHaveFailedTx({ from: alice.address, to: bond.address, exitCode: 202 });
+    bond.sendRedeem(alice.address, 0, { value: ton("0.05") });
+    // … but the holder cannot settle it: that is an operator action.
+    val res = bond.sendSettleRedeem(alice.address, 0, alice.address, { value: ton("0.05") });
+    expect(res).toHaveFailedTx({ from: alice.address, to: bond.address, exitCode: 101 });
 }
 
 get fun `test subscribe with zero amount is rejected`() {
