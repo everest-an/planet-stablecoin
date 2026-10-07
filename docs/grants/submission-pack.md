@@ -63,7 +63,7 @@ programme. Built and shipped the contracts, the oracle, the timelock, the dashbo
 Telegram Mini App; prior work is public in the repository.
 
 ### Contact
-⟨email⟩ · ⟨Telegram⟩
+everest9812@gmail.com · @EverestAn
 
 ---
 
@@ -98,8 +98,8 @@ Telegram Mini App; prior work is public in the repository.
 > Thank you — we are ready to provide anything you need.
 >
 > Best regards,
-> ⟨name⟩ · Everest Holdings Group Co., Ltd.（珠峰控股集团）
-> ⟨email⟩ · ⟨Telegram⟩
+> Everest An · Everest Holdings Group Co., Ltd.（珠峰控股集团）
+> everest9812@gmail.com · @EverestAn
 
 ---
 
@@ -108,6 +108,6 @@ Telegram Mini App; prior work is public in the repository.
 - [ ] 公开仓可访问 ✓（`https://github.com/everest-an/planet` ✓）
 - [ ] `docs/audit-prep.md` 与 `docs/contract-review.md` 在仓里 ✓（已确认 ✓）
 - [ ] **没有任何密钥出现在申请文本里** ✓
-- [ ] 补上 `⟨email⟩` / `⟨Telegram⟩` ✓
+- [ ] 补上 `everest9812@gmail.com` / `@EverestAn` ✓
 - [ ] `NOTICE` 里 vendored TEP-74 的上游许可已核实 ✓（待办 ✓）
 - [ ] 措辞检查：**不出现 "stablecoin" / "yield" / "guaranteed"** ✓（全文已符合 ✓）

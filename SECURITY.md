@@ -10,7 +10,7 @@ welcome regardless.
 
 Please **do not** open a public issue for a security problem.
 
-- Email: ⟨add a security contact address⟩
+- Email: everest9812@gmail.com
 - Or use GitHub's private *"Report a vulnerability"* (Security tab → Advisories).
 
 Please include: the affected contract or file, a description, and a reproduction (a failing test is

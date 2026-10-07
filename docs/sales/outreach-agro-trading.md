@@ -39,15 +39,15 @@
 > Would you be open to a short call?
 >
 > Best regards,
-> ⟨Your name⟩
-> ⟨Title⟩ · Planet
-> ⟨email⟩ · ⟨phone / Telegram⟩
+> Everest An
+> Founder · Planet
+> everest9812@gmail.com · @EverestAn
 
 ---
 
 ## LinkedIn 短版（先互动 2–3 次再发）
 
-> Hi ⟨name⟩ — I work on on-chain trade documents (we have a live dashboard at ppppp.space/dashboard).
+> Hi Everest An — I work on on-chain trade documents (we have a live dashboard at ppppp.space/dashboard).
 > Your Kazakhstan→China/Europe flows with CAD terms are the exact use case. Happy to show you a free
 > testnet pilot on one cargo — no commitment, no cost. Worth a 20-minute call?
 
