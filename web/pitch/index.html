@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Planet — technical partnership deck</title>
+    <meta name="description" content="Tokenise commodity exposure without building the technology. A technical partnership for commodity traders, funds and licensed distributors." />
+    <meta name="robots" content="noindex" />
+    <link rel="canonical" href="https://ppppp.space/pitch/" />
+    <link rel="icon" href="/icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+    <style>
+      .deck { max-width: 1040px; margin: 0 auto; padding: 0 20px 80px; }
+      .slide { border-top: 1px solid rgba(127,127,127,.35); padding: 46px 0 54px; }
+      .slide:first-of-type { border-top: 0; }
+      .kicker { font-family: "DM Mono", monospace; font-size: .74rem; letter-spacing: .14em; text-transform: uppercase; opacity: .7; margin: 0 0 10px; }
+      .slide h2 { font-size: clamp(1.5rem, 3.4vw, 2.3rem); line-height: 1.16; margin: 0 0 16px; max-width: 24ch; }
+      .slide h3 { font-size: 1rem; margin: 26px 0 8px; opacity: .92; }
+      .lead { font-size: 1.06rem; line-height: 1.6; max-width: 62ch; opacity: .92; }
+      .shot { width: 100%; height: auto; display: block; margin: 22px 0 8px; border: 1px solid rgba(127,127,127,.4); }
+      .cap { font-size: .8rem; opacity: .68; margin: 0 0 6px; }
+      .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1px; background: rgba(127,127,127,.35); border: 1px solid rgba(127,127,127,.35); margin: 22px 0; }
+      .stat { background: var(--bg, #fff); padding: 16px 18px; }
+      .stat b { display: block; font-size: 1.5rem; line-height: 1.1; margin-bottom: 4px; }
+      .stat span { font-size: .8rem; opacity: .75; }
+      .two { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; margin-top: 20px; }
+      @media (max-width: 720px) { .two { grid-template-columns: 1fr; } }
+      .card { border: 1px solid rgba(127,127,127,.35); padding: 18px 20px; }
+      .card h4 { margin: 0 0 10px; font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; opacity: .7; }
+      .card ul { margin: 0; padding-left: 18px; font-size: .92rem; line-height: 1.6; }
+      pre.flow { font-family: "DM Mono", monospace; font-size: .8rem; line-height: 1.6; overflow-x: auto; padding: 16px; background: rgba(127,127,127,.09); border-left: 2px solid currentColor; }
+      table.doc-table td, table.doc-table th { font-size: .9rem; }
+      .cta { display: inline-block; margin-top: 18px; padding: 12px 20px; border: 1px solid currentColor; font-family: "DM Mono", monospace; font-size: .82rem; letter-spacing: .06em; text-transform: uppercase; text-decoration: none; }
+      .fine { font-size: .76rem; opacity: .62; line-height: 1.6; margin-top: 34px; }
+      .checkli { list-style: none; padding-left: 0; font-size: .94rem; line-height: 1.75; }
+      .checkli li::before { content: "→ "; opacity: .5; }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="wordmark" href="/">Planet</a>
+      <nav class="nav">
+        <a href="/dashboard">dashboard</a>
+        <a href="/whitepaper">whitepaper</a>
+        <a class="btn" href="https://app.ppppp.space">open app</a>
+      </nav>
+    </header>
+
+    <main class="deck">
+      <!-- 1 -->
+      <section class="slide">
+        <p class="kicker">Technical partnership · 5 slides · non-binding</p>
+        <h2>Tokenise your commodity exposure — without building the technology.</h2>
+        <p class="lead">
+          You have the commodity, the licence and the clients. We have a working,
+          audit-ready issuance stack — contracts, a signed multi-source oracle, a live
+          dashboard and the documentation an auditor asks for.
+        </p>
+        <div class="stats">
+          <div class="stat"><b>$2.5T</b><span>global trade-finance gap (ADB, 2025)</span></div>
+          <div class="stat"><b>$74–92B</b><span>Africa's unmet trade finance (AfDB, 2026)</span></div>
+          <div class="stat"><b>~25%</b><span>of West African trade is financed — vs 60%+ in advanced economies</span></div>
+          <div class="stat"><b>~15%</b><span>annual cost of the working-capital loans that replace trade finance</span></div>
+        </div>
+        <p class="cap">Sources: ADB <i>Global Trade Finance Gap Survey</i> (2025); AfDB <i>Trade Finance Report</i> (2026).</p>
+      </section>
+
+      <!-- 2 -->
+      <section class="slide">
+        <p class="kicker">The window</p>
+        <h2>Dubai has already built the rails. Nobody has filled them.</h2>
+        <p class="lead">
+          In October 2025 <b>DMCC and VARA signed a framework specifically to tokenise commodities</b>,
+          with pilots in gold and diamonds. The first instrument — a 1,971&nbsp;kg silver bar —
+          was issued under it in September 2026. DMCC counts <b>1,500+ precious-metals firms</b>,
+          <b>700+ web3 companies</b> and 26,000 members.
+        </p>
+        <div class="two">
+          <div class="card">
+            <h4>What exists</h4>
+            <ul>
+              <li>The regulator's framework (VARA — Category 2 issuance needs <b>no issuer licence</b>, only a licensed distributor)</li>
+              <li>The registry (DMCC Tradeflow — already handles gold-backed digital assets)</li>
+              <li>The demand: African &amp; Asian traders who cannot get bank finance</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h4>What is missing</h4>
+            <ul>
+              <li>A <b>production-grade issuance stack</b> others can adopt</li>
+              <li>A <b>verified oracle</b> that survives a bad feed</li>
+              <li>Governance that <b>cannot touch custody</b></li>
+              <li>Documentation good enough to <b>speed up an audit</b></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3 -->
+      <section class="slide">
+        <p class="kicker">The product · live today</p>
+        <h2>A working deployment, not a rendering.</h2>
+        <img class="shot" src="/pitch/dashboard.png" alt="Planet live basket dashboard showing PPI, 14 commodities, weights, base and current prices with per-asset state" />
+        <p class="cap">
+          The live dashboard: index value, the full basket with weights and base/current prices,
+          oracle age and the signing threshold — recorded from the public site this month.
+        </p>
+        <p class="lead">
+          <b>We demo it live in the first meeting.</b> Everything you see is read from the chain —
+          not from a slide.
+        </p>
+      </section>
+
+      <!-- 4 -->
+      <section class="slide">
+        <p class="kicker">How it works</p>
+        <h2>Failure is isolated. Governance is bound. Custody is never ours.</h2>
+        <pre class="flow">1  You define one instrument  (one commodity · one jurisdiction · one client group)
+2  We deploy a branded instance on TESTNET against your asset and your data   ← zero risk, zero cost
+3  You take it to compliance and to your auditor        (we supply the audit pack)
+4  Optional: mainnet, placed by your licensed distributor
+5  We operate the stack. You own the product and the client relationship.</pre>
+        <div class="two">
+          <div class="card">
+            <h4>Engineering that matters</h4>
+            <ul>
+              <li><b>Two independent price feeds</b>, median, ed25519-signed, verified on-chain against an M-of-N signer set with distinct-signer enforcement</li>
+              <li><b>Guards:</b> strictly increasing timestamps, a single-update price-jump limit, automatic <b>freeze</b> on source divergence — one bad feed removes one commodity, it cannot poison the index</li>
+              <li><b>Timelock:</b> every privileged action is propose → delay → execute, so holders get a reaction window</li>
+              <li><b>239 automated tests</b>, coverage-gated in CI; deploy scripts dry-run in emulation before any funds are spent</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h4>What you never have to worry about</h4>
+            <ul>
+              <li>A passed vote <b>cannot move assets</b> — governance changes bounded parameters only</li>
+              <li>We <b>never hold client money</b> and are never the custodian</li>
+              <li>Every rule is enforced on-chain, and the rules themselves are <b>immutable</b></li>
+            </ul>
+          </div>
+        </div>
+        <img class="shot" src="/pitch/maths.png" alt="The index formula rendered on the whitepaper page: a re-normalised weighted mean over active assets" />
+        <p class="cap">The index is a re-normalised weighted mean over <i>active</i> assets — published, with the full mathematics, in the whitepaper.</p>
+      </section>
+
+      <!-- 5 -->
+      <section class="slide">
+        <p class="kicker">Commercials &amp; next step</p>
+        <h2>Low integration fee, then a share of what it earns.</h2>
+        <table class="doc-table">
+          <thead><tr><th>Model</th><th>Indicative</th></tr></thead>
+          <tbody>
+            <tr><td>Integration (one-off, white-label)</td><td>USD 20k–80k</td></tr>
+            <tr><td>Platform (monthly: ops, upgrades, support)</td><td>USD 3k–15k / month</td></tr>
+            <tr><td><b>Revenue share</b> (preferred)</td><td><b>20–30%</b> of the instrument's fees</td></tr>
+            <tr><td>Index data / API</td><td>USD 500–5k / month</td></tr>
+          </tbody>
+        </table>
+        <div class="two">
+          <div class="card">
+            <h4>You provide</h4>
+            <ul class="checkli">
+              <li>The asset and its custody arrangements</li>
+              <li>Your licence and regulatory standing</li>
+              <li>Your clients and the commercial relationship</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h4>We provide</h4>
+            <ul class="checkli">
+              <li>The contracts, the oracle, the dashboard, the Telegram Mini App</li>
+              <li>The audit preparation pack — so your audit is faster and cheaper</li>
+              <li>Operations, monitoring and the deployment runbook</li>
+            </ul>
+          </div>
+        </div>
+        <p class="lead" style="margin-top: 22px">
+          <b>The first instrument is a low-cost, zero-risk testnet pilot against one of your assets.</b>
+          We would rather have a reference case than a large first invoice.
+        </p>
+        <a class="cta" href="https://ppppp.space/dashboard">See the live product →</a>
+
+        <p class="fine">
+          Technical proposal only. Not investment advice, not an offer and not a solicitation.
+          No returns, yields or price stability are promised or implied; commodity exposure can lose value.
+          All licensing, regulatory obligations and custody remain with the issuer and its licensed partners.
+          The current public deployment is a testnet proof-of-concept with no real reserve and is unaudited.
+          Market figures: ADB <i>Global Trade Finance Gap Survey</i> (2025); AfDB <i>Trade Finance Report</i> (2026);
+          DMCC press releases (October 2025, December 2025).
+        </p>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <div class="foot-row">
+        <span class="wordmark">Planet</span>
+        <span class="ver">[ technical partnership deck · v1 ]</span>
+      </div>
+      <nav class="foot-nav">
+        <a href="/">home</a>
+        <a href="/dashboard">dashboard</a>
+        <a href="/whitepaper">whitepaper</a>
+      </nav>
+    </footer>
+  </body>
+</html>
