@@ -1,0 +1,49 @@
+name: Timelock owner -> multisig (testnet)
+
+# Point the TIMELOCK's owner at a TON MULTISIG wallet, so every privileged action on PlanetCore
+# needs M-of-N signatures AND the 60s delay. This is the migration that matters: changing
+# PlanetCore's owner directly would drop the delay, so we change the timelock's owner instead
+# (PlanetCore only ever sees `owner == timelock`).
+#
+# The change is itself an owner action, so it runs through the timelock: Propose -> delay ->
+# Execute. Run it as whoever currently owns the timelock.
+#
+# After this the deploy key can no longer act alone: it can propose, but a multisig quorum must
+# approve and nothing executes before the delay. The new address is a workflow INPUT.
+#
+# (Distinct from timelock-setowner.yml, which is the older demo round-trip.)
+
+on:
+  workflow_dispatch:
+    inputs:
+      new_owner:
+        description: "New TIMELOCK owner address (e.g. a 2-of-3 TON multisig wallet)"
+        required: true
+        type: string
+
+jobs:
+  setowner:
+    name: Point the timelock owner at a multisig
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: relayer
+    env:
+      PLANET_CORE: kQAwzh3O-52-QBtB8JFFTjtNaKFhw-uJMkd-zdnoHoGibzcU
+      RELAYER_MNEMONIC: ${{ secrets.TON_WALLET_MNEMONIC }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install deps
+        run: npm install --no-audit --no-fund
+
+      - name: Migrate the timelock owner
+        env:
+          CORE_TIMELOCK: kQBo0345y-RGi49-7WWaWAHyyNtiWe-JrT44iO3G9Cyom6YK
+          NEW_OWNER: ${{ inputs.new_owner }}
+          TIMELOCK_WAIT_MS: "80000"
+        run: node relayer.mjs settimelockowner
