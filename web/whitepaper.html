@@ -113,9 +113,9 @@
           on-chain <b>purchasing-power index (PPI)</b>, expressed as a TEP-74 token on <b>TON</b>.
           Read the <b>light</b> summary, or the <b>full</b> version with the complete mathematics.
         </p>
-        <div id="wp-toggle" role="tablist" aria-label="whitepaper version">
-          <button class="segbtn btn" data-wp="light" role="tab">light</button>
-          <button class="segbtn btn" data-wp="full" role="tab">full version (with mathematics)</button>
+        <div id="wp-toggle" role="group" aria-label="whitepaper version">
+          <button type="button" class="segbtn btn" data-wp="light" aria-pressed="true">light</button>
+          <button type="button" class="segbtn btn" data-wp="full" aria-pressed="false">full version (with mathematics)</button>
         </div>
         <p class="eyebrow" style="margin-top: 10px">
           deep-linkable: <a href="#light">#light</a> · <a href="#full">#full</a> · your choice is remembered
@@ -578,7 +578,7 @@
           btns.forEach(function (b) {
             var on = b.getAttribute("data-wp") === mode;
             b.classList.toggle("on", on);
-            b.setAttribute("aria-selected", on ? "true" : "false");
+            b.setAttribute("aria-pressed", on ? "true" : "false");
           });
           try { localStorage.setItem("wp-mode", mode); } catch (e) {}
           if (push && history.replaceState) history.replaceState(null, "", "#" + mode);
