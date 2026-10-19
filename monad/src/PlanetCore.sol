@@ -294,7 +294,8 @@ contract PlanetCore {
         feesToReserve += reserve;
         feesToStaking += stake;
         riskFund += risk;
-        if (totalReserve >= reserve) totalReserve -= reserve; // reserve share is moved into the reserve bucket
+        // NOTE: the reserve share is NOT deducted here. The deposit already added the gross amount to
+        // totalReserve; the reserve bucket is a label on that same money, not a transfer out of it.
         emit FeesRouted(burn, reserve, stake, risk);
     }
 
