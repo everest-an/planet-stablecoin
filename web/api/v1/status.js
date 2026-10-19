@@ -121,7 +121,7 @@ async function readStatus() {
     return { unreachable: true };
   }
 
-  const [supply, reserve, riskFund, threshold, feesBurn, feesReserve, feesStaking] = await Promise.all([
+  const [supply, reserve, riskFund, threshold, feesBurn, feesReserve, feesStaking, bondOpen, bondPaid] = await Promise.all([
     one("supply"),
     one("reserve"),
     one("riskFund"),
@@ -129,6 +129,8 @@ async function readStatus() {
     one("feesBurn"),
     one("feesReserve"),
     one("feesStaking"),
+    one("bondOpen"),
+    one("bondPaid"),
   ]);
   for (const v of [supply, reserve]) if (v == null) partial = true;
 
@@ -183,6 +185,9 @@ async function readStatus() {
       assetsReturned: assets.length,
       lastOracleUpdate: n(lastOracleUpdate),
       riskFund: n(riskFund),
+      bond: bondOpen == null && bondPaid == null
+        ? undefined
+        : { open: n(bondOpen) !== 0, paid: n(bondPaid) },
       signerThreshold: n(threshold),
       fees: { burn: n(feesBurn), reserve: n(feesReserve), staking: n(feesStaking) },
       assets,

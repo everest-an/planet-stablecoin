@@ -38,6 +38,16 @@
       .card { border: 1px solid var(--muted, #2a2a2a); padding: 12px 14px; }
       .card .k { font-family: "DM Mono", monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted, #8a8a8a); }
       .card .v { font-family: "Space Grotesk", sans-serif; font-size: 22px; margin-top: 6px; color: var(--ink, #111); }
+      .card.wide { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); align-items: start; }
+      .card.wide > .k { grid-column: 1 / -1; margin-bottom: 8px; }
+      .card.wide .st + .st { border-left: 1px solid var(--muted, #2a2a2a); padding-left: 14px; }
+      .card.wide .st .k { font-family: "DM Mono", monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted, #8a8a8a); }
+      .card.wide .st .v { font-family: "Space Grotesk", sans-serif; font-size: 22px; margin-top: 4px; color: var(--ink, #111); }
+      @media (max-width: 480px) {
+        .card.wide { grid-template-columns: 1fr; }
+        .card.wide .st + .st { border-left: 0; padding-left: 0; border-top: 1px solid var(--muted, #2a2a2a); padding-top: 10px; margin-top: 10px; }
+      }
+      .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
       table { width: 100%; border-collapse: collapse; font-family: "DM Mono", monospace; font-size: 13px; }
       th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--muted, #2a2a2a); color: var(--ink, #111); }
       th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted, #8a8a8a); }
@@ -46,7 +56,20 @@
       .bar { display: inline-block; height: 8px; background: currentColor; opacity: 0.45; vertical-align: middle; margin-left: 8px; }
       .note { margin-top: 18px; font-family: "DM Mono", monospace; font-size: 11px; color: var(--muted, #8a8a8a); line-height: 1.6; }
       .warn { border: 1px solid #e8590c; color: #e8590c; padding: 10px 12px; font-family: "DM Mono", monospace; font-size: 12px; margin: 16px 0; }
+      @media (max-width: 640px) {
+        th:nth-child(1), td:nth-child(1), th:nth-child(4), td:nth-child(4) { display: none; }
+        th, td { padding: 8px 6px; }
+        .bar { max-width: 48px; }
+      }
+      @media (max-width: 420px) {
+        th, td { padding: 8px 4px; font-size: 11px; }
+      }
+      #foot { overflow-wrap: anywhere; }
       #foot.ok { color: #2f9e44; } #foot.warn { color: #e8590c; }
+      @media (max-width: 360px) {
+        th:nth-child(6), td:nth-child(6) { display: none; }
+        th, td { font-size: 10px; padding: 6px 3px; }
+      }
     </style>
   </head>
   <body>
@@ -81,8 +104,16 @@
         <div class="card"><div class="k">reserve (units)</div><div class="v" id="c3">…</div></div>
         <div class="card"><div class="k">oracle age</div><div class="v" id="c4">…</div></div>
         <div class="card"><div class="k">M-of-N threshold</div><div class="v" id="c5">…</div></div>
+        <div class="card wide">
+          <div class="k">stability</div>
+          <div class="st"><div class="k">risk fund</div><div class="v" id="c6">…</div></div>
+          <div class="st"><div class="k">bond sale</div><div class="v" id="c7">—</div></div>
+          <div class="st"><div class="k">bond paid</div><div class="v" id="c8">—</div></div>
+        </div>
       </div>
+      <p class="note" id="staleNote" style="display: none"></p>
 
+      <div class="table-wrap">
       <table>
         <thead>
           <tr>
@@ -94,6 +125,7 @@
           <tr><td colspan="7" style="color: var(--muted, #8a8a8a)">loading…</td></tr>
         </tbody>
       </table>
+      </div>
       <p class="note" id="foot"></p>
       <p class="note">
         Weights are ppm of the basket (sum = 100%); base = index base price (immutable once locked).
@@ -250,8 +282,27 @@
           document.getElementById("c1").textContent = s.assetCount;
           document.getElementById("c2").textContent = fmt(s.supply, 0);
           document.getElementById("c3").textContent = fmt(s.reserve, 0);
-          document.getElementById("c4").textContent = ageText(s.lastOracleUpdate);
+          const ageSec = s.lastOracleUpdate
+            ? Math.max(0, Math.floor(Date.now() / 1000) - Number(s.lastOracleUpdate))
+            : null;
+          const c4 = document.getElementById("c4");
+          c4.textContent = ageText(s.lastOracleUpdate);
+          c4.style.color = ageSec !== null && ageSec > 21600 ? "var(--signal, #c2401c)" : "";
           document.getElementById("c5").textContent = s.signerThreshold;
+          document.getElementById("c6").textContent = "$" + fmt(Number(s.riskFund) / 1e6, 2);
+          if (s.bond) {
+            document.getElementById("c7").textContent = s.bond.open ? "open" : "closed";
+            document.getElementById("c8").textContent = "$" + fmt(Number(s.bond.paid) / 1e6, 2);
+          }
+          const staleNote = document.getElementById("staleNote");
+          if (ageSec !== null && ageSec > 21600) {
+            staleNote.textContent =
+              "oracle is stale (" + ageText(s.lastOracleUpdate) + ") — minting is blocked until a fresh price is pushed.";
+            staleNote.style.display = "block";
+            staleNote.style.color = "#e8590c";
+          } else {
+            staleNote.style.display = "none";
+          }
           renderRows(rows);
           setFoot(core, "rendered from the API — verifying against the chain…", "");
           err.style.display = "none";
