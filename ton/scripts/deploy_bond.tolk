@@ -36,7 +36,10 @@ fun main() {
     bond.deploy(deployer.address, { value: ton("0.2") });
     println("PlanetBond -> {}", bond.address);
 
-    if (core.owner() == deployer.address) {
+    if (!scripts.isContractDeployed(core.address)) {
+        println("Core {} is not deployed in this environment — skipping the SetBond check.", core.address);
+        println("On testnet: SetBond(queryId=0, bond={}) via the Core owner (op 0x10000019).", bond.address);
+    } else if (core.owner() == deployer.address) {
         core.sendSetBond(deployer.address, 0, bond.address, { value: ton("0.05") });
         println("Core.bond wired directly (deployer is still the Core owner).");
     } else {
