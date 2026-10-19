@@ -1,0 +1,18 @@
+[profile.default]
+src = "src"
+test = "test"
+out = "out"
+libs = ["lib"]
+solc_version = "0.8.24"
+optimizer = true
+optimizer_runs = 200
+# Monad is EVM-equivalent; keep the default EVM version until the chain config says otherwise.
+evm_version = "paris"
+
+[fmt]
+line_length = 110
+tab_width = 4
+
+# Monad network config — VERIFY these before deploying (chainId / RPC / explorer change).
+[rpc_endpoints]
+monad = "https://rpc.monad.xyz"

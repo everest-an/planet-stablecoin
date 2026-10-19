@@ -1,0 +1,45 @@
+name: Monad build + test
+
+# The Monad (EVM) port lives beside ton/ and does NOT touch the TON stack.
+# This job is the Monad-side equivalent of ton-build.yml: compile, test, and fail loudly.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "monad/**"
+      - ".github/workflows/monad-build.yml"
+
+jobs:
+  foundry:
+    name: Foundry (build + test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: monad
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Show versions
+        run: forge --version
+
+      - name: Install forge-std
+        run: |
+          mkdir -p lib
+          if [ ! -d lib/forge-std ]; then
+            git clone --depth 1 https://github.com/foundry-rs/forge-std.git lib/forge-std
+          fi
+
+      - name: Build
+        run: forge build --sizes
+
+      - name: Test
+        run: forge test -vv
+
+      - name: Format check (informational)
+        run: forge fmt --check || true
