@@ -9,7 +9,7 @@
 
 Planet（PLT）= 全球大宗商品购买力指数协议；当前实现为 **TON 上的合成指数代币 + TEP-74 代币 + 铸赎骨架**。
 仓库：`github.com/everest-an/planet-stablecoin`（**private**），分支 `main`。
-最后验证：`main`（TON 主线：合成指数 + TEP-74 PLT + 铸赎骨架 + 稳定机制 A/C1/C2/C3a+C3b + CAM + 签名预言机（多源 M-of-N，支持 M>2）+ 价格护栏 + 跨合约 `onBouncedMessage` + 域分离 + `SetOwner`/`PlanetTimelock` 时间锁 + **PlanetFund（ETF 基金：两阶段申购 + 托管 M-of-N 确认按 NAV 铸 + 赎回，含 TEP-74 份额收款/burn 的**无信任赎回**）+ 测试网 live**），CI 全绿（**210 测试 / 16 文件**，All files 97.5% 行 / 88.3% 分支 / 94.0% 评分；门禁 90 只升不降）。
+最后验证：`main`（TON 主线：合成指数 + TEP-74 PLT + 铸赎骨架 + 稳定机制 A/C1/C2/C3a+C3b + CAM + 签名预言机（多源 M-of-N，支持 M>2）+ 价格护栏 + 跨合约 `onBouncedMessage` + 域分离 + `SetOwner`/`PlanetTimelock` 时间锁 + **PlanetFund（ETF 基金：两阶段申购 + 托管 M-of-N 确认按 NAV 铸 + 赎回，含 TEP-74 份额收款/burn 的**无信任赎回**）+ 测试网 live**），本地 Acton 全绿（**252 测试 / 20 文件**，All files 96.1% 行 / 85.2% 分支 / 92.0% 评分；门禁 90 只升不降；待 push 后 CI 复核）。
 
 ---
 
@@ -77,9 +77,9 @@ legacy-solana/              Solana/Anchor 遗留实现 + 原 README（算法参�
 ## 3. 当前验证状态（可核对）
 
 - **CI 3 job 全绿**：`Tolk (Acton)`（build + wrapper + test --coverage + **deploy 脚本 emulation 冒烟**）、`TG Mini App`（vite build）、`Tact PoC`。
-- **107 个测试（12 文件）**：纯数学/不变量 + 大额溢出 + 分档费 + 费率斜率/非对称赎回 + 套利返利 + 风险自适应 RTRA + 集成 + 全链路（mint/burn/transfer）+ 赎回镜像 + 链上多资产 PPI + CAM（+frozen 隔离）+ **多源预言机（阈值签名 2-of-N）** + **价格跳变护栏** + 风险基金 + 稳定债券 + **owner 迁移（SetOwner）** + 限额/熔断 + minter 管理/TEP-89 + PlanetBasket + **PlanetTimelock（延迟所有权）** + **M>2 多源（`SignedPriceUpdateN`，去重）**。
+- **252 个测试（20 文件）**：纯数学/不变量 + 大额溢出 + 分档费 + 费率斜率/非对称赎回 + 套利返利 + 风险自适应 RTRA + 集成 + 全链路（mint/burn/transfer）+ 赎回镜像 + 链上多资产 PPI + CAM（+frozen 隔离）+ **多源预言机（阈值签名 2-of-N）** + **价格跳变护栏** + 风险基金 + 稳定债券 + **稳定债券↔Core 自动联动（0.95/0.97 滞回 + `PayBond` 风险基金扣付）** + **owner 迁移（SetOwner）** + 限额/熔断 + minter 管理/TEP-89 + PlanetBasket + **PlanetTimelock（延迟所有权）** + **M>2 多源（`SignedPriceUpdateN`，去重）**。
 - **触发路径**：`.github/workflows/ton-build.yml` 监听 `ton/**` 与 `app-tg/**`。
-- **覆盖率（基线棘轮）**：All files **90.2% score**（行 96.3% / 分支 78.8%）；新增 `planet_timelock.tolk`。门禁 `ton/Acton.toml [test.coverage] minimum-percent = 90`，**只升不降**。
+- **覆盖率（基线棘轮）**：All files **92.0% score**（行 96.1% / 分支 85.2%）；门禁 `ton/Acton.toml [test.coverage] minimum-percent = 90`，**只升不降**。
 - 近期提交：见分支 `feat/ton-coverage-gate-and-jetton-mint`（仓库整理 · 覆盖率棘轮 29→47→73→80 · mint tonAmount 修复 + 全链路/预言机测试）。
 
 ---
@@ -114,6 +114,18 @@ cd app-tg && npm install && npm run build
 - **风险基金（C3a）**：每笔手续费 10%（`RISK_SHARE_BPS`）从储备桶划入 `riskFund`；owner 可 `CoverDeficit` 回补储备（不足则拒绝）。
 - **安全加固**：**价格跳变护栏**（>50% 拒，`116`）+ **多源预言机（M-of-N 阈值签名）**（`SetSigner`/`SetThreshold`；M≤2 用 `SignedPriceUpdate`，M>2 用 `SignedPriceUpdateN`；需 M 个不同来源，`117`）+ **`SetOwner`**（owner 迁移到多签钱包）+ **`PlanetTimelock`**（独立合约：Propose→delay→Execute，Core 零改动）+ `docs/security.md`。
 - **稳定债券（C3b）**：独立 `PlanetBond` 合约（Core 存储 ref 已满）——`SetOpen`/`SetPremium`/`Subscribe`（face=principal×(1+premium)）/`Redeem`；mock 记账。
+- **稳定债券 ↔ Core 自动联动（本次）**：
+  - `Limits` ref cell 新增 `bond` / `bondOpen` / `bondPaid`（主 storage 仍是 4 refs，不超限）。
+  - `PlanetCore.SetBond(bond)`（owner）：登记债券；`bondOpen=false` 复位，下一次 PPI 更新重新同步。
+  - 每次 PPI 重算（`UpdatePrice` / `CamUpdate` / `OracleUpdateAssetPrice` / 签名路径）调用 `bondSync`：
+    `PPI<0.95` 且当前关闭 → 发 `SetOpen(true)`；`PPI≥0.97` 且当前打开 → 发 `SetOpen(false)`。
+    **边沿触发**（`bondOpen`）避免每次推价都发消息；2% 滞回避免阈值抖动；`PPI=0`（全冻结）不开售。
+  - Bond 的 `SetOpen` 接受 **owner 或部署时写入的 core 地址**（自动触发权限）。
+  - `SettleRedeem` 后 Bond → Core `PayBond(face)`；Core 从 `riskFund` **扣付上限=余额**
+    （不足不抛错——真实付款已在链下完成，不能因记账不足回滚结算），累计 `bondPaid`。
+  - 新消息：`SetBond` `0x10000019`、`PayBond` `0x20000015`；共享结构在 `contracts/bond_messages.tolk`。
+  - 测试：`contracts/tests/bond_link.test.tolk`（13 个：wiring/清空、0.95 开、0.96 滞回、0.97 关、
+    恰好 0.95 不开、pre-lock 路径、PPI=0 守卫、CAM 路径、签名路径、全额/封顶扣付、未接线/非 Bond 拒绝）。
 - **稳定机制**：A（分档费 / 单笔限额 / >15% 冻结铸币）；**C1**（>5% 费率斜率 + 非对称赎回费）；**C2**（套利返利）；**C3a**（风险基金）。
 - **链上多资产 PPI**：Core 存篮子（`map<int64,CoreAsset>`），oracle 推单资产价 → 链上 `computePpi`；`SetBasketAsset`/`OracleUpdateAssetPrice`/`LockBasePrices`；删 `OracleUpdatePrice`。
 - **赎回链路打通**：钱包 `AskToBurn` → minter 减供应 → minter 镜像 `BurnMirror`(0x10000008) → Core 同步减 `totalSupply`/`totalReserve`（净额）；移除会双算的旧 `core.Burn`。
@@ -139,7 +151,7 @@ cd app-tg && npm install && npm run build
 | ✅ | **多资产 PPI 计算**（按篮子权重链上算，替代单值 `currentPpi`） | ✅ 完成（`docs/ppi-multiasset.md` 方案 (i)；前端读 Core；未做 Basket 镜像） |
 | P2 | **CAM 插件层**（每商品独立适配器 → 标准化 价格/波动率/流动性/风险；解耦+隔离） | 🟡 设计稿就绪 `docs/commodity-cam.md`；建议先做 **Phase A**（MockCam + 风险自适应 RTRA，纯代码可验证），**待批复** |
 | ✅ | **CAM 插件层（Phase A）** | ✅ 完成：`SetCam`/`CamUpdate` + 每资产风险数据 + 风险自适应 RTRA（`cam.test.tolk`）；真实 CAM 数据源仍待外部 |
-| P2 | **协议稳定机制** | A ✅ + C1 ✅ + C2 ✅ + C3a ✅（风险基金）+ **C3b ✅（稳定债券）**；**待做**：稳定债券接入 Core 触发（PPI<0.95 自动开售）、风险基金偿付联动 |
+| ✅ | **协议稳定机制** | A ✅ + C1 ✅ + C2 ✅ + C3a ✅（风险基金）+ **C3b ✅（稳定债券 + Core 自动触发 + 风险基金结算扣付）**。剩余：真实付款、到期阶梯、`BOND_CAP`（mock 记账阶段） |
 | ✅ | **测试网部署** | ✅ 已上线 TON testnet（`ton-deploy.yml`）；地址见 §11；数据源 `relayer-push.yml` |
 | P3 | 多签 + 时间锁迁移（owner 权限点：SetPaused/SetJettonMinter/SetAsset/UpdatePrice） | 部署后配置 |
 | P3 | 第三方审计（Halborn/Certora）、漏洞赏金、形式化验证 | 外部机构 |
@@ -181,7 +193,7 @@ cd app-tg && npm install && npm run build
 
 ## 9. 下一次开局的推荐指令
 
-> "读 `docs/HANDOFF.md`。仓库已整理（主线 `ton/`+`app-tg/`，Solana 归档 `legacy-solana/`）。**210 测试全绿**，覆盖率 97.5% 行 / 88.3% 分支 / 94.0% 评分（门禁 90，只升不降）；链上 PPI/赎回/稳定机制 A/C1/C2/C3a+C3b/CAM+隔离/签名预言机（M-of-N 多源，支持 M>2）/价格护栏/`SetOwner`+`PlanetTimelock` 时间锁 **+ PlanetFund（ETF 基金：两阶段申购 + 托管 M-of-N 确认按 NAV 铸 + 赎回，含 TEP-74 份额收款/burn 的无信任赎回）** 均已就绪，TON 测试网 live + mint/burn 端到端验证；白皮书 v1.5 + `docs/security.md`。下一步：真实数据源接入 / 外部审计 / 1:1（RWA 托管 + 合规）或前端完善。改动保持 CI 绿。"
+> "读 `docs/HANDOFF.md`。仓库已整理（主线 `ton/`+`app-tg/`，Solana 归档 `legacy-solana/`）。**252 测试全绿**，覆盖率 96.1% 行 / 85.2% 分支 / 92.0% 评分（门禁 90，只升不降）；链上 PPI/赎回/稳定机制 A/C1/C2/C3a+C3b（**债券已与 Core 自动联动**）/CAM+隔离/签名预言机（M-of-N 多源，支持 M>2）/价格护栏/`SetOwner`+`PlanetTimelock` 时间锁 **+ PlanetFund（ETF 基金：两阶段申购 + 托管 M-of-N 确认按 NAV 铸 + 赎回，含 TEP-74 份额收款/burn 的无信任赎回）** 均已就绪，TON 测试网 live + mint/burn 端到端验证；白皮书 v1.5 + `docs/security.md`。下一步：真实数据源接入 / 外部审计 / 1:1（RWA 托管 + 合规）或前端完善。改动保持 CI 绿。"
 
 ---
 
@@ -205,7 +217,7 @@ cd app-tg && npm install && npm run build
 | **PLTG Minter**（治理代币） | `kQDF0ixGco8WW4fqPB3XNdrNJ8vikFNkkyzKbz8hNJiFZ7OD`（固定供应 **1e9 PLTG** 已铸给部署钱包；已实测 `totalSupply=1e15`） |
 | **PlanetGov**（质押/投票） | `kQAK5XcQdykCOrA2-uFraTxq9CFD1NNdK5W4QrwCexNcBYJ3`（质押 + **按份额分红**（对应费用桶）+ **按质押量投票**；已接 PLTG minter + `SetGovWallet`） |
 | **PlanetBasket** | `kQAfGKn_UrUW8LQd92ZWy0h0BrCA_QTBhMqDA1M-PZtyv-r_` |
-| **PlanetBond**（稳定债券） | `kQDYY-LJED5Xi2j-fnsxEqcYsMj0BWU-XrtV3SiSCu_pwizG`（isOpen=false, premium=5%） |
+| **PlanetBond**（稳定债券） | `kQDMxJXroCmuxBw9Sw7oj9LhO9Y0mLxdPS3Tr4vY-sdq65hz`（isOpen=false, premium=5%；2026-10-19 链上复核 exit=0） |
 | **PlanetFund**（ETF 基金） | `kQAYbx_u7I7yhcYU8yxeewWdh3gnS067IgaWeV8UlYItug1o`（两阶段申购 + 托管 M-of-N 确认按 NAV 铸 + 赎回；含 TEP-74 份额收款/burn 的无信任赎回） |
 | **Fund JettonMinter** | `kQCSnnMlGUIEJvlI_NLG_x0wg-_ZX74AYFIxuLU4YpFeg1sk`（admin = PlanetFund） |
 | **Core / Fund owner 时间锁** | `kQC_j4CrhPvbAX19_4C-PAoGNWBsaxj4GN5v6mIhGb7ctxQ1`（delay=**60s**；**`PlanetCore.owner` 已迁移至此**（实测 owner hash=`68d37e39…`）+ `PlanetFund.owner` 同址）→ 特权操作需 `Propose → 60s → Execute` |
@@ -246,13 +258,13 @@ docs/adr/0001-immutable-core-upgradeable-oracle-adapter.md and docs/deploy-runbo
 | PLT Minter (admin = Core) | kQC6zZ83qploNLCy0MdUNhKkBD9Tx25N-xWF7iDHkd3IJ2k3 |
 | PlanetTimelock (60s, Core owner) | kQC_j4CrhPvbAX19_4C-PAoGNWBsaxj4GN5v6mIhGb7ctxQ1 |
 | PlanetGov | kQAK5XcQdykCOrA2-uFraTxqCFD1NNdK5W4QrwCexNcBYJ3 |
-| PlanetBond | kQDYY-LJED5Xi2j-fnsxEqcYsMj0BWU-XrtV3SiSCu_pwizG |
+| PlanetBond | kQDMxJXroCmuxBw9Sw7oj9LhO9Y0mLxdPS3Tr4vY-sdq65hz (live; verified 2026-10-19; the kQDYY… entry is uninitialized on testnet) |
 | PLTG Minter | kQDF0ixGco8WW4fqPB3XNdrNJ8vikFNkkyzKbz8hNJiFZ7OD (UNCHANGED address) |
 | PlanetFund owner | kQBo0345y-RGi49-7WWaWAHyyNtiWe-JrT44iO3G9Cyom6YK (older timelock; Fund was not redeployed) |
 
 Superseded (kept only as history / API fallback): Core kQAwzh3O-52-QBtB8JFFTjtNaKFhw-uJMkd-zdnoHoGibzcU,
 PLT minter kQAMXsJdK0tklNy5x3Q8Jhw1dAkB6pw6ubREVprusamUcpbq, Gov kQD4eBl68N4Udu4YPEFrKSKL99mx0To1ihGd-DQP7b1EpaUV,
-Bond kQDMxJXroCmuxBw9Sw7oj9LhO9Y0mLxdPS3Tr4vY-sdq65hz, Basket kQAfGKn_UrUW8LQd92ZWy0h0BrCA_QTBhMqDA1M-PZtyv-r_ (deprecated, BK-1).
+Basket kQAfGKn_UrUW8LQd92ZWy0h0BrCA_QTBhMqDA1M-PZtyv-r_ (deprecated, BK-1).
 
 Verified on-chain: assetCount=14, baseLocked=true, signerCount=1/threshold=1, signerAt(0)=the hot key
 (0x75bc1c11...), owner=the new Timelock, 14 prices pushed + verified. Live /api/v1/oracle: healthy=true, fresh=true, maxAgeSeconds=93600 (26h SLA).
@@ -264,3 +276,40 @@ Two real bugs were found and fixed during the rebuild:
 2. deploy_gov.tolk minted the PLTG genesis supply unconditionally; the PLTG minter address is
    deterministic, so a re-run reused it and DOUBLED the supply (1e15 -> 2e15). Now guarded on
    totalSupply == 0. Commit 8ac3c6c. A cleanup burn (relayer burnjetton) can restore 1e15 exactly.
+---
+
+## v1.9 bond link (2026-10-19) �� redeploy note
+
+Core and Bond code changed, and contracts are immutable (ADR-0001), so the live testnet
+addresses in ��11 do **not** include this feature yet. A redeploy must follow the runbook:
+
+1. Deploy the Core stack (`ton-deploy.yml`) and configure the basket/signers.
+2. Migrate `PlanetCore.owner` to the timelock (`core-owner.yml`).
+3. Deploy the Bond (`bond-deploy.yml` �� `scripts/deploy_bond.tolk`). The script bakes the
+   live Core into `BondStorage.core` and, when the deployer is still the Core owner, calls
+   `SetBond`; otherwise it prints the timelock body.
+4. Wire Core �� Bond through the timelock: `SetBond(queryId=0, bond=<NEW_BOND>)`, op
+   `0x10000019`, then `Propose �� delay �� Execute`.
+5. Verify: `PlanetCore.bond() == <NEW_BOND>`, `PlanetBond.core() == <CORE>`,
+   `PlanetCore.bondOpen() == false`, `PlanetCore.bondPaid() == 0`.
+
+Storage stays legal: the three new fields live in the existing `limitsState` ref cell, so
+`PlanetCore` remains at 4/4 refs and below 1023 bits.
+
+Known remaining hardening: `PlanetBond` has no `SetOwner`, so its owner is the deployer key.
+Add `SetOwner` (zero-address guarded) before production, or deploy the Bond with a multisig
+as owner.
+
+---
+
+## v1.9 frontend polish (2026-10-19)
+
+- `app-tg/`: oracle-age cell + 6h stale banner (mint is blocked on-chain when stale), PPI vs peg
+  line, stability panel (bond sale/premium/face + risk fund), manual refresh, top error banner,
+  first-load state, English copy, 320px no-overflow.
+- `web/dashboard.html`: risk-fund + bond strip, stale oracle styling, responsive table (drops
+  `#`/`BASE` ��640px, `��` ��360px; horizontal wrapper retained).
+- `web/api/v1/status.js`: additive `bond: { open, paid }` when the Core getters exist (omitted on
+  the live v1.8 Core, so the dashboard shows "��").
+- Live Bond address corrected after on-chain verification: `kQDMxJXroCmuxBw9Sw7oj9LhO9Y0mLxdPS3Tr4vY-sdq65hz`
+  (exit=0, premium 5%, totalIssued 0). The `kQDYY��` entry in the v1.8 rebuild table is uninitialized.

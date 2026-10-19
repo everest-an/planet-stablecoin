@@ -38,7 +38,7 @@
 | L1 | 赎回镜像（钱包 AskToBurn → minter → Core） | ✅ 已实现 |
 | L1 | 预言机接缝 + 单/多资产推价 | ✅ 已实现（`oracle.test.tolk` 等） |
 | L2 | CAM 插件层（标准化多维输出、隔离） | ✅ 已实现（`SetCam`/`CamUpdate`，`cam.test.tolk`） |
-| L3 | 稳定/风控（分档费、弹性曲线、套利入口、风险基金、熔断） | ✅ 已实现（`stability.test.tolk`）；稳定债券 🟡 合约就绪未联动 |
+| L3 | 稳定/风控（分档费、弹性曲线、套利入口、风险基金、熔断、稳定债券） | ✅ 已实现（`stability.test.tolk` + `bond_link.test.tolk`）；债券由 Core 自动开/关并从风险基金结算扣付 |
 | L3 | 实际成交（外部 DEX 再平衡） | ⬜ 设计（协议不自建 DEX） |
 | L4 | 代币化 ETF 基金（申购/赎回按 NAV + 无信任赎回） | ✅ 已实现（`planet_fund.tolk`） |
 | L0 | RWA 实物储备 | ⬜ 未启动（需外部合作/合规） |
@@ -102,7 +102,7 @@
 | P1（✅） | CAM（`SetCam`/`CamUpdate` + 风险自适应 RTRA）；限额/多签+时间锁 | 纯代码 |
 | P2（🟡） | 前端/看板（✅ Mini App + 官网）；接**外部 DEX 实际成交**（⬜，不自建） | 外部 DEX |
 | P3（✅） | 协议稳定机制：分档费 / 限额 / 熔断 / 弹性曲线 / 套利返还 / 风险基金 | 纯代码 |
-| P4（🟡） | 稳定债券（`PlanetBond` 合约就绪；⬜ 与 Core 自动联动） | P3 |
+| P4（✅） | 稳定债券（`PlanetBond` + Core 自动开/关 + 结算从风险基金扣付；⬜ 真实付款/到期阶梯） | P3 |
 | P4b（✅） | 代币化 ETF 基金 `PlanetFund`（申购/赎回按 NAV + TEP-74 无信任赎回） | 纯代码 |
 | P5（⬜） | PLTG 治理代币；RWA 储备 + 合规 | 外部合作 |
 

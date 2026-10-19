@@ -21,7 +21,7 @@
 | 弹性铸赎曲线（>5% 陡峭化） | ✅ 已实现（斜率） | `feeBpsForPpi` |
 | 套利入口（方向正确返还手续费） | ✅ 已实现 | `SetArb` + `arbRebateBps` |
 | 风险基金（手续费划拨 + 补储备） | ✅ 已实现 | `RISK_SHARE_BPS` + `riskFund` + `CoverDeficit` |
-| 稳定债券（PPI<0.95 折价发债） | 🟡 合约就绪（`PlanetBond`，独立账本，**尚未与 Core 自动联动**） | `planet_bond.tolk` |
+| 稳定债券（PPI<0.95 折价发债） | ✅ 已实现（Core 自动开/关 sale：<0.95 开、≥0.97 关；结算从风险基金扣付） | `planet_bond.tolk` + `SetBond`/`PayBond` |
 | RTRA 实时再平衡（漂移触发） | ✅ 已实现（漂移计算 + 风险自适应触发） | `rebalanceDrift`/`shouldRebalanceRisk` |
 | RTRA **实际成交**（外部 DEX） | ⬜ 设计（协议**不自建 DEX**） | — |
 | CAM 适配层（价格/波动率/流动性/风险 + 隔离） | ✅ 已实现（Phase A） | `SetCam` + `CamUpdate` |
@@ -94,7 +94,7 @@ Received = B · PPI · (1 − f)
 - **弹性铸赎曲线（已实现）**：>5% 后费率**线性陡峭化**（`SLOPE_BPS`）；下行非对称——`PPI<0.97` 追加赎回罚费，且总费率封顶（`MAX_BURN_FEE_BPS`）保证 payout 不为负。
 - **套利入口（已实现）**：`SetArb` 设定返还 bps；当 `PPI>1.03`（index rich）时铸币费按返还下调，激励外部套利者把价拉回 PPI。
 - **风险基金（已实现）**：每笔手续费的 `RISK_SHARE_BPS`（10%）划入 `riskFund`；owner 可用 `CoverDeficit` 把风险基金补进储备。
-- **稳定债券（合约就绪）**：`PlanetBond`（折价认购/赎回账本）已部署，但**尚未与 Core 自动联动**（`PPI<0.95` 自动触发待做）。
+- **稳定债券（已联动）**：`PlanetBond`（折价认购/赎回账本）+ Core 自动触发——`PPI<0.95` 自动 `SetOpen(true)` 开售，回升到 `≥0.97` 自动关闭（2% 滞回，避免在阈值附近反复开关）；每次价格更新只在**跨档**时发一次通知。运营方结算赎回后，Bond 向 Core 发 `PayBond`，Core 从风险基金扣付（**上限=当前风险基金余额**，不足不失败、不中断结算）。真实资金付款与到期阶梯仍为运营/后续工作。
 - 详见 `docs/peg-stability.md`。
 
 ### 3.4 CAM 适配层（**Phase A 已实现**）
@@ -128,7 +128,7 @@ L0 储备 / RWA      实物/ETF 储备 + 托管 + 储备证明                  
 L1 核心            PlanetCore：篮子 / 链上 PPI / 铸赎 / 费率 / RTRA / 赎回镜像 / 治理篮子 [已实现]
 L2 适配层          CAM：每商品标准化 价格/波动率/流动性/风险              [Phase A 已实现]
 L3 稳定 / 风控      分档费 · 弹性曲线 · 套利入口 · 风险基金 · 熔断          [已实现]
-                  稳定债券（PlanetBond）                               [合约就绪，未联动]
+                  稳定债券（PlanetBond + Core 自动触发 + 风险基金结算）   [已实现]
                   实际成交（外部 DEX）                                  [设计]
 L4 基金            PlanetFund：申购 / 托管 M-of-N 按 NAV 铸 / 赎回        [已实现]
 （不自建 DEX/AMM；交易走外部场所）
@@ -151,7 +151,7 @@ L4 基金            PlanetFund：申购 / 托管 M-of-N 按 NAV 铸 / 赎回   
 | 阶段 | 内容 | 状态 |
 |---|---|---|
 | P0 | TON 核心 + 铸赎镜像 + 链上 PPI + 稳定机制批次 A + CAM Phase A | ✅ 已实现 |
-| P1 | 稳定机制 C1/C2/C3（费率斜率、套利入口、风险基金） | ✅ 已实现；债券 🟡 合约就绪未联动 |
+| P1 | 稳定机制 C1/C2/C3（费率斜率、套利入口、风险基金、稳定债券） | ✅ 已实现（债券已与 Core 自动联动并从风险基金结算扣付） |
 | P2 | 前端/看板（Mini App + 官网）✅；接外部 DEX（不自建）⬜ | 🟡 |
 | P3 | 接入真实数据源 + 测试网部署（Yahoo+Sina 双源中位数、冻结护栏、M-of-N 签名） | ✅ 已实现 |
 | P3b | 代币化 ETF 基金 `PlanetFund`（申购/赎回按 NAV + 无信任赎回） | ✅ 已实现 |

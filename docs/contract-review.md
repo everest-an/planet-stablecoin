@@ -146,8 +146,11 @@ fun handleRedeem(...) { ... storage.bonds.set(sender, BondRec{ ..., redeemed: tr
 无 `assert (storage.totalIssued >= b.face)`；int64 下溢会翻成大正数 ✗。
 **修法**：加断言。
 
-### ℹ️ BD-4 独立账本、未与 Core 联动
-`core` 字段只存不用 ✗；"PPI<0.95 自动开债"未实现 ✓（已在文档说明 ✓）。
+### ℹ️ BD-4 独立账本、未与 Core 联动 — ✅ 已修（2026-10-19）
+`core` 字段只存不用 ✗ → 现在用于两件事：① Bond 接受来自 `core` 的 `SetOpen`（Core 自动触发）；
+② `SettleRedeem` 后向 `core` 发 `PayBond(face)`，Core 从风险基金扣付（上限=余额，累计 `bondPaid`）。
+Core 侧新增 `SetBond`（owner）+ `bondSync`（`PPI<0.95` 开、`≥0.97` 关，2% 滞回、边沿触发）。
+回归：`contracts/tests/bond_link.test.tolk`（13 个测试）。
 
 ---
 

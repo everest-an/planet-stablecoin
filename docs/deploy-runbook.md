@@ -47,8 +47,11 @@ gh workflow run core-owner.yml            # 日志取 <NEW_TIMELOCK>
 # ④ Gov + PLTG（含 genesis 分配）
 gh workflow run gov-deploy.yml            # 日志取 <NEW_GOV> / <NEW_PLTG_MINTER>
 
-# ⑤ Bond（BD-1/2/3 修复）
+# ⑤ Bond（BD-1/2/3 修复 + Core 自动触发）
 gh workflow run bond-deploy.yml           # 日志取 <NEW_BOND>
+
+# ⑥ 把 Core 指向 Bond（SetBond, op 0x10000019 → Propose → 60s → Execute）
+#    脚本在 deployer 仍是 Core owner 时会直接接线；否则按日志给出的 body 走时间锁
 
 # ⑥ 首次推送真实价格（hot key），确认 PPI 更新
 gh workflow run relayer-push.yml
@@ -78,6 +81,8 @@ gh workflow run relayer-push.yml
 - [ ] `PlanetCore.owner() == <NEW_TIMELOCK>`
 - [ ] `PlanetTimelock.tlOwner() == 部署钱包`、`delay() == 60`
 - [ ] `JettonMinter.adminAddress() == <NEW_CORE>`
+- [ ] `PlanetCore.bond() == <NEW_BOND>`、`PlanetBond.core() == <NEW_CORE>`
+- [ ] `PlanetCore.bondOpen() == false`、`PlanetCore.bondPaid() == 0`
 
 线上：
 
