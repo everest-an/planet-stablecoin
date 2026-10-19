@@ -6,3 +6,4 @@ dist/
 devserver.log
 .vercel
 .env*
+devserver*.log

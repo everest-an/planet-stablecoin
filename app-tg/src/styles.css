@@ -350,3 +350,97 @@ code {
   border-bottom: 1px solid var(--hair-strong);
 }
 .wallet .link:hover { color: var(--ink); border-color: var(--ink); }
+
+/* ---- polish: peg context, alerts, refresh meta, stability ---- */
+.peg {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.peg.far,
+.signal { color: var(--signal); }
+
+.banner {
+  border: 1px solid var(--signal);
+  padding: var(--sp-3);
+  margin: var(--sp-3) 0;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-top: var(--sp-3);
+}
+.meta .link {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--hair-strong);
+}
+.meta .link:hover:not(:disabled) { color: var(--ink); border-color: var(--ink); }
+.meta .link:disabled { opacity: 0.4; cursor: default; }
+
+.note {
+  margin: var(--sp-3) 0 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.kv {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--hair);
+}
+.kv > div {
+  padding: var(--sp-3) var(--sp-2) var(--sp-3) 0;
+  border-bottom: 1px solid var(--hair);
+}
+.kv > div + div {
+  padding-left: var(--sp-3);
+  border-left: 1px solid var(--hair);
+}
+.kv .k {
+  display: block;
+  margin-bottom: var(--sp-2);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.kv .v-sm {
+  font-family: var(--mono);
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.badge.open { border-color: var(--ink); color: var(--ink); }
+
+@media (max-width: 480px) {
+  .head { flex-wrap: wrap; }
+  .head-right { width: 100%; flex-wrap: wrap; justify-content: space-between; gap: var(--sp-2); }
+}
+@media (max-width: 420px) {
+  .kv { grid-template-columns: 1fr; }
+  .kv > div + div { padding-left: 0; border-left: 0; }
+}
+@media (max-width: 360px) {
+  th, td { padding: var(--sp-2) 2px; font-size: 10px; }
+  th:first-child, td:first-child { display: none; }
+  .wbar { width: 18px; }
+  .badge { font-size: 9px; padding: 1px 3px; }
+}

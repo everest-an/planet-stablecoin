@@ -9,6 +9,8 @@ const ENDPOINT =
 const API_KEY = (import.meta.env.VITE_TONCENTER_API_KEY as string | undefined) || undefined;
 const PLANET_ADDRESS = import.meta.env.VITE_PLANET_ADDRESS ?? "";
 const PLT_MINTER_ADDRESS = import.meta.env.VITE_PLT_MINTER_ADDRESS ?? "";
+const BOND_ADDRESS = import.meta.env.VITE_BOND_ADDRESS ?? "";
+const MAX_ORACLE_AGE = 21600; // 6h — matches PlanetCore's mint freshness guard
 // Since A2, PlanetCore owns the commodity basket; the app reads assets from it directly.
 
 const OP_MINT = 0x10000001; // PlanetCore Mint message opcode
@@ -43,6 +45,18 @@ function fmtFixed(raw: bigint, decimals = 6): string {
   });
 }
 
+// Compact oracle age: 42s / 12m / 3h 20m / 2d 4h.
+function fmtAge(seconds: number | null): string {
+  if (seconds === null || !Number.isFinite(seconds) || seconds < 0) return "—";
+  const s = Math.floor(seconds);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 48) return m % 60 ? `${h}h ${m % 60}m` : `${h}h`;
+  return `${Math.floor(h / 24)}d ${h % 24}h`;
+}
+
 function mintBody(usdcAmount: bigint): Cell {
   return beginCell()
     .storeUint(OP_MINT, 32)
@@ -69,8 +83,8 @@ function preferredTheme(): Theme {
 // Turn a TON Connect / RPC error into a human-readable message.
 function classifyTxError(e: unknown): string {
   const m = String((e as Error)?.message ?? e);
-  if (/reject|denied|cancel|abort|user/i.test(m)) return "已取消：你在钱包里拒绝了交易";
-  if (/insufficient|not enough|balance/i.test(m)) return "余额不足（测试网 TON / USDC）";
+  if (/reject|denied|cancel|abort|user/i.test(m)) return "Cancelled: you rejected the transaction in your wallet";
+  if (/insufficient|not enough|balance/i.test(m)) return "Insufficient balance (testnet TON / USDC)";
   return m;
 }
 
@@ -108,24 +122,35 @@ export default function App() {
   const [maxMint, setMaxMint] = useState(0);
   const [pltRaw, setPltRaw] = useState<bigint | null>(null);
   const [intentNote, setIntentNote] = useState("");
+  const [riskFund, setRiskFund] = useState("—");
+  const [oracleAge, setOracleAge] = useState<number | null>(null);
+  const [bond, setBond] = useState<{
+    open: boolean;
+    premiumBps: number;
+    totalIssued: string;
+  } | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem("planet-theme", theme);
   }, [theme]);
 
-  async function refresh() {
-    if (!PLANET_ADDRESS) {
-      setError("VITE_PLANET_ADDRESS not set");
-      return;
-    }
+  async function refresh(manual = false) {
+    if (manual) setRefreshing(true);
     try {
+      if (!PLANET_ADDRESS) {
+        setError("VITE_PLANET_ADDRESS not set");
+        return;
+      }
       const addr = Address.parse(PLANET_ADDRESS);
-      const [p, r, s, mx] = await Promise.all([
+      const [p, r, s, mx, lu, rf] = await Promise.all([
         runMethodRetry(addr, "ppi"),
         runMethodRetry(addr, "reserve"),
         runMethodRetry(addr, "supply"),
         runMethodRetry(addr, "maxPerTx"),
+        runMethodRetry(addr, "lastOracleUpdate"),
+        runMethodRetry(addr, "riskFund"),
       ]);
       const ppiBig = p.stack.readBigNumber();
       setPpi(fmtFixed(ppiBig, 6));
@@ -133,6 +158,11 @@ export default function App() {
       setReserve(fmtFixed(r.stack.readBigNumber(), 6));
       setSupply(fmtFixed(s.stack.readBigNumber(), 6));
       setMaxMint(Number(mx.stack.readBigNumber()));
+      setRiskFund(fmtFixed(rf.stack.readBigNumber(), 6));
+      const lastPush = Number(lu.stack.readBigNumber());
+      setOracleAge(
+        lastPush > 0 ? Math.max(0, Math.floor(Date.now() / 1000) - lastPush) : null
+      );
 
       // User balances: PLT via the jetton wallet, TON via the node.
       if (userAddress) {
@@ -159,6 +189,29 @@ export default function App() {
           }
         }
       }
+
+      // Bond state is read from the bond contract itself: these getters already exist on
+      // the deployed bond, while the newer Core bond getters may not be deployed yet.
+      if (BOND_ADDRESS) {
+        try {
+          const b = Address.parse(BOND_ADDRESS);
+          const [bo, bp, ti] = await Promise.all([
+            runMethodRetry(b, "isOpen"),
+            runMethodRetry(b, "premiumBps"),
+            runMethodRetry(b, "totalIssued"),
+          ]);
+          setBond({
+            open: bo.stack.readBoolean(),
+            premiumBps: Number(bp.stack.readBigNumber()),
+            totalIssued: fmtFixed(ti.stack.readBigNumber(), 6),
+          });
+        } catch {
+          setBond(null);
+        }
+      } else {
+        setBond(null);
+      }
+
       setUpdatedAt(new Date().toLocaleTimeString());
 
       // On-chain basket composition (owned by PlanetCore since A2)
@@ -219,6 +272,8 @@ export default function App() {
       setError("");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      if (manual) setRefreshing(false);
     }
   }
 
@@ -277,7 +332,7 @@ export default function App() {
       return;
     }
     if (maxMint > 0 && Number(units) > maxMint) {
-      setError(`超过单笔限额（${maxMint / 10 ** USD_DECIMALS} USDC）`);
+      setError(`Amount exceeds the per-transaction cap (${maxMint / 10 ** USD_DECIMALS} USDC)`);
       return;
     }
     setBusy(true);
@@ -296,7 +351,7 @@ export default function App() {
           },
         ],
       });
-      setMsg(`已提交：mint ${amount} USDC（等待链上确认…）`);
+      setMsg(`Submitted: mint ${amount} USDC (waiting for on-chain confirmation…)`);
       setAmount("");
       if (userAddress) setTxUrl(`${EXPLORER}/${userAddress}`);
       setTimeout(() => { void refresh(); }, 5000);
@@ -315,7 +370,7 @@ export default function App() {
       return;
     }
     if (pltRaw !== null && units > pltRaw) {
-      setError("超过你的 PLT 余额");
+      setError("Amount exceeds your PLT balance");
       return;
     }
     setBusy(true);
@@ -345,7 +400,7 @@ export default function App() {
           },
         ],
       });
-      setMsg(`已提交：burn ${burnAmount} PLT（等待链上确认…）`);
+      setMsg(`Submitted: burn ${burnAmount} PLT (waiting for on-chain confirmation…)`);
       setBurnAmount("");
       if (userAddress) setTxUrl(`${EXPLORER}/${userAddress}`);
       setTimeout(() => { void refresh(); }, 5000);
@@ -356,8 +411,12 @@ export default function App() {
     }
   }
 
+  const loading = !updatedAt && !error;
+  const stale = oracleAge !== null && oracleAge > MAX_ORACLE_AGE;
+  const ppiDev = ppiRaw !== null && ppiRaw > 0 ? (ppiRaw - 1) * 100 : null;
+
   return (
-    <main className="wrap">
+    <main className="wrap" aria-busy={loading}>
       <header className="head">
         <h1>Planet</h1>
         <div className="head-right">
@@ -365,6 +424,7 @@ export default function App() {
             className="link"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             title="toggle theme"
+            aria-label="Toggle light and dark theme"
           >
             [ {theme} ]
           </button>
@@ -387,6 +447,22 @@ export default function App() {
 
       <p className="tag">[ commodity purchasing-power index · TON testnet ]</p>
       {intentNote && <p className="muted">▸ {intentNote}</p>}
+      {loading && (
+        <p className="muted" role="status">
+          reading chain…
+        </p>
+      )}
+      {error && (
+        <p className="err banner" role="alert">
+          {error}
+        </p>
+      )}
+      {stale && (
+        <p className="err banner" role="alert">
+          Oracle is stale ({fmtAge(oracleAge)} old) — minting is blocked until the relayer
+          pushes a fresh price.
+        </p>
+      )}
 
       <div className="sec-head">
         <span className="num">[ 01 ]</span>
@@ -397,6 +473,12 @@ export default function App() {
         <div className="card">
           <span className="k">PPI</span>
           <span className="v">{ppi}</span>
+          {ppiDev !== null && (
+            <span className={`peg${Math.abs(ppiDev) > 5 ? " far" : ""}`}>
+              vs 1.000000 {ppiDev >= 0 ? "▲" : "▼"} {ppiDev >= 0 ? "+" : ""}
+              {ppiDev.toFixed(2)}%
+            </span>
+          )}
         </div>
         <div className="card">
           <span className="k">Reserve</span>
@@ -405,6 +487,14 @@ export default function App() {
         <div className="card">
           <span className="k">PLT Supply</span>
           <span className="v">{supply}</span>
+        </div>
+        <div className="card">
+          <span className="k">Oracle age</span>
+          <span className={`v${stale ? " signal" : ""}`}>{fmtAge(oracleAge)}</span>
+        </div>
+        <div className="card">
+          <span className="k">Risk fund</span>
+          <span className="v">${riskFund}</span>
         </div>
         {userAddress && (
           <div className="card">
@@ -420,7 +510,12 @@ export default function App() {
         )}
       </section>
 
-      {updatedAt && <p className="muted">Last updated: {updatedAt}</p>}
+      <div className="meta">
+        <span className="muted">Last updated: {updatedAt || "—"}</span>
+        <button className="link" onClick={() => void refresh(true)} disabled={refreshing}>
+          [ {refreshing ? "refreshing…" : "refresh"} ]
+        </button>
+      </div>
 
       {assets.length > 0 && (
         <section className="basket">
@@ -484,9 +579,45 @@ export default function App() {
         </section>
       )}
 
-      <section className="mint" id="mint">
+      <section className="stability">
         <div className="sec-head">
           <span className="num">[ 03 ]</span>
+          <span className="lbl">stability</span>
+          <span className="end">¬</span>
+        </div>
+        {BOND_ADDRESS ? (
+          bond ? (
+            <div className="kv">
+              <div>
+                <span className="k">Sale</span>
+                <span className={`badge${bond.open ? " open" : ""}`}>
+                  {bond.open ? "open" : "closed"}
+                </span>
+              </div>
+              <div>
+                <span className="k">Premium</span>
+                <span className="v-sm">{(bond.premiumBps / 100).toFixed(2)}%</span>
+              </div>
+              <div>
+                <span className="k">Face outstanding</span>
+                <span className="v-sm">${bond.totalIssued}</span>
+              </div>
+            </div>
+          ) : (
+            <p className="muted">Bond state unavailable.</p>
+          )
+        ) : (
+          <p className="muted">Bond not configured (set VITE_BOND_ADDRESS).</p>
+        )}
+        <p className="note">
+          The sale opens automatically below PPI 0.950000 and closes at 0.970000. Settled
+          bonds draw from the risk fund.
+        </p>
+      </section>
+
+      <section className="mint" id="mint">
+        <div className="sec-head">
+          <span className="num">[ 04 ]</span>
           <span className="lbl">mint</span>
           <span className="end">¬</span>
         </div>
@@ -511,7 +642,7 @@ export default function App() {
 
       <section className="mint" id="burn">
         <div className="sec-head">
-          <span className="num">[ 04 ]</span>
+          <span className="num">[ 05 ]</span>
           <span className="lbl">burn</span>
           <span className="end">¬</span>
         </div>
@@ -534,11 +665,15 @@ export default function App() {
         {!PLT_MINTER_ADDRESS && (
           <p className="muted">Set VITE_PLT_MINTER_ADDRESS to enable burn.</p>
         )}
-        {msg && <p className="ok">{msg}</p>}
+        {msg && (
+          <p className="ok" role="status" aria-live="polite">
+            {msg}
+          </p>
+        )}
         {txUrl && (
           <p className="muted">
             <a href={txUrl} target="_blank" rel="noreferrer">
-              在区块浏览器查看该钱包 ↗
+              View this wallet in the explorer ↗
             </a>
           </p>
         )}
@@ -550,8 +685,6 @@ export default function App() {
         back to PlanetCore. PPI is read from PlanetCore; the basket-implied value is
         computed from the on-chain basket for comparison.
       </p>
-
-      {error && <p className="err">{error}</p>}
 
       <footer className="foot">
         <a href="https://ppppp.space" target="_blank" rel="noreferrer">

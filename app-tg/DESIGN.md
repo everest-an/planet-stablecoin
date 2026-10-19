@@ -88,3 +88,17 @@ Caret blink honours reduced-motion. All numerals tabular for stable columns.
   basket table 328px; mobile density rules applied (`â‰¤640px`).
 - Theme toggle: `data-theme` flips lightâ†”dark and persists to `localStorage`.
 - Real on-chain data rendered: PPI `0.995879`, per-asset `NOW` = pushed medians, `â–²/â–¼` drift, `ok/frozen` badges.
+
+## 9. Polish additions (2026-10-19)
+
+| Primitive | Role | Rule |
+|---|---|---|
+| `.peg` | PPI deviation vs 1.000000 | DM Mono 11px, muted; `--signal` above 5% |
+| `.banner` | stale-oracle / error banner | 1px `--signal` border, prose wraps at word boundaries |
+| `.meta` + `.link` | last-updated + manual refresh | DM Mono 10¨C11px, hairline underline, 40% disabled |
+| `.kv` | stability strip (sale / premium / face) | hairline 3-column grid, collapses to 1 column ¡Ü420px |
+| `.badge.open` | bond sale open | ink border/text (closed keeps the muted badge) |
+
+QA (real browser, live testnet reads): at 390¡Á844 and 320¡Á800 `scrollWidth === clientWidth`;
+the basket table drops `#` and `BASE` ¡Ü640px (and `¦¤ vs base` ¡Ü360px); the bond panel read the
+live Bond (`closed`, `5.00%`, `$0`) and the stale banner rendered at 21h oracle age.
