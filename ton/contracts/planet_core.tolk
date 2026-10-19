@@ -9,6 +9,7 @@ import "oracle_state"
 import "burn_mirror"
 import "limits"
 import "signed_price"
+import "bond_messages"
 
 const FEE_BPS = 50;          // 0.5% = 50 bps (near peg)
 const FEE_BPS_ELEVATED = 100; // 1.0% when |PPI-1| in (3%, 5%]
@@ -23,6 +24,11 @@ const REDEEM_PENALTY_PPI = 970000; // below this PPI, redeem fee is penalised
 const REDEEM_PENALTY_BPS = 100;    // extra redeem fee (bps) below REDEEM_PENALTY_PPI
 const BAND_RICH = 1030000;         // PPI above this = index rich -> reward minting
 const RISK_SHARE_BPS = 1000;       // 10% of each fee -> risk fund
+// Stabilization bond (C3b link): open the sale below the trigger, close it after the
+// index recovers past a HIGHER band. The 2% gap is deliberate hysteresis — without it a
+// PPI hovering at 0.95 would toggle the sale on every oracle push.
+const BOND_TRIGGER_PPI = 950000;   // PPI < 0.95 -> open the bond sale
+const BOND_CLOSE_PPI = 970000;     // PPI >= 0.97 -> close it again
 const MAX_PRICE_JUMP_PPM = 500000; // reject a single price update that jumps >50%
 const MAX_ASSET_WEIGHT = 150000;   // 15% — no single commodity may exceed this (wp §2.1)
 // Staleness guard: refuse to MINT against an oracle price older than this (6h). Without it a
@@ -53,6 +59,7 @@ const ERR_BAD_OWNER = 120;
 const ERR_BAD_RISK = 121;
 const ERR_BAD_AMOUNT = 122;
 const ERR_NO_ACTIVE_ASSETS = 123; // no priced (non-frozen) asset: the index is undefined (C-1)
+const ERR_NOT_BOND = 124;         // PayBond must come from the configured PlanetBond
 
 // Cap the redeem fee so the payout can never go negative (defends against a far
 // below-peg PPI inflating the reserve through a negative fee → AR3).
@@ -211,7 +218,14 @@ struct (0x10000014) SetOwner {
     newOwner: address  // e.g. migrate to a TON multisig wallet
 }
 
-type AllowedMessage = Mint | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | BurnMirror | SetBasketAsset | OracleUpdateAssetPrice | LockBasePrices | SetLimits | SetCam | CamUpdate | SetArb | SetSigner | SignedPriceUpdate | SignedPriceUpdateN | CoverDeficit | SetThreshold | SetOwner | GovernanceAddAsset | GovernanceSetWeight
+// Owner wires the stabilization bond (C3b) into the automatic PPI trigger. Passing the
+// zero address disables the trigger. The Bond accepts SetOpen from this Core address.
+struct (0x10000019) SetBond {
+    queryId: int64
+    bond: address
+}
+
+type AllowedMessage = Mint | UpdatePrice | SetPaused | SetJettonMinter | SetOracle | BurnMirror | SetBasketAsset | OracleUpdateAssetPrice | LockBasePrices | SetLimits | SetCam | CamUpdate | SetArb | SetSigner | SignedPriceUpdate | SignedPriceUpdateN | CoverDeficit | SetThreshold | SetOwner | SetBond | PayBond | GovernanceAddAsset | GovernanceSetWeight
 
 // ---------------- Contract ABI ----------------
 
@@ -389,6 +403,42 @@ fun computePpi(assets: map<int64, CoreAsset>, assetCount: int64): int64 {
     return (num * PPI_SCALE / den) as int64;
 }
 
+// ---------------- Stabilization bond link (C3b) ----------------
+
+// Decide whether this PPI value needs a SetOpen notification. Returns the updated Limits
+// and an action (0 = nothing, 1 = open, 2 = close). Edge-triggered through `bondOpen`, so
+// a stream of oracle pushes inside the same band sends nothing; the 0.95/0.97 gap is the
+// hysteresis that stops a PPI hovering at the trigger from flapping the sale.
+fun bondSync(lim: Limits, ppi: int64): (Limits, int) {
+    var next = lim;
+    if (isZeroAddress(lim.bond)) {
+        return (next, 0);
+    }
+    // ppi == 0 means "index undefined" (all assets frozen): never open a sale on it.
+    if (!lim.bondOpen && ppi > 0 && ppi < BOND_TRIGGER_PPI) {
+        next.bondOpen = true;
+        return (next, 1);
+    }
+    if (lim.bondOpen && ppi >= BOND_CLOSE_PPI) {
+        next.bondOpen = false;
+        return (next, 2);
+    }
+    return (next, 0);
+}
+
+fun sendBondState(bond: address, open: bool) {
+    val m = createMessage({
+        bounce: BounceMode.Only256BitsOfBody,
+        dest: bond,
+        value: BOND_NOTIFY_TON,
+        body: SetOpen {
+            queryId: 0,
+            open: open,
+        },
+    });
+    m.send(SEND_MODE_PAY_FEES_SEPARATELY);
+}
+
 // ---------------- Message handling ----------------
 
 fun onInternalMessage(in: InMessage) {
@@ -413,6 +463,8 @@ fun onInternalMessage(in: InMessage) {
         CoverDeficit => { handleCoverDeficit(in.senderAddress, msg); }
         SetThreshold => { handleSetThreshold(in.senderAddress, msg); }
         SetOwner => { handleSetOwner(in.senderAddress, msg); }
+        SetBond => { handleSetBond(in.senderAddress, msg); }
+        PayBond => { handlePayBond(in.senderAddress, msg); }
         GovernanceAddAsset => { handleGovernanceAddAsset(in.senderAddress, msg); }
         GovernanceSetWeight => { handleGovernanceSetWeight(in.senderAddress, msg); }
         else => { assert (in.body.isEmpty()) throw 0xFFFF; }
@@ -477,6 +529,9 @@ fun handleMint(sender: address, msgValue: coins, msg: Mint) {
         maxPerTx: lim.maxPerTx,
         arbRebateBps: lim.arbRebateBps,
         riskFund: lim.riskFund + riskShare,
+        bond: lim.bond,
+        bondOpen: lim.bondOpen,
+        bondPaid: lim.bondPaid,
     }.toCell();
     val net = (msg.amount as int) * (BPS_DENOM as int - effBps as int) / BPS_DENOM;
     val minted = (net * PPI_SCALE / (storage.currentPpi as int)) as int64;
@@ -528,7 +583,12 @@ fun handleUpdatePrice(sender: address, msg: UpdatePrice) {
     // basket/oracle path, so this direct write must not be usable post-lock (OR4).
     assert (!storage.baseLocked) throw ERR_BASE_LOCKED;
     storage.currentPpi = msg.price;
+    val lim = Limits.fromCell(storage.limitsState);
+    val (nextLim, action) = bondSync(lim, storage.currentPpi);
+    storage.limitsState = nextLim.toCell();
     storage.save();
+    if (action == 1) { sendBondState(nextLim.bond, true); }
+    if (action == 2) { sendBondState(nextLim.bond, false); }
 }
 
 fun handleSetPaused(sender: address, msg: SetPaused) {
@@ -590,7 +650,14 @@ fun handleSetLimits(sender: address, msg: SetLimits) {
     var storage = lazy Storage.load();
     assert (sender == storage.owner) throw ERR_NOT_OWNER;
     val lim = Limits.fromCell(storage.limitsState);
-    storage.limitsState = Limits { maxPerTx: msg.maxPerTx, arbRebateBps: lim.arbRebateBps, riskFund: lim.riskFund }.toCell();
+    storage.limitsState = Limits {
+        maxPerTx: msg.maxPerTx,
+        arbRebateBps: lim.arbRebateBps,
+        riskFund: lim.riskFund,
+        bond: lim.bond,
+        bondOpen: lim.bondOpen,
+        bondPaid: lim.bondPaid,
+    }.toCell();
     storage.save();
 }
 
@@ -603,6 +670,9 @@ fun handleSetArb(sender: address, msg: SetArb) {
         maxPerTx: lim.maxPerTx,
         arbRebateBps: msg.rebateBps,
         riskFund: lim.riskFund,
+        bond: lim.bond,
+        bondOpen: lim.bondOpen,
+        bondPaid: lim.bondPaid,
     }.toCell();
     storage.save();
 }
@@ -667,7 +737,12 @@ fun applyOraclePayload(payload: cell) {
     os.lastOracleUpdate = p.timestamp;
     storage.oracleState = os.toCell();
     storage.currentPpi = computePpi(storage.assets, storage.assetCount);
+    val lim = Limits.fromCell(storage.limitsState);
+    val (nextLim, action) = bondSync(lim, storage.currentPpi);
+    storage.limitsState = nextLim.toCell();
     storage.save();
+    if (action == 1) { sendBondState(nextLim.bond, true); }
+    if (action == 2) { sendBondState(nextLim.bond, false); }
 }
 
 fun handleSignedPriceUpdate(msg: SignedPriceUpdate) {
@@ -746,8 +821,51 @@ fun handleCoverDeficit(sender: address, msg: CoverDeficit) {
         maxPerTx: lim.maxPerTx,
         arbRebateBps: lim.arbRebateBps,
         riskFund: lim.riskFund - msg.amount,
+        bond: lim.bond,
+        bondOpen: lim.bondOpen,
+        bondPaid: lim.bondPaid,
     }.toCell();
     storage.totalReserve += msg.amount;
+    storage.save();
+}
+
+// Owner wires (or clears, with the zero address) the stabilization bond. `bondOpen` is
+// reset so the next PPI update resynchronises the sale state with the new contract.
+fun handleSetBond(sender: address, msg: SetBond) {
+    var storage = lazy Storage.load();
+    assert (sender == storage.owner) throw ERR_NOT_OWNER;
+    val lim = Limits.fromCell(storage.limitsState);
+    storage.limitsState = Limits {
+        maxPerTx: lim.maxPerTx,
+        arbRebateBps: lim.arbRebateBps,
+        riskFund: lim.riskFund,
+        bond: msg.bond,
+        bondOpen: false,
+        bondPaid: lim.bondPaid,
+    }.toCell();
+    storage.save();
+}
+
+// The wired bond reports a settled face value. Draw it from the risk fund, capped at the
+// available balance: the payout already happened off-chain, so a shortfall must NEVER
+// bounce and undo the settlement — it simply leaves the rest unfunded.
+fun handlePayBond(sender: address, msg: PayBond) {
+    var storage = lazy Storage.load();
+    val lim = Limits.fromCell(storage.limitsState);
+    assert (!isZeroAddress(lim.bond) && sender == lim.bond) throw ERR_NOT_BOND;
+    assert (msg.amount > 0) throw ERR_BAD_AMOUNT;
+    var pay: int64 = msg.amount;
+    if (pay > lim.riskFund) {
+        pay = lim.riskFund;
+    }
+    storage.limitsState = Limits {
+        maxPerTx: lim.maxPerTx,
+        arbRebateBps: lim.arbRebateBps,
+        riskFund: lim.riskFund - pay,
+        bond: lim.bond,
+        bondOpen: lim.bondOpen,
+        bondPaid: lim.bondPaid + pay,
+    }.toCell();
     storage.save();
 }
 
@@ -823,7 +941,12 @@ fun handleCamUpdate(sender: address, msg: CamUpdate) {
     os.lastOracleUpdate = msg.timestamp;
     storage.oracleState = os.toCell();
     storage.currentPpi = computePpi(storage.assets, storage.assetCount);
+    val lim = Limits.fromCell(storage.limitsState);
+    val (nextLim, action) = bondSync(lim, storage.currentPpi);
+    storage.limitsState = nextLim.toCell();
     storage.save();
+    if (action == 1) { sendBondState(nextLim.bond, true); }
+    if (action == 2) { sendBondState(nextLim.bond, false); }
 }
 
 // Only the registered oracle may push an asset price, only forward in time, and only
@@ -848,7 +971,12 @@ fun handleOracleUpdateAssetPrice(sender: address, msg: OracleUpdateAssetPrice) {
     os.lastOracleUpdate = msg.timestamp;
     storage.oracleState = os.toCell();
     storage.currentPpi = computePpi(storage.assets, storage.assetCount);
+    val lim = Limits.fromCell(storage.limitsState);
+    val (nextLim, action) = bondSync(lim, storage.currentPpi);
+    storage.limitsState = nextLim.toCell();
     storage.save();
+    if (action == 1) { sendBondState(nextLim.bond, true); }
+    if (action == 2) { sendBondState(nextLim.bond, false); }
 }
 
 // ---------------- Getters ----------------
@@ -932,6 +1060,22 @@ get fun signerAt(index: int64): uint256 {
 get fun riskFund(): int64 {
     val storage = lazy Storage.load();
     return Limits.fromCell(storage.limitsState).riskFund;
+}
+
+get fun bond(): address {
+    val storage = lazy Storage.load();
+    return Limits.fromCell(storage.limitsState).bond;
+}
+
+get fun bondOpen(): bool {
+    val storage = lazy Storage.load();
+    return Limits.fromCell(storage.limitsState).bondOpen;
+}
+
+// Cumulative face value actually drawn from the risk fund to settle bonds.
+get fun bondPaid(): int64 {
+    val storage = lazy Storage.load();
+    return Limits.fromCell(storage.limitsState).bondPaid;
 }
 
 get fun feesBurn(): int64 {

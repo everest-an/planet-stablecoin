@@ -27,7 +27,7 @@ fun deployCoreAt(reserve: int64, supply: int64, ppi: int64, baseLocked: bool): (
         assetCount: 0,
         baseLocked: baseLocked,
         oracleState: OracleState { oracle: deployer.address, signerCount: 0, threshold: 0, signers: [], lastOracleUpdate: 0 }.toCell(),
-        limitsState: Limits { maxPerTx: 0, arbRebateBps: 0, riskFund: 0 }.toCell(),
+        limitsState: Limits { maxPerTx: 0, arbRebateBps: 0, riskFund: 0, bond: address("EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c"), bondOpen: false, bondPaid: 0 }.toCell(),
     });
     expect(core.deploy(deployer.address, { value: ton("0.3") }))
         .toHaveSuccessfulDeploy({ to: core.address });
@@ -85,7 +85,7 @@ get fun `test bounced mint is ignored`() {
         assetCount: 0,
         baseLocked: false,
         oracleState: OracleState { oracle: deployer.address, signerCount: 0, threshold: 0, signers: [], lastOracleUpdate: 0 }.toCell(),
-        limitsState: Limits { maxPerTx: 0, arbRebateBps: 0, riskFund: 0 }.toCell(),
+        limitsState: Limits { maxPerTx: 0, arbRebateBps: 0, riskFund: 0, bond: address("EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c"), bondOpen: false, bondPaid: 0 }.toCell(),
     });
     expect(core.deploy(deployer.address, { value: ton("0.3") }))
         .toHaveSuccessfulDeploy({ to: core.address });
