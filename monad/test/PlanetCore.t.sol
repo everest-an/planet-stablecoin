@@ -34,40 +34,38 @@ contract PlanetCoreTest is Test {
 
     // ---------------------------------------------------------------- I4
     function test_ppi_is_weighted_mean() public {
-        push(0, 110 * SCALE); // +10%
-        push(1, 47.5e6); //  -5%
-        push(2, 84 * SCALE); // +5%
-        // 0.5*1.10 + 0.3*0.95 + 0.2*1.05 = 1.045
-        assertApproxEqAbs(core.computePpi(), 1_045_000, 2);
+        for (uint256 i; i < 4; ++i) push(i, 110 * SCALE); // four assets +10%, four flat
+        // (0.5 * 1.10 + 0.5 * 1.00) = 1.05
+        assertApproxEqAbs(core.computePpi(), 1_050_000, 2);
     }
 
     function test_ppi_renormalises_when_one_asset_freezes() public {
-        push(0, 110 * SCALE);
-        push(1, 47.5e6);
-        push(2, 84 * SCALE);
-        // freeze B -> renormalise over A and C only
-        vm.prank(relayer);
-        core.updatePrice(1, 47.5e6, 0, SCALE, 2, uint64(block.timestamp));
-        // (0.5*1.10 + 0.2*1.05) / 0.7 = 1.0857...
-        assertApproxEqAbs(core.computePpi(), 1_085_714, 3);
-        assertEq(core.assetCount(), 3);
+        for (uint256 i; i < 4; ++i) push(i, 110 * SCALE);
+        // freeze the four that moved: the index renormalises back to the flat half = 1.00
+        for (uint256 i; i < 4; ++i) {
+            vm.prank(relayer);
+            core.updatePrice(i, 110 * SCALE, 0, SCALE, 2, uint64(block.timestamp));
+            vm.warp(block.timestamp + 1);
+        }
+        assertApproxEqAbs(core.computePpi(), 1_000_000, 2);
+        assertEq(core.assetCount(), 8);
     }
 
     // ---------------------------------------------------------------- C-1 (the headline fix)
     function test_ppi_is_zero_when_everything_is_frozen() public {
         vm.startPrank(relayer);
-        core.updatePrice(0, 100 * SCALE, 0, SCALE, 2, uint64(block.timestamp));
-        core.updatePrice(1, 50 * SCALE, 0, SCALE, 2, uint64(block.timestamp) + 1);
-        core.updatePrice(2, 80 * SCALE, 0, SCALE, 2, uint64(block.timestamp) + 2);
+        for (uint256 i; i < 8; ++i) {
+            core.updatePrice(i, 100 * SCALE, 0, SCALE, 2, uint64(block.timestamp) + i);
+        }
         vm.stopPrank();
         assertEq(core.computePpi(), 0, "undefined index must read 0, never 1.0");
     }
 
     function test_mint_reverts_when_index_is_undefined() public {
         vm.startPrank(relayer);
-        core.updatePrice(0, 100 * SCALE, 0, SCALE, 2, uint64(block.timestamp));
-        core.updatePrice(1, 50 * SCALE, 0, SCALE, 2, uint64(block.timestamp) + 1);
-        core.updatePrice(2, 80 * SCALE, 0, SCALE, 2, uint64(block.timestamp) + 2);
+        for (uint256 i; i < 8; ++i) {
+            core.updatePrice(i, 100 * SCALE, 0, SCALE, 2, uint64(block.timestamp) + i);
+        }
         vm.stopPrank();
         vm.prank(stranger);
         vm.expectRevert(PlanetCore.NoActiveAsset.selector);
@@ -78,7 +76,7 @@ contract PlanetCoreTest is Test {
     function test_weight_sum_must_be_exactly_100pct() public {
         vm.prank(owner);
         vm.expectRevert(PlanetCore.BadWeights.selector);
-        core.setAsset(0, 400_000, 100 * SCALE, 100 * SCALE); // sum would be 90%
+        core.setAsset(0, 100_000, 100 * SCALE, 100 * SCALE); // sum would be 975_000
     }
 
     function test_weight_cap_is_15pct() public {
