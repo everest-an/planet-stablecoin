@@ -1,0 +1,85 @@
+name: Monad deploy
+
+# The deployer key lives ONLY in the MONAD_DEPLOY_KEY repository secret. This workflow never prints
+# it; it prints the derived ADDRESS (public by definition) so the wallet can be funded, and then
+# deploys the contracts once it has gas.
+#
+# Required secrets:
+#   MONAD_DEPLOY_KEY   the deployer private key (32-byte hex)
+# Optional inputs (defaults are placeholders — set the current Monad testnet values):
+#   rpc     e.g. https://testnet-rpc.monad.xyz
+#   chain   e.g. 10143
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "address (just print the deployer address) or deploy (deploy the core stack)"
+        required: true
+        default: address
+      rpc:
+        description: "Monad testnet RPC URL"
+        required: true
+        default: "https://testnet-rpc.monad.xyz"
+      chain:
+        description: "Monad testnet chain id"
+        required: true
+        default: "10143"
+      owner:
+        description: "owner address for the deployed contracts (blank = the deployer)"
+        required: false
+
+jobs:
+  monad:
+    name: Monad (${{ inputs.action }})
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: monad
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Install forge-std
+        run: |
+          mkdir -p lib
+          if [ ! -d lib/forge-std ]; then
+            git clone --depth 1 https://github.com/foundry-rs/forge-std.git lib/forge-std
+          fi
+
+      - name: Derive the deployer address (public) and check its balance
+        env:
+          KEY: ${{ secrets.MONAD_DEPLOY_KEY }}
+          RPC: ${{ inputs.rpc }}
+        run: |
+          if [ -z "$KEY" ]; then echo "MONAD_DEPLOY_KEY secret is missing"; exit 1; fi
+          ADDR=$(cast wallet address --private-key "$KEY")
+          echo "deployer address: $ADDR"
+          echo "DEPLOYER=$ADDR" >> "$GITHUB_ENV"
+          BAL=$(cast balance "$ADDR" --rpc-url "$RPC" 2>/dev/null || echo "0")
+          echo "balance (wei): $BAL"
+
+      - name: Deploy
+        if: ${{ inputs.action == 'deploy' }}
+        env:
+          KEY: ${{ secrets.MONAD_DEPLOY_KEY }}
+          RPC: ${{ inputs.rpc }}
+          CHAIN: ${{ inputs.chain }}
+        run: |
+          OWNER="${{ inputs.owner }}"
+          if [ -z "$OWNER" ]; then OWNER="$DEPLOYER"; fi
+          echo "owner for the deployed contracts: $OWNER"
+
+          forge create src/PlanetTimelock.sol:PlanetTimelock \
+            --rpc-url "$RPC" --chain "$CHAIN" --private-key "$KEY" \
+            --constructor-args "$OWNER" 60 --broadcast
+
+          forge create src/PlanetToken.sol:PlanetToken \
+            --rpc-url "$RPC" --chain "$CHAIN" --private-key "$KEY" \
+            --constructor-args "$OWNER" "$OWNER" --broadcast
+
+          echo "Deployed. Wire the token/owner/minter to the timelock in a follow-up migration step."
