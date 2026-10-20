@@ -19,9 +19,10 @@ contract PlanetCoreTest is Test {
         core = new PlanetCore(owner, relayer);
         // A, B, C: weights 50/30/20, bases 100 / 50 / 80
         vm.startPrank(owner);
-        core.setAsset(0, 500_000, 100 * SCALE, 100 * SCALE);
-        core.setAsset(1, 300_000, 50 * SCALE, 50 * SCALE);
-        core.setAsset(2, 200_000, 80 * SCALE, 80 * SCALE);
+        // 8 assets x 12.5% == 100%, each within the 15% per-asset cap
+        for (uint256 i; i < 8; ++i) {
+            core.setAsset(i, 125_000, 100 * SCALE, 100 * SCALE);
+        }
         core.lockBasePrices();
         vm.stopPrank();
     }
@@ -88,7 +89,7 @@ contract PlanetCoreTest is Test {
     function test_base_price_is_immutable_after_lock() public {
         vm.prank(owner);
         vm.expectRevert(PlanetCore.BaseIsLocked.selector);
-        core.setAsset(0, 500_000, 101 * SCALE, 101 * SCALE);
+        core.setAsset(0, 125_000, 101 * SCALE, 101 * SCALE);
     }
 
     // ---------------------------------------------------------------- oracle guards
@@ -122,7 +123,7 @@ contract PlanetCoreTest is Test {
     function test_only_owner_can_change_basket() public {
         vm.prank(stranger);
         vm.expectRevert(PlanetCore.NotOwner.selector);
-        core.setAsset(0, 500_000, 100 * SCALE, 100 * SCALE);
+        core.setAsset(0, 125_000, 100 * SCALE, 100 * SCALE);
     }
 
     // ---------------------------------------------------------------- fees / I6
