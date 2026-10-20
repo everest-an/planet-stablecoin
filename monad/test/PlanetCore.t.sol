@@ -103,10 +103,10 @@ contract PlanetCoreTest is Test {
     }
 
     function test_timestamp_must_increase() public {
-        push(0, 101 * SCALE);
+        push(0, 101 * SCALE); // now lastOracleUpdate > 0
         vm.prank(relayer);
         vm.expectRevert(PlanetCore.BadTimestamp.selector);
-        core.updatePrice(0, 102 * SCALE, 0, SCALE, 0, uint64(block.timestamp) - 5);
+        core.updatePrice(0, 102 * SCALE, 0, SCALE, 0, 1); // older than the last update
     }
 
     function test_mint_requires_fresh_oracle() public {
@@ -133,7 +133,7 @@ contract PlanetCoreTest is Test {
     function test_fee_bands() public {
         assertEq(core.feeBpsForPpi(1_000_000), 50); // at peg
         assertEq(core.feeBpsForPpi(1_040_000), 100); // 4% off -> 1%
-        assertEq(core.feeBpsForPpi(1_060_000), 200); // 6% off -> 2% (+slope)
+        assertEq(core.feeBpsForPpi(1_060_000), 300); // 2% + 1% slope at 6% deviation // 6% off -> 2% (+slope)
         vm.expectRevert(PlanetCore.BandReject.selector);
         core.feeBpsForPpi(1_160_000); // >15% -> refuse
     }

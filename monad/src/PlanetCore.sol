@@ -148,7 +148,7 @@ contract PlanetCore {
     {
         if (weight > MAX_ASSET_WEIGHT) revert BadWeight();
         if (basePrice == 0) revert ZeroAmount();
-        if (baseLocked && basePrice != assets[index].basePrice) revert BaseIsLocked();
+        if (baseLocked && index < assets.length && basePrice != assets[index].basePrice) revert BaseIsLocked();
 
         if (index == assets.length) {
             assets.push(Asset(weight, basePrice, currentPrice == 0 ? basePrice : currentPrice, 0, SCALE, RISK_NORMAL));
