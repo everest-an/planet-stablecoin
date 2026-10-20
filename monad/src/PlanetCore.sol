@@ -207,7 +207,7 @@ contract PlanetCore {
             Asset storage a = assets[i];
             if (a.riskState == RISK_FROZEN) continue;
             // price/base in 1e6; weight in ppm -> product is 1e12, divide back by SCALE
-            num += uint256(a.weight) * uint256(a.currentPrice) * SCALE / uint256(a.basePrice);
+            num += uint256(a.weight) * uint256(a.currentPrice) * uint256(SCALE) / uint256(a.basePrice);
             den += uint256(a.weight);
         }
         if (den == 0) return 0; // C-1
@@ -227,18 +227,18 @@ contract PlanetCore {
     function priceJumpOk(uint64 oldPrice, uint64 newPrice) public pure returns (bool) {
         if (oldPrice == 0 || newPrice == 0) return false;
         uint256 diff = oldPrice > newPrice ? oldPrice - newPrice : newPrice - oldPrice;
-        return diff * BPS_DENOM <= uint256(oldPrice) * 5000;
+        return diff * uint256(BPS_DENOM) <= uint256(oldPrice) * uint256(5000);
     }
 
     // ---------------------------------------------------------------- fees (I6)
     function feeBpsForPpi(uint64 ppi) public pure returns (uint64) {
         uint256 d = ppi > SCALE ? ppi - SCALE : SCALE - ppi;
-        if (d * BPS_DENOM > uint256(SCALE) * uint256(BAND_REJECT_BPS)) revert BandReject();
-        if (d * BPS_DENOM <= uint256(SCALE) * 300) return FEE_BASE_BPS;                 // <=3%
-        if (d * BPS_DENOM <= uint256(SCALE) * 500) return FEE_MID_BPS;                  // 3-5%
+        if (d * uint256(BPS_DENOM) > uint256(SCALE) * uint256(BAND_REJECT_BPS)) revert BandReject();
+        if (d * uint256(BPS_DENOM) <= uint256(SCALE) * 300) return FEE_BASE_BPS;                 // <=3%
+        if (d * uint256(BPS_DENOM) <= uint256(SCALE) * 500) return FEE_MID_BPS;                  // 3-5%
         // >5%: 2% + slope per point of extra deviation
-        uint256 extraBps = (d * BPS_DENOM / uint256(SCALE)) - 500;
-        return uint64(uint256(FEE_HIGH_BPS) + extraBps * SLOPE_BPS / 100);
+        uint256 extraBps = (d * uint256(BPS_DENOM) / uint256(SCALE)) - 500;
+        return uint64(uint256(FEE_HIGH_BPS) + extraBps * uint256(SLOPE_BPS) / 100);
     }
 
     // ---------------------------------------------------------------- mint (I5, I6)
@@ -253,9 +253,9 @@ contract PlanetCore {
         if (ppi == 0) revert NoActiveAsset(); // C-1: never mint against an undefined index
 
         uint64 feeBps = feeBpsForPpi(ppi);
-        uint256 fee = uint256(deposit) * feeBps / BPS_DENOM;
+        uint256 fee = uint256(deposit) * feeBps / uint256(BPS_DENOM);
         uint256 net = uint256(deposit) - fee;
-        minted = uint64(net * SCALE / uint256(ppi));
+        minted = uint64(net * uint256(SCALE) / uint256(ppi));
         if (minted == 0) revert ZeroAmount();
 
         totalSupply += minted;
@@ -273,8 +273,8 @@ contract PlanetCore {
 
         uint64 feeBps = feeBpsForPpi(ppi);
         uint64 burnFee = feeBps > MAX_BURN_FEE_BPS ? MAX_BURN_FEE_BPS : feeBps; // I9 / payout >= 0
-        uint256 gross = uint256(burnAmount) * uint256(ppi) / SCALE;
-        uint256 fee = gross * burnFee / BPS_DENOM;
+        uint256 gross = uint256(burnAmount) * uint256(ppi) / uint256(SCALE);
+        uint256 fee = gross * burnFee / uint256(BPS_DENOM);
         payout = uint64(gross - fee);
 
         if (totalSupply < burnAmount) revert Underflow(); // no silent wrap
@@ -285,10 +285,10 @@ contract PlanetCore {
     }
 
     function _routeFees(uint256 fee) internal {
-        uint64 burn = uint64(fee * BURN_SHARE_BPS / BPS_DENOM);
-        uint64 reserve = uint64(fee * RESERVE_SHARE_BPS / BPS_DENOM);
-        uint64 stake = uint64(fee * STAKE_SHARE_BPS / BPS_DENOM);
-        uint64 risk = uint64(fee * RISK_SHARE_BPS / BPS_DENOM);
+        uint64 burn = uint64(fee * uint256(BURN_SHARE_BPS) / uint256(BPS_DENOM));
+        uint64 reserve = uint64(fee * uint256(RESERVE_SHARE_BPS) / uint256(BPS_DENOM));
+        uint64 stake = uint64(fee * uint256(STAKE_SHARE_BPS) / uint256(BPS_DENOM));
+        uint64 risk = uint64(fee * uint256(RISK_SHARE_BPS) / uint256(BPS_DENOM));
 
         feesToBurn += burn;
         feesToReserve += reserve;
