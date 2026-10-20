@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
 import {PlanetCore} from "../src/PlanetCore.sol";
+import {PlanetToken} from "../src/PlanetToken.sol";
 
 /// These tests mirror the TON suite's economics cases one-for-one, so the migration can be judged
 /// on behaviour rather than on vibes. Each test name states the invariant it defends.
@@ -166,6 +167,24 @@ contract PlanetCoreTest is Test {
         vm.prank(stranger);
         vm.expectRevert(PlanetCore.IsPaused.selector);
         core.mint(1_000 * SCALE);
+    }
+
+    /// End-to-end: a mint really mints the ERC-20, and a redeem really burns it (no mirror needed).
+    function test_mint_and_redeem_move_the_erc20() public {
+        PlanetToken tok = new PlanetToken(owner, address(core));
+        vm.prank(owner);
+        core.setToken(address(tok));
+
+        push(0, 100 * SCALE);
+        vm.prank(stranger);
+        uint64 minted = core.mint(1_000_000 * SCALE);
+        assertEq(tok.balanceOf(stranger), minted, "the core minted the token");
+        assertEq(tok.totalSupply(), minted);
+
+        vm.prank(stranger);
+        core.redeem(minted);
+        assertEq(tok.balanceOf(stranger), 0, "redeem burned it");
+        assertEq(tok.totalSupply(), 0);
     }
 
     function test_cover_deficit_moves_risk_fund_into_reserve() public {

@@ -1,5 +1,7 @@
-// SPDX-License-Identifier: MIT
+  ok:         totalSupply -= burnAmount;   ok:         totalSupply += minted;   ok:     function setPaused(bool v) external onlyOwne   ok:     uint64 public riskFund;   ok: pragma solidity ^0.8.24; // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
+
+import {PlanetToken} from "./PlanetToken.sol";
 
 /**
  * PlanetCore (Monad / EVM port) — step 1 of the migration.
@@ -77,6 +79,8 @@ contract PlanetCore {
     uint64 public feesToReserve;
     uint64 public feesToStaking;
     uint64 public riskFund;
+    /// @notice The PLT token. Optional so the economics can be exercised without it; set it in production.
+    PlanetToken public token;
 
     Asset[] public assets;
 
@@ -134,6 +138,11 @@ contract PlanetCore {
     function setRelayer(address next) external onlyOwner {
         relayer = next;
         emit RelayerChanged(next);
+    }
+
+    /// @notice Wire the token. Once set, mint() mints it and redeem() burns it, synchronously.
+    function setToken(address next) external onlyOwner {
+        token = PlanetToken(next);
     }
 
     function setPaused(bool v) external onlyOwner {
@@ -259,6 +268,7 @@ contract PlanetCore {
         if (minted == 0) revert ZeroAmount();
 
         totalSupply += minted;
+        if (address(token) != address(0)) token.mint(msg.sender, minted); // EVM: synchronous, no mirror
         totalReserve += deposit;
         _routeFees(fee);
         emit Minted(msg.sender, deposit, uint64(fee), minted, ppi);
@@ -279,6 +289,7 @@ contract PlanetCore {
 
         if (totalSupply < burnAmount) revert Underflow(); // no silent wrap
         totalSupply -= burnAmount;
+        if (address(token) != address(0)) token.burn(msg.sender, burnAmount);
 
         _routeFees(fee);
         emit Redeemed(msg.sender, burnAmount, burnFee, payout, ppi);
