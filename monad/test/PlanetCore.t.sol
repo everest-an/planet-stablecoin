@@ -74,10 +74,13 @@ contract PlanetCoreTest is Test {
     }
 
     // ---------------------------------------------------------------- I1 / I2 / I3
-    function test_weight_sum_must_be_exactly_100pct() public {
+    function test_weight_sum_is_enforced_on_price_update() public {
+        // an incomplete basket must not accept prices: I1 is checked where it matters
         vm.prank(owner);
+        core.setAsset(8, 100_000, 100 * SCALE, 100 * SCALE); // sum becomes 1_100_000
+        vm.prank(relayer);
         vm.expectRevert(PlanetCore.BadWeights.selector);
-        core.setAsset(0, 100_000, 100 * SCALE, 100 * SCALE); // sum would be 975_000
+        core.updatePrice(0, 100 * SCALE, 0, SCALE, 0, uint64(block.timestamp));
     }
 
     function test_weight_cap_is_15pct() public {

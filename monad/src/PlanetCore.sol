@@ -160,8 +160,8 @@ contract PlanetCore {
             a.basePrice = keepBase;
             if (currentPrice != 0) a.currentPrice = currentPrice;
         }
-        // I1: the weight sum must stay exactly 100% after every basket change
-        if (weightSum() != SCALE) revert BadWeights();
+        // NOTE: the weight sum is enforced on every PRICE UPDATE (I1), not here. Requiring it per
+        // setAsset call would make it impossible to build a basket incrementally.
         emit AssetSet(index, weight, assets[index].basePrice, assets[index].currentPrice);
     }
 
