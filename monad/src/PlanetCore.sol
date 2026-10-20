@@ -1,36 +1,8 @@
-  ok:         totalSupply -= burnAmount;   ok:         totalSupply += minted;   ok:     function setPaused(bool v) external onlyOwne   ok:     uint64 public riskFund;   ok: pragma solidity ^0.8.24; // SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
 import {PlanetToken} from "./PlanetToken.sol";
 
-/**
- * PlanetCore (Monad / EVM port) — step 1 of the migration.
- *
- * WHAT THIS IS
- *   A faithful port of the ECONOMICS, not a line-by-line translation. The TON version is Tolk on a
- *   message-passing VM; this is Solidity on an EVM. The maths and the invariants are identical:
- *
- *     I1  sum(weight) == 1e6 on every price update
- *     I2  each weight <= 150_000 (15%)
- *     I3  base prices are immutable once locked
- *     I4  PPI = renormalised weighted mean over ACTIVE (non-frozen) assets; **0 if none active**
- *         (this is the C-1 fix: an undefined index must never read as 1.0)
- *     I5  mint requires oracle freshness <= MAX_ORACLE_AGE AND ppi > 0
- *     I6  fees split 30 burn / 50 reserve / 20 staking, with 10% of the fee carved into the risk fund
- *     I7  privileged calls are owner-only
- *     I9  totalIssued >= face on every debit (no underflow)
- *
- * WHAT IS DELIBERATELY NOT HERE YET (tracked, not forgotten)
- *   - M-of-N signed oracle (EVM uses ECDSA/ecrecover; the TON version used ed25519 with a signer set)
- *     -> today: a single authorised relayer, all the same guards.
- *   - PlanetTimelock / PlanetGov / Bond / Fund and the ERC-20 itself -> step 2.
- *   - The reviewed "constitution" (bounded governance) -> step 3.
- *
- * SECURITY POSTURE
- *   - Checks-effects-interactions throughout; no external calls in this contract at all in step 1.
- *   - All arithmetic is uint128/uint256 with explicit bounds; Solidity 0.8 reverts on overflow.
- *   - Not audited. Testnet only. Do not put real value in it.
- */
 contract PlanetCore {
     // ---------------------------------------------------------------- constants
     uint64 public constant SCALE = 1e6;              // 1e6 == 1.0
