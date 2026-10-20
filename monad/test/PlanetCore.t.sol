@@ -56,7 +56,7 @@ contract PlanetCoreTest is Test {
     function test_ppi_is_zero_when_everything_is_frozen() public {
         vm.startPrank(relayer);
         for (uint256 i; i < 8; ++i) {
-            core.updatePrice(i, 100 * SCALE, 0, SCALE, 2, uint64(block.timestamp) + i);
+            core.updatePrice(i, 100 * SCALE, 0, SCALE, 2, uint64(block.timestamp + i));
         }
         vm.stopPrank();
         assertEq(core.computePpi(), 0, "undefined index must read 0, never 1.0");
@@ -65,7 +65,7 @@ contract PlanetCoreTest is Test {
     function test_mint_reverts_when_index_is_undefined() public {
         vm.startPrank(relayer);
         for (uint256 i; i < 8; ++i) {
-            core.updatePrice(i, 100 * SCALE, 0, SCALE, 2, uint64(block.timestamp) + i);
+            core.updatePrice(i, 100 * SCALE, 0, SCALE, 2, uint64(block.timestamp + i));
         }
         vm.stopPrank();
         vm.prank(stranger);
