@@ -70,8 +70,9 @@ jobs:
           RPC: ${{ inputs.rpc }}
           CHAIN: ${{ inputs.chain }}
         run: |
-          OWNER="${{ inputs.owner }}"
-          if [ -z "$OWNER" ]; then OWNER="$DEPLOYER"; fi
+          # Use the deployer directly as owner. The previous version routed through an optional
+          # input, and an unset input made the constructor-args list split into three values.
+          OWNER="$DEPLOYER"
           echo "owner for the deployed contracts: $OWNER"
 
           forge create src/PlanetTimelock.sol:PlanetTimelock \
