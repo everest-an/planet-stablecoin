@@ -63,6 +63,17 @@ jobs:
           BAL=$(cast balance "$ADDR" --rpc-url "$RPC" 2>/dev/null || echo "0")
           echo "balance (wei): $BAL"
 
+      - name: Configure the 14-asset basket
+        if: ${{ inputs.action == 'configure' }}
+        env:
+          KEY: 0x${{ secrets.MONAD_DEPLOY_KEY }}
+          RPC: ${{ inputs.rpc }}
+          CHAIN: ${{ inputs.chain }}
+        run: |
+          forge script script/ConfigureBasket.s.sol:ConfigureBasket \
+            --rpc-url "$RPC" --chain "$CHAIN" --private-key "$KEY" \
+            --broadcast -vv
+
       - name: Deploy
         if: ${{ inputs.action == 'deploy' }}
         env:
