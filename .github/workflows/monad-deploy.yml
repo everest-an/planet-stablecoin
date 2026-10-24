@@ -75,12 +75,11 @@ jobs:
           OWNER="$DEPLOYER"
           echo "owner for the deployed contracts: $OWNER"
 
-          forge create src/PlanetTimelock.sol:PlanetTimelock \
+          # Constructor arguments are passed from Solidity (script/Deploy.s.sol), not through the
+          # shell, because CLI constructor-args were being re-split (3 values for 2 parameters).
+          OWNER="$DEPLOYER" DELAY="60" \
+          forge script script/Deploy.s.sol:Deploy \
             --rpc-url "$RPC" --chain "$CHAIN" --private-key "$KEY" \
-            --constructor-args "$OWNER" 60 --broadcast
+            --broadcast -vv
 
-          forge create src/PlanetToken.sol:PlanetToken \
-            --rpc-url "$RPC" --chain "$CHAIN" --private-key "$KEY" \
-            --constructor-args "$OWNER" "$OWNER" --broadcast
-
-          echo "Deployed. Wire the token/owner/minter to the timelock in a follow-up migration step."
+          echo "Deployed. Token minter = Core, core token = token (wired in the script)."
