@@ -53,7 +53,7 @@ jobs:
 
       - name: Derive the deployer address (public) and check its balance
         env:
-          KEY: ${{ secrets.MONAD_DEPLOY_KEY }}
+          KEY: 0x${{ secrets.MONAD_DEPLOY_KEY }}
           RPC: ${{ inputs.rpc }}
         run: |
           if [ -z "$KEY" ]; then echo "MONAD_DEPLOY_KEY secret is missing"; exit 1; fi
@@ -66,7 +66,7 @@ jobs:
       - name: Deploy
         if: ${{ inputs.action == 'deploy' }}
         env:
-          KEY: ${{ secrets.MONAD_DEPLOY_KEY }}
+          KEY: 0x${{ secrets.MONAD_DEPLOY_KEY }}
           RPC: ${{ inputs.rpc }}
           CHAIN: ${{ inputs.chain }}
         run: |

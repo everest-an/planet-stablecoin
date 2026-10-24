@@ -27,7 +27,7 @@ import {PlanetTimelock} from "../src/PlanetTimelock.sol";
  */
 contract Deploy is Script {
     function run() external {
-        uint256 pk = vm.envUint("PRIVATE_KEY");
+        uint256 pk = vm.envUint("KEY");
         address deployer = vm.addr(pk);
         address owner = vm.envOr("OWNER", deployer);
         uint64 delay = uint64(vm.envOr("DELAY", uint256(60)));
