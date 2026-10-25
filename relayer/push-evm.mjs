@@ -37,6 +37,7 @@ import { readFileSync } from "node:fs";
 import { createPublicClient, createWalletClient, http, parseAbi, formatEther, formatGwei } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { arbitrumSepolia } from "viem/chains";
+import { ASSETS as CHANNEL_ASSETS, readAsset } from "./sources.mjs";
 
 const CORE = (process.env.CORE ?? "0x65362ef75028700855E842F903FF6FBD65A97f65");
 const RPC = (process.env.RPC ?? "https://sepolia-rollup.arbitrum.io/rpc");
@@ -61,69 +62,6 @@ const ABI = parseAbi([
 
 const chain = arbitrumSepolia;
 const pub = createPublicClient({ chain, transport: http(RPC) });
-
-// ---------------------------------------------------------------- price sources (same as relayer.mjs)
-async function yahooPrice(symbol) {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1d&interval=1d`;
-  const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
-  if (!res.ok) throw new Error(`yahoo ${symbol}: HTTP ${res.status}`);
-  const j = await res.json();
-  const price = j?.chart?.result?.[0]?.meta?.regularMarketPrice;
-  if (!Number.isFinite(price) || price <= 0) throw new Error(`yahoo ${symbol}: bad price '${price}'`);
-  return price;
-}
-
-async function sinaPrice(code) {
-  // `var hq_str_<code>="<current>,,<bid>,<ask>,..."`. Throw (not exit) so one dead symbol degrades to a
-  // single-source reading instead of killing the run — same contract as the TON relayer.
-  const res = await fetch(`https://hq.sinajs.cn/list=${encodeURIComponent(code)}`, {
-    headers: { Referer: "https://finance.sina.com.cn", "User-Agent": "Mozilla/5.0" },
-  });
-  if (!res.ok) throw new Error(`sina ${code}: HTTP ${res.status}`);
-  const m = (await res.text()).match(/"([^"]*)"/);
-  if (!m || !m[1]) throw new Error(`sina ${code}: no data`);
-  const price = Number(m[1].split(",")[0]);
-  if (!Number.isFinite(price) || price <= 0) throw new Error(`sina ${code}: bad price`);
-  return price;
-}
-
-async function sourcePrices(asset) {
-  const out = [];
-  try {
-    out.push({ src: "yahoo", price: await yahooPrice(asset.symbol) });
-  } catch (e) {
-    console.log(`  warn: ${String(e?.message ?? e).slice(0, 90)}`);
-  }
-  if (asset.sina) {
-    try {
-      out.push({ src: "sina", price: (await sinaPrice(asset.sina)) * (asset.sinaScale ?? 1) });
-    } catch (e) {
-      console.log(`  warn: ${String(e?.message ?? e).slice(0, 90)}`);
-    }
-  }
-  return out;
-}
-
-// Median of N sources. With an even count the mean of the two middle values is the median — using
-// either one alone would make the result depend on source ordering.
-function aggregate(prices) {
-  if (!prices.length) throw new Error("no price sources available");
-  const vals = prices.map((p) => p.price).sort((a, b) => a - b);
-  const median =
-    vals.length % 2 === 1
-      ? vals[(vals.length - 1) / 2]
-      : (vals[vals.length / 2 - 1] + vals[vals.length / 2]) / 2;
-  const spread = vals.length >= 2 ? (vals[vals.length - 1] - vals[0]) / median : 0;
-  // Diverging sources are reported as CAUTION (riskState=1) rather than trusted: the median still
-  // moves the index, but the flag tells the dashboard/monitor that this reading is disputed.
-  //
-  // TRAP: relayer/README.md says a diverging asset is pushed "frozen" and "excluded from computePpi".
-  // On EVM that is false — PlanetCore.computePpi() skips only RISK_FROZEN (2), not RISK_CAUTION (1).
-  // So a 2%-divergent reading still counts toward the index. Do not rely on the README's wording;
-  // if genuine exclusion is wanted the value must be 2, which is a deliberate, separate decision.
-  const frozen = spread > MAX_SPREAD;
-  return { median, spread, frozen, prices };
-}
 
 // ---------------------------------------------------------------- main
 const cfg = JSON.parse(readFileSync(ASSETS_JSON, "utf8"));
@@ -171,16 +109,19 @@ for (const asset of cfg.assets) {
   const onchain = await pub.readContract({ address: CORE, abi: ABI, functionName: "assets", args: [BigInt(i)] });
   const [, basePrice, currentPrice, , , riskState, lastUpdate] = onchain;
 
-  let agg;
-  try {
-    agg = aggregate(await sourcePrices(asset));
-  } catch (e) {
-    console.log(`#${i} ${asset.symbol}: SKIP — ${String(e?.message ?? e).slice(0, 60)}`);
+  const channelAsset = CHANNEL_ASSETS[asset.index];
+  if (!channelAsset) {
+    console.log(`#${i} ${asset.symbol}: SKIP — no channel config for index ${asset.index}`);
+    continue;
+  }
+  const agg = await readAsset(channelAsset);
+  if (!agg.ok) {
+    console.log(`#${i} ${asset.symbol}: SKIP — ${agg.reason}`);
     continue;
   }
 
-  const price = BigInt(Math.round(agg.median * SCALE));
-  const risk = agg.frozen ? 1 : 0;
+  const price = BigInt(Math.round(agg.price * SCALE));
+  const risk = agg.riskState;
   const rel = currentPrice > 0n ? Math.abs(Number(price - currentPrice)) / Number(currentPrice) : 1;
   const riskChanged = Number(riskState) !== risk;
   const changePct = basePrice > 0n ? ((Number(price) / Number(basePrice)) - 1) * 100 : 0;
@@ -190,9 +131,9 @@ for (const asset of cfg.assets) {
   const assetAge = Number(lastUpdate);
   const assetStale = MAX_PUSH_AGE_H > 0 && (assetAge === 0 || nowSec - assetAge >= MAX_PUSH_AGE_H * 3600);
 
-  const line = `#${String(i).padStart(2)} ${asset.symbol.padEnd(6)} ${agg.median.toFixed(4).padStart(10)}` +
+  const line = `#${String(i).padStart(2)} ${asset.symbol.padEnd(6)} ${agg.price.toFixed(4).padStart(10)}` +
     `  vsBase ${changePct >= 0 ? "+" : ""}${changePct.toFixed(2)}%  vsChain ${(rel * 100).toFixed(3)}%` +
-    `  spread ${(agg.spread * 100).toFixed(1)}%  risk ${riskState}->${risk}` +
+    `  src ${agg.confirmations + 1}/${agg.channelsOk}  spread ${(agg.spread * 100).toFixed(2)}%  risk ${riskState}->${risk}` +
     `  age ${assetAge === 0 ? "never" : Math.floor((nowSec - assetAge) / 60) + "m"}`;
 
   if (!assetStale && rel < MIN_PUSH_DELTA && !riskChanged) {
