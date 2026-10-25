@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import {Test} from "forge-std/Test.sol";
 import {PlanetCore} from "../src/PlanetCore.sol";
 import {PlanetToken} from "../src/PlanetToken.sol";
+import {SignedPriceOracle} from "../src/SignedPriceOracle.sol";
 
 /// These tests mirror the TON suite's economics cases one-for-one, so the migration can be judged
 /// on behaviour rather than on vibes. Each test name states the invariant it defends.
@@ -32,6 +33,12 @@ contract PlanetCoreTest is Test {
         vm.prank(relayer);
         core.updatePrice(i, price, 0, SCALE, 0, uint64(block.timestamp));
         vm.warp(block.timestamp + 1); // keep timestamps strictly increasing
+    }
+
+    // mint() now gates on the STALEST asset, so an economics test has to have pushed the whole
+    // basket — otherwise it is testing against an oracle that was never fully initialised.
+    function pushAll(uint64 price) internal {
+        for (uint256 i; i < 8; ++i) push(i, price);
     }
 
     // ---------------------------------------------------------------- I4
@@ -111,7 +118,7 @@ contract PlanetCoreTest is Test {
     }
 
     function test_mint_requires_fresh_oracle() public {
-        push(0, 100 * SCALE);
+        pushAll(100 * SCALE);
         vm.warp(block.timestamp + 7 hours); // past MAX_ORACLE_AGE
         vm.prank(stranger);
         vm.expectRevert(PlanetCore.StaleOracle.selector);
@@ -140,7 +147,7 @@ contract PlanetCoreTest is Test {
     }
 
     function test_mint_splits_fee_30_50_20_10() public {
-        push(0, 100 * SCALE);
+        pushAll(100 * SCALE);
         uint64 deposit = 1_000_000 * SCALE; // 1M units
         vm.prank(stranger);
         uint64 minted = core.mint(deposit);
@@ -154,14 +161,14 @@ contract PlanetCoreTest is Test {
     }
 
     function test_redeem_cannot_underflow_supply() public {
-        push(0, 100 * SCALE);
+        pushAll(100 * SCALE);
         vm.prank(stranger);
         vm.expectRevert(PlanetCore.Underflow.selector);
         core.redeem(1); // nothing was ever minted
     }
 
     function test_paused_blocks_mint() public {
-        push(0, 100 * SCALE);
+        pushAll(100 * SCALE);
         vm.prank(owner);
         core.setPaused(true);
         vm.prank(stranger);
@@ -175,7 +182,7 @@ contract PlanetCoreTest is Test {
         vm.prank(owner);
         core.setToken(address(tok));
 
-        push(0, 100 * SCALE);
+        pushAll(100 * SCALE);
         vm.prank(stranger);
         uint64 minted = core.mint(1_000_000 * SCALE);
         assertEq(tok.balanceOf(stranger), minted, "the core minted the token");
@@ -188,7 +195,7 @@ contract PlanetCoreTest is Test {
     }
 
     function test_cover_deficit_moves_risk_fund_into_reserve() public {
-        push(0, 100 * SCALE);
+        pushAll(100 * SCALE);
         vm.prank(stranger);
         core.mint(1_000_000 * SCALE);
         uint64 rf = core.riskFund();
@@ -196,5 +203,137 @@ contract PlanetCoreTest is Test {
         vm.prank(owner);
         core.coverDeficit(rf);
         assertEq(core.riskFund(), 0);
+    }
+
+    // ---------------------------------------------------------------- per-asset staleness
+    /// The regression this exists for: one fresh asset used to make the whole index look current,
+    /// so minting stayed open against thirteen inputs that were a week old.
+    function test_one_fresh_asset_cannot_mask_the_rest() public {
+        pushAll(100 * SCALE);
+        vm.warp(block.timestamp + 7 hours);
+        push(0, 101 * SCALE); // only ONE asset refreshed
+
+        assertEq(core.lastOracleUpdate(), uint64(block.timestamp - 1), "the fresh push is recorded");
+        assertGt(block.timestamp - core.oldestActiveUpdate(), 6 hours, "the oldest input is still stale");
+
+        vm.prank(stranger);
+        vm.expectRevert(PlanetCore.StaleOracle.selector);
+        core.mint(1_000 * SCALE);
+    }
+
+    function test_mint_opens_once_every_active_asset_is_fresh() public {
+        pushAll(100 * SCALE);
+        vm.prank(stranger);
+        core.mint(1_000 * SCALE);
+    }
+
+    // ---------------------------------------------------------------- jump-guard escape hatch
+    function test_force_price_bypasses_the_jump_guard_and_flags_caution() public {
+        pushAll(100 * SCALE);
+
+        vm.prank(relayer);
+        vm.expectRevert(PlanetCore.PriceJump.selector);
+        core.updatePrice(0, 160 * SCALE, 0, SCALE, 0, uint64(block.timestamp));
+
+        vm.prank(owner);
+        core.forcePrice(0, 160 * SCALE, 0, SCALE, 0, uint64(block.timestamp));
+        (uint64 cur, uint8 risk) = _priceAndRisk(0);
+        assertEq(cur, 160 * SCALE);
+        assertEq(risk, 1, "a forced price must not look normal");
+    }
+
+    function test_only_owner_can_force_a_price() public {
+        pushAll(100 * SCALE);
+        vm.prank(relayer);
+        vm.expectRevert(PlanetCore.NotOwner.selector);
+        core.forcePrice(0, 160 * SCALE, 0, SCALE, 0, uint64(block.timestamp));
+    }
+
+    // ---------------------------------------------------------------- freezing a dead feed
+    /// Without an owner-side freeze, an asset whose feed dies blocks minting forever: its price
+    /// cannot be pushed, so it drags oldestActiveUpdate past MAX_ORACLE_AGE with no way out.
+    function test_owner_can_freeze_a_dead_feed_so_mint_resumes() public {
+        pushAll(100 * SCALE);
+        vm.warp(block.timestamp + 10 hours);
+
+        vm.prank(stranger);
+        vm.expectRevert(PlanetCore.StaleOracle.selector);
+        core.mint(1_000 * SCALE);
+
+        for (uint256 i = 1; i < 8; ++i) push(i, 100 * SCALE); // refresh the seven live feeds
+        vm.prank(owner);
+        core.setRiskState(0, 2); // asset 0's feed is dead: retire it
+
+        vm.prank(stranger);
+        core.mint(1_000 * SCALE);
+    }
+
+    function test_only_owner_can_set_risk_state() public {
+        vm.prank(stranger);
+        vm.expectRevert(PlanetCore.NotOwner.selector);
+        core.setRiskState(0, 2);
+    }
+
+    // ---------------------------------------------------------------- M-of-N signed path
+    function test_signed_update_needs_the_threshold_and_distinct_signers() public {
+        uint256 pk1 = 0xA11CE1;
+        uint256 pk2 = 0xB0B2;
+        uint256 pk3 = 0xCAFE3;
+        address[] memory signers = new address[](3);
+        signers[0] = vm.addr(pk1);
+        signers[1] = vm.addr(pk2);
+        signers[2] = vm.addr(pk3);
+
+        SignedPriceOracle o = new SignedPriceOracle(owner, signers, 2);
+        vm.prank(owner);
+        core.setOracle(address(o));
+
+        SignedPriceOracle.PricePayload memory p = SignedPriceOracle.PricePayload({
+            index: 0,
+            price: 101 * SCALE,
+            volatility: 0,
+            liquidity: SCALE,
+            riskState: 0,
+            timestamp: uint64(block.timestamp + 10)
+        });
+        bytes32 d = o.digest(p);
+
+        (uint8 v1, bytes32 r1, bytes32 s1) = vm.sign(pk1, d);
+        (uint8 v2, bytes32 r2, bytes32 s2) = vm.sign(pk2, d);
+
+        vm.expectRevert(PlanetCore.BadSignature.selector);
+        core.updatePriceSigned(p, abi.encodePacked(r1, s1, v1));
+
+        // the same key twice is one signer, not two
+        vm.expectRevert(PlanetCore.BadSignature.selector);
+        core.updatePriceSigned(p, abi.encodePacked(r1, s1, v1, r1, s1, v1));
+
+        core.updatePriceSigned(p, abi.encodePacked(r1, s1, v1, r2, s2, v2));
+        (uint64 cur, ) = _priceAndRisk(0);
+        assertEq(cur, 101 * SCALE);
+    }
+
+    function test_signed_update_reverts_without_an_oracle() public {
+        SignedPriceOracle.PricePayload memory p = SignedPriceOracle.PricePayload({
+            index: 0,
+            price: 101 * SCALE,
+            volatility: 0,
+            liquidity: SCALE,
+            riskState: 0,
+            timestamp: uint64(block.timestamp + 10)
+        });
+        vm.expectRevert(PlanetCore.NoOracle.selector);
+        core.updatePriceSigned(p, "");
+    }
+
+    function _priceAndRisk(uint256 i) internal view returns (uint64 currentPrice, uint8 riskState) {
+        (uint64 w, uint64 base, uint64 cur, uint64 vol, uint64 liq, uint8 risk, uint64 stamp) = core.assets(i);
+        currentPrice = cur;
+        riskState = risk;
+        w;
+        base;
+        vol;
+        liq;
+        stamp;
     }
 }

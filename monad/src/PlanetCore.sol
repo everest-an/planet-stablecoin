@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {PlanetToken} from "./PlanetToken.sol";
+import {SignedPriceOracle} from "./SignedPriceOracle.sol";
 
 contract PlanetCore {
     // ---------------------------------------------------------------- constants
@@ -34,11 +35,17 @@ contract PlanetCore {
         uint64 volatility;   // 1e6 fixed point (advisory)
         uint64 liquidity;    // 1e6 fixed point (advisory)
         uint8 riskState;     // 0 normal / 1 caution / 2 frozen
+        // Appended, so the generated getter keeps weight..riskState at indices 0..5.
+        // Per-asset staleness: a single global timestamp let one fresh asset make the whole index
+        // look current while thirteen inputs were days old.
+        uint64 lastUpdate;
     }
 
     // ---------------------------------------------------------------- storage
     address public owner;
     address public relayer;              // authorised price signer for step 1
+    /// @notice M-of-N verifier for step 2. May stay unset: updatePriceSigned then reverts NoOracle.
+    SignedPriceOracle public oracle;
     bool public paused;
     bool public baseLocked;
 
@@ -63,6 +70,9 @@ contract PlanetCore {
     event BaseLocked();
     event AssetSet(uint256 indexed index, uint64 weight, uint64 basePrice, uint64 currentPrice);
     event PriceUpdated(uint256 indexed index, uint64 price, uint64 ppi, uint64 timestamp);
+    event PriceForced(uint256 indexed index, uint64 price, uint64 ppi);
+    event RiskStateSet(uint256 indexed index, uint8 state, uint64 ppi);
+    event OracleChanged(address indexed oracle);
     event Minted(address indexed to, uint64 deposit, uint64 fee, uint64 minted, uint64 ppi);
     event Redeemed(address indexed from, uint64 burned, uint64 feeBps, uint64 payout, uint64 ppi);
     event FeesRouted(uint64 burn, uint64 reserve, uint64 staking, uint64 risk);
@@ -83,6 +93,9 @@ contract PlanetCore {
     error BandReject();
     error Underflow();
     error BadTimestamp();
+    error BadRiskState();
+    error NoOracle();
+    error BadSignature();
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert NotOwner();
@@ -132,7 +145,7 @@ contract PlanetCore {
         if (baseLocked && index < assets.length && basePrice != assets[index].basePrice) revert BaseIsLocked();
 
         if (index == assets.length) {
-            assets.push(Asset(weight, basePrice, currentPrice == 0 ? basePrice : currentPrice, 0, SCALE, RISK_NORMAL));
+            assets.push(Asset(weight, basePrice, currentPrice == 0 ? basePrice : currentPrice, 0, SCALE, RISK_NORMAL, 0));
         } else {
             if (index > assets.length) revert BadIndex();
             Asset storage a = assets[index];
@@ -151,29 +164,95 @@ contract PlanetCore {
         emit BaseLocked();
     }
 
-    /// @notice Guarded price update. Step 1: one authorised relayer (M-of-N arrives in step 2).
-    ///         Guards are identical to the TON version: monotonic timestamp, basket weights valid,
-    ///         single-update jump limit.
+    /// @notice Step 1: one authorised relayer pushes a price.
     function updatePrice(uint256 index, uint64 price, uint64 volatility, uint64 liquidity, uint8 riskState, uint64 timestamp)
         external
         onlyRelayer
     {
+        _applyPrice(index, price, volatility, liquidity, riskState, timestamp, false);
+    }
+
+    /// @notice Step 2: an M-of-N signed payload, verified by the separately deployed oracle.
+    /// @dev    Deliberately not `onlyRelayer`: authenticity comes from the signatures, so anyone may
+    ///         relay. The oracle bounds the payload to (its own address, chainid) in its digest, so a
+    ///         signature cannot be replayed onto another oracle or another chain.
+    function updatePriceSigned(SignedPriceOracle.PricePayload calldata p, bytes calldata sigs) external {
+        if (address(oracle) == address(0)) revert NoOracle();
+        if (!oracle.verify(p, sigs)) revert BadSignature();
+        _applyPrice(p.index, p.price, p.volatility, p.liquidity, p.riskState, p.timestamp, false);
+    }
+
+    function setOracle(address next) external onlyOwner {
+        oracle = SignedPriceOracle(next);
+        emit OracleChanged(next);
+    }
+
+    /// @notice Emergency path around the 50% jump guard, owner-only (put the owner behind the timelock).
+    /// @dev    Without this, a genuine >50% move can never be recorded: the push reverts forever, the
+    ///         oldest input passes MAX_ORACLE_AGE, and minting stops permanently with no way back.
+    ///         A forced price is recorded as at least CAUTION so the index visibly flags it.
+    function forcePrice(uint256 index, uint64 price, uint64 volatility, uint64 liquidity, uint8 riskState, uint64 timestamp)
+        external
+        onlyOwner
+    {
+        _applyPrice(index, price, volatility, liquidity, riskState, timestamp, true);
+    }
+
+    /// @notice Freeze (2) or un-freeze (0/1) an asset without a price. Frozen assets are skipped by
+    ///         the index AND by the staleness check, so the owner can retire a dead feed instead of
+    ///         letting it block minting forever.
+    function setRiskState(uint256 index, uint8 state) external onlyOwner {
+        if (index >= assets.length) revert BadIndex();
+        if (state > RISK_FROZEN) revert BadRiskState();
+        assets[index].riskState = state;
+        currentPpi = computePpi();
+        emit RiskStateSet(index, state, currentPpi);
+    }
+
+    function _applyPrice(
+        uint256 index,
+        uint64 price,
+        uint64 volatility,
+        uint64 liquidity,
+        uint8 riskState,
+        uint64 timestamp,
+        bool skipJump
+    ) internal {
         if (paused) revert IsPaused();
         if (index >= assets.length) revert BadIndex();
+        if (riskState > RISK_FROZEN) revert BadRiskState();
         if (timestamp <= lastOracleUpdate) revert BadTimestamp();
         if (weightSum() != SCALE) revert BadWeights();
 
         Asset storage a = assets[index];
-        if (!priceJumpOk(a.currentPrice, price)) revert PriceJump();
+        if (!skipJump && !priceJumpOk(a.currentPrice, price)) revert PriceJump();
 
         a.currentPrice = price;
         a.volatility = volatility;
         a.liquidity = liquidity;
-        a.riskState = riskState;
+        a.riskState = skipJump && riskState == RISK_NORMAL ? RISK_CAUTION : riskState;
+        a.lastUpdate = timestamp;
 
         lastOracleUpdate = timestamp;
         currentPpi = computePpi();
+        if (skipJump) emit PriceForced(index, price, currentPpi);
         emit PriceUpdated(index, price, currentPpi, timestamp);
+    }
+
+    /// @notice The timestamp of the STALEST price among active (non-frozen) assets; 0 when none.
+    ///         This, not lastOracleUpdate, is what mint() gates on: an index is only as fresh as
+    ///         its worst input.
+    function oldestActiveUpdate() public view returns (uint64 oldest) {
+        uint256 n = assets.length;
+        bool seen;
+        for (uint256 i; i < n; ++i) {
+            Asset storage a = assets[i];
+            if (a.riskState == RISK_FROZEN) continue;
+            if (!seen || a.lastUpdate < oldest) {
+                oldest = a.lastUpdate;
+                seen = true;
+            }
+        }
     }
 
     // ---------------------------------------------------------------- index (I4)
@@ -227,11 +306,12 @@ contract PlanetCore {
     function mint(uint64 deposit) external returns (uint64 minted) {
         if (paused) revert IsPaused();
         if (deposit == 0) revert ZeroAmount();
-        if (lastOracleUpdate == 0 || block.timestamp > uint256(lastOracleUpdate) + MAX_ORACLE_AGE) {
-            revert StaleOracle();
-        }
         uint64 ppi = currentPpi;
         if (ppi == 0) revert NoActiveAsset(); // C-1: never mint against an undefined index
+        uint64 oldest = oldestActiveUpdate();
+        if (oldest == 0 || block.timestamp > uint256(oldest) + MAX_ORACLE_AGE) {
+            revert StaleOracle();
+        }
 
         uint64 feeBps = feeBpsForPpi(ppi);
         uint256 fee = uint256(deposit) * feeBps / uint256(BPS_DENOM);
