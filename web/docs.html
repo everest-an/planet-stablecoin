@@ -160,15 +160,14 @@
         (<code>token.minter == core</code>), and the core keeps the supply accounting.
       </p>
       <ul>
-        <li><b>Mint:</b> <code>mint(uint64 deposit)</code> on the core → it computes
-          <code>deposit·(1−fee)/index</code> and mints PLT to the caller,
-          and updates reserve/supply. Minting is refused if the basket is far off peg
-          (<code>ERR_DEVIATION</code>), above the per-tx cap, or if the oracle price is older than
-          six hours (<code>ERR_STALE_PRICE</code>).</li>
-        <li><b>Burn/redeem:</b> <code>redeem(uint64 burnAmount)</code> burns the caller's PLT and credits
-          the payout to <code>totalReserve</code>; the off-chain delivery of the underlying is the operator's
-          job, handled separately from the burn so a failed delivery cannot desynchronise
-          supply. Mint and redeem from <a href="/app">/app</a>: it encodes the two calls directly and previews the contract's own arithmetic.</li>
+        <li><b>Mint:</b> <code>mint(uint64 deposit)</code> pulls <code>deposit</code> of the collateral
+          token (Circle test USDC, 6 decimals) from the caller with <code>transferFrom</code>, computes
+          <code>deposit·(1−fee)/index</code> and mints PLT. It reverts <code>NoDepositToken</code> when no
+          collateral is wired, so the core cannot fall back to minting against a number it never received.</li>
+        <li><b>Burn/redeem:</b> <code>redeem(uint64 burnAmount)</code> burns the caller's PLT, pays back
+          <code>burnAmount·index·(1−fee)</code> of the collateral, and decrements <code>totalReserve</code> by
+          exactly that payout — the fee stays in the reserve. Both calls are on <a href="/app">/app</a>,
+          which previews the contract's own arithmetic.</li>
       </ul>
       <p>
         Fees are band-based (0.5% near the index, 1% at 3–5% off, 2% beyond, plus a

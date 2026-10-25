@@ -76,8 +76,9 @@ dashboard/API, a Telegram Mini App, and the public audit-preparation pack. Prior
   a `setSigners()` call, not a redeploy. We would rather state that than let a reviewer assume a threshold that
   is not yet enforced by independent key holders.
 - **Mint/redeem now works on Arbitrum** at /app, but read what the contract does: `mint(uint64 deposit)` takes a
-  DECLARED deposit and transfers no collateral, so anyone can mint any amount. It exercises the accounting; it is
-  not a sale and not a redemption right. Wiring real collateral is the work this grant would fund.
+- **Mint/redeem work on Arbitrum** at /app: `mint(uint64 deposit)` pulls the deposit from the caller via `transferFrom`
+  and `redeem` pays it back out, decrementing `totalReserve`. The collateral is Circle's test USDC, so nothing here has
+  value — and there is no custody, insurance or redemption guarantee behind it. That is the gap this grant would fund.
 
 ## 8. Links
 

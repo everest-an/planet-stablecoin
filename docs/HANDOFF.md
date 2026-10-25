@@ -37,7 +37,7 @@
 - `web/whitepaper.html`：**27 处 TON 引用未处理**（§2 架构 / §7 oracle / §12 证据 / 附录 C 代码 / 附录 F 部署 / 地址）。**§3 PPI、§4 费率、§5 稳定、§9 治理、§10 代币经济不要动** —— 这些机制没变。
 - **M-of-N 提高到 2-of-3**：合约与 oracle 都已就位，剩下的只是 `setSigners([a,b,c], 2)` + 把密钥分散到不同人手里。不需要重新部署。
 - ~~合约级缺陷~~ **已修（2026-10-25 重新部署到新地址）**：`Asset.lastUpdate` 逐资产 + `mint` 看 `oldestActiveUpdate()`；`forcePrice()` 提供 >50% 的 timelock 旁路；`setRiskState()` 可冻结死掉的源。
-- ~~铸赎 UI 迁到 EVM~~ **已做**：`web/app.html`（`/app`）零依赖直连；`mint(1000e6)` 链上返回 991203689，页面显示 991.203689。**`mint()` 不收抵押物**，页面已显著警示。
+- ~~铸赎 UI 迁到 EVM~~ **已做**：`web/app.html`（`/app`）零依赖直连，含 `approve` 两步流程。**`mint()` 现在通过 `transferFrom` 拉取测试 USDC**（Circle Arbitrum Sepolia `0x75faf114…AA4d`）；`redeem` 从储备付出并**减少** `totalReserve`（旧代码只付不减，背书被永久高估）。
 
 ### 页面已声明的诚实边界
 

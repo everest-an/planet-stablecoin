@@ -6,7 +6,7 @@
     <title>Planet — mint / redeem PLT (Arbitrum Sepolia)</title>
     <meta
       name="description"
-      content="Mint and redeem PLT against the Planet on-chain commodity index on Arbitrum Sepolia. Testnet proof of concept: no collateral is transferred, not a stablecoin."
+      content="Mint and redeem PLT against the Planet on-chain commodity index on Arbitrum Sepolia. Testnet proof of concept: minting pulls test USDC and redeeming pays it back, but nothing here has value and PLT is not a stablecoin."
     />
     <link rel="stylesheet" href="/styles.css" />
     <style>
@@ -54,10 +54,11 @@
       </p>
 
       <div class="warn">
-        <b>Minting takes a declared deposit, not collateral.</b> This deployment has no payment token:
-        <code>mint(uint64 deposit)</code> mints PLT against the number you type and transfers nothing.
-        Anyone can mint any amount. That is fine for a testnet accounting exercise and unacceptable for
-        a product — do not read PLT here as redeemable for anything.
+        <b>Minting pulls real test USDC.</b> <code>mint(uint64 deposit)</code> takes
+        <code>deposit</code> USDC (6 decimals) from your wallet via <code>transferFrom</code> and mints
+        PLT against it at the on-chain index. You will be asked to approve the amount first. This is
+        Circle's Arbitrum Sepolia test USDC — worth nothing — and PLT is not a redemption right:
+        redeeming pays test USDC back from the reserve, whatever is in it.
       </div>
 
       <div class="panel">
@@ -107,6 +108,7 @@
     <script>
       const CORE = "0x65362ef75028700855E842F903FF6FBD65A97f65";
       const TOKEN = "0x367e62f6fd68FDe2698A65022713Ef99ca9a4c80";
+      const USD = "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d";
       const RPC = "https://sepolia-rollup.arbitrum.io/rpc";
       const CHAIN_ID = 421614;
       const SCALE = 1000000n;
@@ -116,6 +118,8 @@
         oldestActiveUpdate: "0xb6ef7e0f",
         feeBpsForPpi: "0x7a71bb7a",
         balanceOf: "0x70a08231",
+        allowance: "0xdd62ed3e",
+        approve: "0x095ea7b3",
         mint: "0xfb9d09c8",
         redeem: "0x3a4db838",
       };
@@ -168,10 +172,12 @@
           feeBps = await rpcCall(CORE, SEL.feeBpsForPpi + hex(p));
           const ageSec = oldest ? Math.floor(Date.now() / 1000) - Number(oldest) : null;
           const bal = account ? await rpcCall(TOKEN, SEL.balanceOf + account.slice(2).toLowerCase().padStart(64, "0")) : null;
+          const usd = account ? await rpcCall(USD, SEL.balanceOf + account.slice(2).toLowerCase().padStart(64, "0")) : null;
           $("state").innerHTML =
             `index (PPI)  <b>${(Number(p) / 1e6).toFixed(6)}</b><br />` +
             `PLT supply   <b>${supply === null ? "—" : fromFixed6(supply)}</b><br />` +
             `your PLT     <b>${bal === null ? "connect a wallet" : fromFixed6(bal)}</b><br />` +
+            `your USDC    <b>${usd === null ? "connect a wallet" : fromFixed6(usd)}</b><br />` +
             `mint fee     <b>${(Number(feeBps) / 100).toFixed(2)}%</b><br />` +
             `oracle age   <b>${ageSec === null ? "never pushed" : ageSec + "s"}</b>` +
             (ageSec !== null && ageSec > 21600 ? ' <span class="bad">— stale, minting is blocked</span>' : "");
@@ -209,7 +215,7 @@
         const fee = (gross * burnFee) / 10000n;
         const payout = gross - fee;
         $("redeemPreview").innerHTML =
-          `gross ${fromFixed6(gross)} · fee ${fromFixed6(fee)} (${(Number(burnFee) / 100).toFixed(2)}%)<br />you receive <b>${fromFixed6(payout)}</b> — paid out by the operator, not by this page`;
+          `gross ${fromFixed6(gross)} · fee ${fromFixed6(fee)} (${(Number(burnFee) / 100).toFixed(2)}%)<br />you receive <b>${fromFixed6(payout)}</b> — test USDC, paid from the contract reserve by redeem()`;
         $("redeemBtn").disabled = !account || burn === 0n;
       }
 
@@ -259,34 +265,62 @@
         }
       }
 
-      async function send(selector, amount) {
-        if (!account || amount === null) return;
+      const pad = (a) => a.slice(2).toLowerCase().padStart(64, "0");
+
+      async function sendTx(to, data) {
+        const hash = await window.ethereum.request({
+          method: "eth_sendTransaction",
+          params: [{ from: account, to, data }],
+        });
+        $("status").innerHTML = `sent <a href="https://sepolia.arbiscan.io/tx/${hash}" target="_blank" rel="noopener">${hash.slice(0, 18)}…</a> — waiting for the receipt`;
+        for (let i = 0; i < 60; i++) {
+          const rc = await fetch(RPC, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_getTransactionReceipt", params: [hash] }),
+          }).then((r) => r.json());
+          if (rc.result) return rc.result.status === "0x1";
+          await new Promise((r) => setTimeout(r, 2000));
+        }
+        return false;
+      }
+
+      // Two transactions the first time: ERC-20 allowance is not implicit, and a mint that skips
+      // approve would simply revert. The second call is skipped once the allowance covers it.
+      async function mint() {
+        const deposit = toFixed6($("mintIn").value);
+        if (!account || deposit === null || deposit === 0n) return;
         $("status").textContent = "waiting for your wallet…";
         try {
           await ensureChain();
-          const data = selector + hex(amount);
-          const hash = await window.ethereum.request({
-            method: "eth_sendTransaction",
-            params: [{ from: account, to: CORE, data }],
-          });
-          $("status").innerHTML = `sent <a href="https://sepolia.arbiscan.io/tx/${hash}" target="_blank" rel="noopener">${hash.slice(0, 18)}…</a> — waiting for the receipt`;
-          for (let i = 0; i < 60; i++) {
-            const rc = await fetch(RPC, {
-              method: "POST",
-              headers: { "content-type": "application/json" },
-              body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_getTransactionReceipt", params: [hash] }),
-            }).then((r) => r.json());
-            if (rc.result) {
-              const ok = rc.result.status === "0x1";
-              $("status").innerHTML = ok
-                ? '<span class="ok">confirmed on Arbitrum Sepolia</span>'
-                : '<span class="bad">transaction reverted — the contract refused it (stale oracle, band, or jump guard)</span>';
-              readState();
+          const allowance = await rpcCall(USD, SEL.allowance + pad(account) + pad(CORE));
+          if ((allowance ?? 0n) < deposit) {
+            $("status").textContent = "step 1/2 — approve the USDC deposit…";
+            if (!(await sendTx(USD, SEL.approve + pad(CORE) + hex(deposit)))) {
+              $("status").innerHTML = '<span class="bad">approval did not confirm</span>';
               return;
             }
-            await new Promise((r) => setTimeout(r, 2000));
+            $("status").textContent = "step 2/2 — mint…";
           }
-          $("status").textContent = "still pending — check the explorer";
+          $("status").innerHTML = (await sendTx(CORE, SEL.mint + hex(deposit)))
+            ? '<span class="ok">minted</span>'
+            : '<span class="bad">mint reverted — stale oracle, band reject, or the jump guard</span>';
+          readState();
+        } catch (e) {
+          $("status").innerHTML = `<span class="bad">${e.message}</span>`;
+        }
+      }
+
+      async function redeem() {
+        const burn = toFixed6($("redeemIn").value);
+        if (!account || burn === null || burn === 0n) return;
+        $("status").textContent = "waiting for your wallet…";
+        try {
+          await ensureChain();
+          $("status").innerHTML = (await sendTx(CORE, SEL.redeem + hex(burn)))
+            ? '<span class="ok">redeemed — test USDC paid out</span>'
+            : '<span class="bad">redeem reverted — do you hold that much PLT, and is the reserve deep enough?</span>';
+          readState();
         } catch (e) {
           $("status").innerHTML = `<span class="bad">${e.message}</span>`;
         }
@@ -295,8 +329,8 @@
       $("connect").addEventListener("click", connect);
       $("mintIn").addEventListener("input", previewMint);
       $("redeemIn").addEventListener("input", previewRedeem);
-      $("mintBtn").addEventListener("click", () => send(SEL.mint, toFixed6($("mintIn").value)));
-      $("redeemBtn").addEventListener("click", () => send(SEL.redeem, toFixed6($("redeemIn").value)));
+      $("mintBtn").addEventListener("click", mint);
+      $("redeemBtn").addEventListener("click", redeem);
 
       readState();
       setInterval(readState, 60000);
