@@ -34,6 +34,9 @@ on:
       threshold:
         description: "deploy only: SignedPriceOracle threshold (blank = 1, correct while one operator holds every key)"
         required: false
+      deposit_token:
+        description: "deploy only: ERC-20 the core pulls on mint (blank = Circle test USDC on Arbitrum Sepolia)"
+        required: false
 
 jobs:
   monad:
@@ -88,6 +91,7 @@ jobs:
           RPC: ${{ inputs.rpc }}
           CHAIN: ${{ inputs.chain }}
           THRESHOLD: ${{ inputs.threshold }}
+          DEPOSIT_TOKEN: ${{ inputs.deposit_token || '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d' }}
         run: |
           # Use the deployer directly as owner. The previous version routed through an optional
           # input, and an unset input made the constructor-args list split into three values.

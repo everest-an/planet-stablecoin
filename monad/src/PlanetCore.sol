@@ -4,6 +4,12 @@ pragma solidity ^0.8.24;
 import {PlanetToken} from "./PlanetToken.sol";
 import {SignedPriceOracle} from "./SignedPriceOracle.sol";
 
+interface IERC20 {
+    function transfer(address to, uint256 amount) external returns (bool);
+    function transferFrom(address from, address to, uint256 amount) external returns (bool);
+    function balanceOf(address who) external view returns (uint256);
+}
+
 contract PlanetCore {
     // ---------------------------------------------------------------- constants
     uint64 public constant SCALE = 1e6;              // 1e6 == 1.0
@@ -46,6 +52,9 @@ contract PlanetCore {
     address public relayer;              // authorised price signer for step 1
     /// @notice M-of-N verifier for step 2. May stay unset: updatePriceSigned then reverts NoOracle.
     SignedPriceOracle public oracle;
+    /// @notice The collateral a mint pulls and a redeem pays out. Unset means mint() reverts — the
+    ///         core will not mint against a number it does not actually receive.
+    IERC20 public depositToken;
     bool public paused;
     bool public baseLocked;
 
@@ -73,6 +82,7 @@ contract PlanetCore {
     event PriceForced(uint256 indexed index, uint64 price, uint64 ppi);
     event RiskStateSet(uint256 indexed index, uint8 state, uint64 ppi);
     event OracleChanged(address indexed oracle);
+    event DepositTokenChanged(address indexed token);
     event Minted(address indexed to, uint64 deposit, uint64 fee, uint64 minted, uint64 ppi);
     event Redeemed(address indexed from, uint64 burned, uint64 feeBps, uint64 payout, uint64 ppi);
     event FeesRouted(uint64 burn, uint64 reserve, uint64 staking, uint64 risk);
@@ -96,6 +106,8 @@ contract PlanetCore {
     error BadRiskState();
     error NoOracle();
     error BadSignature();
+    error NoDepositToken();
+    error TransferFailed();
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert NotOwner();
@@ -185,6 +197,13 @@ contract PlanetCore {
     function setOracle(address next) external onlyOwner {
         oracle = SignedPriceOracle(next);
         emit OracleChanged(next);
+    }
+
+    /// @notice Wire the collateral. One-way in practice: changing it after a mint would leave the
+    ///         previous token stranded in the contract.
+    function setDepositToken(address next) external onlyOwner {
+        depositToken = IERC20(next);
+        emit DepositTokenChanged(next);
     }
 
     /// @notice Emergency path around the 50% jump guard, owner-only (put the owner behind the timelock).
@@ -319,6 +338,11 @@ contract PlanetCore {
         minted = uint64(net * uint256(SCALE) / uint256(ppi));
         if (minted == 0) revert ZeroAmount();
 
+        // Pull the collateral BEFORE any state change. Every check above has already run, so this
+        // cannot leave the contract holding a deposit it refused to mint against.
+        if (address(depositToken) == address(0)) revert NoDepositToken();
+        if (!depositToken.transferFrom(msg.sender, address(this), uint256(deposit))) revert TransferFailed();
+
         totalSupply += minted;
         if (address(token) != address(0)) token.mint(msg.sender, minted); // EVM: synchronous, no mirror
         totalReserve += deposit;
@@ -342,6 +366,13 @@ contract PlanetCore {
         if (totalSupply < burnAmount) revert Underflow(); // no silent wrap
         totalSupply -= burnAmount;
         if (address(token) != address(0)) token.burn(msg.sender, burnAmount);
+
+        // The payout leaves the reserve; the fee does not (it stays in the contract and _routeFees
+        // labels it). Without this decrement totalReserve only ever grows and overstates the backing.
+        if (address(depositToken) == address(0)) revert NoDepositToken();
+        if (totalReserve < payout) revert Underflow();
+        totalReserve -= payout;
+        if (!depositToken.transfer(msg.sender, uint256(payout))) revert TransferFailed();
 
         _routeFees(fee);
         emit Redeemed(msg.sender, burnAmount, burnFee, payout, ppi);

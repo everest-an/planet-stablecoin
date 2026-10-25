@@ -50,6 +50,9 @@ contract Deploy is Script {
         token.setMinter(address(core));
         core.setToken(address(token));
 
+        address depositToken = vm.envOr("DEPOSIT_TOKEN", address(0));
+        if (depositToken != address(0)) core.setDepositToken(depositToken);
+
         address signerA = vm.envOr("SIGNER_A", address(0));
         address oracleAddr = address(0);
         if (signerA != address(0)) {
@@ -67,6 +70,7 @@ contract Deploy is Script {
         console.log("PlanetToken   :", address(token));
         console.log("PlanetCore    :", address(core));
         if (oracleAddr != address(0)) console.log("PriceOracle   :", oracleAddr);
+        if (depositToken != address(0)) console.log("DepositToken  :", depositToken);
         console.log("assetCount    :", core.assetCount());
         console.log("ppi           :", core.currentPpi());
     }

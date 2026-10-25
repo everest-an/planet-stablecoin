@@ -5,11 +5,13 @@ import {Test} from "forge-std/Test.sol";
 import {PlanetCore} from "../src/PlanetCore.sol";
 import {PlanetToken} from "../src/PlanetToken.sol";
 import {SignedPriceOracle} from "../src/SignedPriceOracle.sol";
+import {MockERC20} from "./MockERC20.sol";
 
 /// These tests mirror the TON suite's economics cases one-for-one, so the migration can be judged
 /// on behaviour rather than on vibes. Each test name states the invariant it defends.
 contract PlanetCoreTest is Test {
     PlanetCore core;
+    MockERC20 usd;
     address owner = address(0xA11CE);
     address relayer = address(0xB0B);
     address stranger = address(0xCAFE);
@@ -17,16 +19,20 @@ contract PlanetCoreTest is Test {
     uint64 constant SCALE = 1e6;
 
     function setUp() public {
-        vm.prank(owner);
-        core = new PlanetCore(owner, relayer);
-        // A, B, C: weights 50/30/20, bases 100 / 50 / 80
         vm.startPrank(owner);
+        core = new PlanetCore(owner, relayer);
+        usd = new MockERC20();
+        core.setDepositToken(address(usd));
         // 8 assets x 12.5% == 100%, each within the 15% per-asset cap
         for (uint256 i; i < 8; ++i) {
             core.setAsset(i, 125_000, 100 * SCALE, 100 * SCALE);
         }
         core.lockBasePrices();
         vm.stopPrank();
+
+        usd.mint(stranger, 10_000_000 * SCALE);
+        vm.prank(stranger);
+        usd.approve(address(core), type(uint256).max);
     }
 
     function push(uint256 i, uint64 price) internal {
@@ -324,6 +330,47 @@ contract PlanetCoreTest is Test {
         });
         vm.expectRevert(PlanetCore.NoOracle.selector);
         core.updatePriceSigned(p, "");
+    }
+
+    // ---------------------------------------------------------------- collateral
+    /// The whole point of wiring a deposit token: a mint that does not receive anything must not
+    /// proceed. Before this, mint() minted against a number the caller simply typed.
+    function test_mint_reverts_without_deposit_token() public {
+        pushAll(100 * SCALE);
+        vm.prank(owner);
+        core.setDepositToken(address(0));
+        vm.prank(stranger);
+        vm.expectRevert(PlanetCore.NoDepositToken.selector);
+        core.mint(1_000 * SCALE);
+    }
+
+    function test_mint_pulls_the_collateral() public {
+        pushAll(100 * SCALE);
+        uint64 deposit = 1_000 * SCALE;
+        uint256 before = usd.balanceOf(stranger);
+        vm.prank(stranger);
+        core.mint(deposit);
+        assertEq(usd.balanceOf(stranger), before - deposit, "the deposit left the caller");
+        assertEq(usd.balanceOf(address(core)), deposit, "the core holds it");
+        assertEq(core.totalReserve(), deposit);
+    }
+
+    /// totalReserve used to only ever grow: redeem paid the caller without decrementing it, so the
+    /// reported backing drifted further from reality with every redemption.
+    function test_redeem_pays_out_and_reduces_the_reserve() public {
+        pushAll(100 * SCALE);
+        uint64 deposit = 1_000 * SCALE;
+        vm.prank(stranger);
+        uint64 minted = core.mint(deposit);
+        uint256 before = usd.balanceOf(stranger);
+
+        vm.prank(stranger);
+        uint64 payout = core.redeem(minted);
+
+        assertEq(usd.balanceOf(stranger), before + payout, "the payout reached the caller");
+        assertEq(core.totalReserve(), deposit - payout, "the reserve dropped by the payout only");
+        assertEq(core.totalSupply(), 0);
+        assertLt(uint256(payout), uint256(deposit), "the fee stayed behind");
     }
 
     function _priceAndRisk(uint256 i) internal view returns (uint64 currentPrice, uint8 riskState) {
