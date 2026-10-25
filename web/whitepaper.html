@@ -4,13 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Planet — whitepaper (complete &amp; light)</title>
-    <meta name="description" content="Complete Planet whitepaper: an on-chain commodity purchasing-power index (PPI) and index token on TON. Full mathematics, basket, stability, oracle, governance/DAO, tokenomics, worked simulation and technical appendix. Phase 1 synthetic index token." />
+    <meta name="description" content="Complete Planet whitepaper: an on-chain commodity purchasing-power index (PPI) and index token. The reference implementation documented here is on TON; an EVM port (identical on-chain index maths, different settlement) is live on Arbitrum Sepolia. Full mathematics, basket, stability, oracle, governance/DAO, tokenomics, worked simulation and technical appendix. Phase 1 synthetic index token." />
     <link rel="canonical" href="https://ppppp.space/whitepaper" />
     <meta property="og:type" content="article" />
     <meta property="og:site_name" content="Planet" />
     <meta property="og:url" content="https://ppppp.space/whitepaper" />
     <meta property="og:title" content="Planet whitepaper — complete edition" />
-    <meta property="og:description" content="The complete whitepaper: mechanisms, mathematics, worked simulation, technical appendix, and an honest implemented-vs-design status. Phase 1 PoC on TON." />
+    <meta property="og:description" content="The complete whitepaper: mechanisms, mathematics, worked simulation, technical appendix, and an honest implemented-vs-design status. Reference implementation on TON; EVM port live on Arbitrum Sepolia." />
     <meta property="og:image" content="https://ppppp.space/icon.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Planet whitepaper — complete edition" />
@@ -23,7 +23,7 @@
         "headline": "Planet whitepaper — complete edition",
         "url": "https://ppppp.space/whitepaper",
         "inLanguage": "en",
-        "about": "On-chain commodity purchasing-power index; synthetic index token; TEP-74 on TON",
+        "about": "On-chain commodity purchasing-power index; synthetic index token; TEP-74 on TON (reference implementation) and ERC-20 on Arbitrum Sepolia",
         "publisher": { "@type": "Organization", "name": "Planet", "url": "https://ppppp.space/" }
       }
     </script>
@@ -94,13 +94,22 @@
 
     <main>
       <section class="hero">
-        <p class="eyebrow">[ whitepaper · v1.9 · complete edition · TON testnet ]</p>
+        <p class="eyebrow">[ whitepaper · v1.9 · complete edition · reference implementation: TON testnet ]</p>
         <h1>Planet — an on-chain commodity purchasing-power index.</h1>
         <p class="lede">
           Planet (PLT) aggregates the real prices of a basket of global commodities into a single
           on-chain <b>purchasing-power index (PPI)</b>, expressed as a TEP-74 token on <b>TON</b>.
           This page is the <b>complete whitepaper</b> — mathematics, basket, stability, oracle,
           governance, tokenomics, worked simulation and technical appendix.
+        </p>
+        <p class="note" style="border-left:3px solid #c2401c;padding:10px 14px">
+          <b>Which implementation this document describes.</b> Everything below documents the <b>TON reference
+          implementation</b> in detail, including TVM-specific integer arithmetic, the jetton message flow and the
+          Tolk code excerpts in appendix C. The mathematics of the index, the fee schedule and the stability
+          mechanism are unchanged in the EVM port, but its <b>settlement layer is different</b>: ERC-20 instead of
+          jetton, and <code>updatePrice</code> from a single relayer instead of ed25519-signed multi-signer
+          updates. For the deployed Arbitrum contracts and their exact behaviour, read
+          <a href="/docs">/docs</a>, not this appendix. <span style="opacity:.7">(Inserted 2026-10-25.)</span>
         </p>
         <div id="wp-toggle" role="group" aria-label="whitepaper version">
           <button type="button" class="segbtn btn" data-wp="full" aria-pressed="true">complete edition</button>
@@ -184,6 +193,9 @@
         <h2>8. Status &amp; roadmap</h2>
         <ul>
           <li><b>Now:</b> TON testnet; contracts implemented and tested (239 tests); multi-source oracle live; key separation done.</li>
+          <li><b>EVM port:</b> Arbitrum Sepolia — PlanetCore + PLT (ERC-20) + Timelock, 14-asset basket, hourly price push.
+            <b>The site and public API read that deployment</b>; its mint/redeem UI is not built yet, and its oracle is a single
+            relayer key (the M-of-N verifier is written but not deployed). See <a href="/docs">/docs</a> for the EVM specifics.</li>
           <li><b>Next:</b> third-party audit; multisig owner; production oracle sources; binding PLTG governance.</li>
           <li><b>Later:</b> 1:1 commodity reserve via an RWA custodian, proof-of-reserve and compliance.</li>
         </ul>
@@ -863,7 +875,7 @@ fun pending(s) { return s.amount * storage.accRewardPerShare / RPS_SCALE - s.rew
     <footer class="foot">
       <div class="foot-row">
         <span class="wordmark">Planet</span>
-        <span class="ver">[ v1.9 · TON testnet ]</span>
+        <span class="ver">[ v1.9 · reference impl: TON testnet · EVM port: Arbitrum Sepolia ]</span>
       </div>
       <nav class="foot-nav">
         <a href="/">home</a>
