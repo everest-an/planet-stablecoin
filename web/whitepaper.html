@@ -4,13 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Planet — whitepaper (complete &amp; light)</title>
-    <meta name="description" content="Complete Planet whitepaper: an on-chain commodity purchasing-power index (PPI) and index token. The reference implementation documented here is on TON; an EVM port (identical on-chain index maths, different settlement) is live on Arbitrum Sepolia. Full mathematics, basket, stability, oracle, governance/DAO, tokenomics, worked simulation and technical appendix. Phase 1 synthetic index token." />
+    <meta name="description" content="Complete Planet whitepaper: an on-chain commodity purchasing-power index (PPI) and index token. The reference implementation documented here is the Solidity/EVM stack deployed on Arbitrum Sepolia. Full mathematics, basket, stability, oracle, governance/DAO, tokenomics, worked simulation and technical appendix. Phase 1 synthetic index token." />
     <link rel="canonical" href="https://ppppp.space/whitepaper" />
     <meta property="og:type" content="article" />
     <meta property="og:site_name" content="Planet" />
     <meta property="og:url" content="https://ppppp.space/whitepaper" />
     <meta property="og:title" content="Planet whitepaper — complete edition" />
-    <meta property="og:description" content="The complete whitepaper: mechanisms, mathematics, worked simulation, technical appendix, and an honest implemented-vs-design status. Reference implementation on TON; EVM port live on Arbitrum Sepolia." />
+    <meta property="og:description" content="The complete whitepaper: mechanisms, mathematics, worked simulation, technical appendix, and an honest implemented-vs-design status. Reference implementation live on Arbitrum Sepolia." />
     <meta property="og:image" content="https://ppppp.space/icon.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Planet whitepaper — complete edition" />
@@ -23,7 +23,7 @@
         "headline": "Planet whitepaper — complete edition",
         "url": "https://ppppp.space/whitepaper",
         "inLanguage": "en",
-        "about": "On-chain commodity purchasing-power index; synthetic index token; TEP-74 on TON (reference implementation) and ERC-20 on Arbitrum Sepolia",
+        "about": "On-chain commodity purchasing-power index; synthetic index token; ERC-20 on Arbitrum Sepolia (reference implementation)",
         "publisher": { "@type": "Organization", "name": "Planet", "url": "https://ppppp.space/" }
       }
     </script>
@@ -88,29 +88,30 @@
         <a href="/#how">how it works</a>
         <a href="/#protocol">protocol</a>
         <a href="/#status">status</a>
-        <a href="/app">mint (EVM)</a>
-<a class="btn" href="https://app.ppppp.space">TON app</a>
+        <a href="/app">mint / redeem</a>
+<a class="btn" href="/app">open app</a>
       </nav>
     </header>
 
     <main>
       <section class="hero">
-        <p class="eyebrow">[ whitepaper · v1.9 · complete edition · reference implementation: TON testnet ]</p>
+        <p class="eyebrow">[ whitepaper · v2.0 · complete edition · reference implementation: Arbitrum Sepolia ]</p>
         <h1>Planet — an on-chain commodity purchasing-power index.</h1>
         <p class="lede">
           Planet (PLT) aggregates the real prices of a basket of global commodities into a single
-          on-chain <b>purchasing-power index (PPI)</b>, expressed as a TEP-74 token on <b>TON</b>.
+          on-chain <b>purchasing-power index (PPI)</b>, expressed as a ERC-20 token on <b>Arbitrum Sepolia</b>.
           This page is the <b>complete whitepaper</b> — mathematics, basket, stability, oracle,
           governance, tokenomics, worked simulation and technical appendix.
         </p>
         <p class="note" style="border-left:3px solid #c2401c;padding:10px 14px">
-          <b>Which implementation this document describes.</b> Everything below documents the <b>TON reference
-          implementation</b> in detail, including TVM-specific integer arithmetic, the jetton message flow and the
-          Tolk code excerpts in appendix C. The mathematics of the index, the fee schedule and the stability
-          mechanism are unchanged in the EVM port, but its <b>settlement layer is different</b>: ERC-20 instead of
-          jetton, and <code>updatePrice</code> from a single relayer instead of ed25519-signed multi-signer
-          updates. For the deployed Arbitrum contracts and their exact behaviour, read
-          <a href="/docs">/docs</a>, not this appendix. <span style="opacity:.7">(Inserted 2026-10-25.)</span>
+          <b>Which implementation this document describes.</b> Everything below documents the <b>EVM reference
+          implementation</b> in the <code>monad/</code> directory, deployed on <b>Arbitrum Sepolia</b>: Solidity
+          0.8.24, an ERC-20 PLT, a timelock owner and a signed-price oracle. The mathematics of the index, the
+          fee schedule and the stability mechanism are settlement-agnostic. The live write path is
+          <code>updatePrice</code> from an authorised relayer; the separate <code>SignedPriceOracle</code>
+          (ECDSA M-of-N) is deployed and wired for <code>updatePriceSigned</code>, but its signer set is
+          currently 1-of-1. For the deployed addresses and exact behaviour, read
+          <a href="/docs">/docs</a>. <span style="opacity:.7">(Updated 2026-10-25.)</span>
         </p>
         <div id="wp-toggle" role="group" aria-label="whitepaper version">
           <button type="button" class="segbtn btn" data-wp="full" aria-pressed="true">complete edition</button>
@@ -132,8 +133,8 @@
         <p>
           Planet (PLT) aggregates the real prices of a basket of global commodities — energy,
           metals and agriculture — into an on-chain <b>purchasing-power index (PPI)</b>, and
-          expresses that index as a TEP-74 token on <b>TON</b>. A wallet can mint PLT by
-          depositing value at the current PPI, and burn PLT to redeem against the basket.
+          expresses that index as an ERC-20 token on <b>Arbitrum Sepolia</b>. A wallet can mint PLT by
+          depositing test USDC at the current PPI, and redeem PLT for test USDC from the reserve.
         </p>
         <p class="callout">
           <b>Phase 1 status.</b> Planet is a proof-of-concept <b>synthetic index token</b>. It
@@ -145,10 +146,10 @@
         <table class="doc-table">
           <thead><tr><th>Layer</th><th>Component</th><th>Status</th></tr></thead>
           <tbody>
-            <tr><td>L4</td><td>Fund — tokenised ETF shares (subscribe / redeem at NAV)</td><td>implemented</td></tr>
-            <tr><td>L3</td><td>Stability &amp; risk — tiered fees, elastic curve, arbitrage, bonds, risk fund, circuit-breakers</td><td>implemented</td></tr>
-            <tr><td>L2</td><td>CAM adapter — per-commodity standardisation (price / volatility / liquidity / risk)</td><td>phase A</td></tr>
-            <tr><td>L1</td><td>PlanetCore — basket, on-chain PPI, mint/burn, fees, redemption mirror</td><td>implemented</td></tr>
+            <tr><td>L4</td><td>Fund — tokenised ETF shares (subscribe / redeem at NAV)</td><td>design — not in this deployment</td></tr>
+            <tr><td>L3</td><td>Stability &amp; risk — tiered fees, elastic curve, arbitrage, risk fund, circuit-breakers</td><td>fees / risk fund live; bonds design</td></tr>
+            <tr><td>L2</td><td>CAM adapter — per-commodity standardisation (price / volatility / liquidity / risk)</td><td>design — advisory fields only</td></tr>
+            <tr><td>L1</td><td>PlanetCore — basket, on-chain PPI, mint/redeem, fees, collateral</td><td>implemented</td></tr>
             <tr><td>L0</td><td>Reserve / RWA — physical &amp; ETF custody, proof-of-reserve</td><td>future</td></tr>
           </tbody>
         </table>
@@ -162,10 +163,10 @@
         </p>
         <h2>4. Mint / burn and fees</h2>
         <p>
-          Minting deposits value and issues PLT at the current PPI, net of a tiered fee. Each fee
-          is routed <b>30% burn · 50% reserve · 20% staking</b>, less a <b>10% risk-fund</b>
-          carve-out. Burning goes through the TEP-74 jetton wallet and is mirrored back to core
-          accounting so supply stays consistent.
+          Minting pulls test USDC and issues PLT at the current PPI, net of a tiered fee. Each fee
+          is routed <b>30% burn · 50% reserve · 20% staking</b>, with a <b>10% risk-fund</b>
+          carve-out taken from the reserve bucket (net <b>30 / 40 / 20 / 10</b>). Redeeming burns PLT
+          and pays test USDC from the reserve in the same transaction.
         </p>
         <h2>5. Stability mechanisms</h2>
         <ul>
@@ -176,29 +177,31 @@
         </ul>
         <h2>6. Oracle</h2>
         <p>
-          Prices are sourced off-chain from <b>two independent feeds</b>, combined as a
-          <b>median</b>, and signed with ed25519. PlanetCore verifies against an
-          <b>M-of-N signer set</b> (distinct signers enforced) and applies guards: strictly
-          increasing timestamps, a single-update price-jump limit, a freshness ceiling on
-          minting, and automatic freeze on source divergence.
+          Prices are sourced off-chain from up to <b>four independent channels</b> per asset:
+          Yahoo Finance is the primary and Sina / Tencent / Eastmoney are <b>confirmations</b> within
+          0.5% (not a median). PlanetCore applies guards: strictly increasing timestamps, a
+          single-update price-jump limit, a 6-hour freshness ceiling on minting over the
+          <i>stalest active asset</i>, and a caution state when a reading has no confirmation.
+          The live write path is an authorised relayer; the <code>SignedPriceOracle</code> adds an
+          ECDSA M-of-N path, deployed today with a 1-of-1 signer set.
         </p>
         <h2>7. Governance</h2>
         <p>
           All privileged actions require the owner. Ownership is migrated to a <b>timelock</b>
           and routed through <code>Propose → delay → Execute</code>, giving holders a reaction
-          window; the timelock’s owner should be a <b>multisig</b> for M-of-N plus delay. A
-          staking token (PLTG) distributes fee revenue pro-rata and carries stake-weighted
-          parameter signalling. The original DAO plan, and exactly what is live today, are set out
-          in §9 of the complete edition.
+          window; the timelock’s owner should be a <b>multisig</b>. The PLTG staking/voting design is
+          documented but <b>not deployed</b> in this Arbitrum deployment; parameter authority is the
+          timelock. The original DAO plan, and exactly what is live today, are set out in §9 of the
+          complete edition.
         </p>
         <h2>8. Status &amp; roadmap</h2>
         <ul>
-          <li><b>Now:</b> TON testnet; contracts implemented and tested (239 tests); multi-source oracle live; key separation done.</li>
-          <li><b>EVM port:</b> Arbitrum Sepolia — PlanetCore + PLT (ERC-20) + Timelock, 14-asset basket, hourly price push.
-            <b>The site, the public API and <a href="/app">/app</a> (mint/redeem) run against that deployment</b>; its oracle is a single
-            relayer key (the M-of-N verifier is deployed, but its signer set is 1-of-1). See <a href="/docs">/docs</a> for the EVM specifics.</li>
-          <li><b>Next:</b> third-party audit; multisig owner; production oracle sources; binding PLTG governance.</li>
-          <li><b>Later:</b> 1:1 commodity reserve via an RWA custodian, proof-of-reserve and compliance.</li>
+          <li><b>Now:</b> Arbitrum Sepolia — PlanetCore + PLT (ERC-20) + Timelock + SignedPriceOracle; 14-asset basket;
+            hourly price push; <b>70 Foundry tests</b>. The site, the public API and <a href="/app">/app</a>
+            (mint/redeem against test USDC) run against this deployment. The live oracle is a single relayer
+            key; the M-of-N verifier is deployed but its signer set is 1-of-1.</li>
+          <li><b>Next:</b> third-party audit; multisig owner; raise the signer set to 2-of-3; production oracle sources.</li>
+          <li><b>Later:</b> 1:1 commodity reserve via an RWA custodian, proof-of-reserve and compliance; PLTG governance.</li>
         </ul>
         <h2>9. Disclaimer</h2>
         <p class="callout">
@@ -212,15 +215,17 @@
       <article class="doc" id="wp-full">
         <h2>0. Status, scope and honesty</h2>
         <p>
-          This document describes <b>Planet v1.9</b>, a working proof-of-concept deployed on the
-          TON testnet. It is written to be falsifiable: every mechanism is marked
+          This document describes <b>Planet v2.0</b>, a working proof-of-concept deployed on
+          <b>Arbitrum Sepolia</b>. It is written to be falsifiable: every mechanism is marked
           <span class="tag impl">implemented</span> · <span class="tag design">design</span> ·
           <span class="tag future">future</span>.
         </p>
         <p class="callout">
-          <b>Red lines.</b> PLT is a <b>synthetic index token</b>. It has <b>no physical
-          reserve</b>, is <b>not a stablecoin</b>, and is not “fully collateralised”. Market price
-          may diverge materially from the theoretical index. Nothing here is investment advice.
+          <b>Red lines.</b> PLT is a <b>synthetic index token</b>. Mints are collateralised by
+          <b>test USDC</b> held by the contract and redeemed from that reserve, but there is <b>no
+          physical commodity reserve</b>, it is <b>not a stablecoin</b>, and it is not “fully
+          collateralised” against the basket. Market price may diverge materially from the theoretical
+          index. Nothing here is investment advice.
         </p>
         <ul class="toc">
           <li><a href="#f1">1. Problem &amp; design goals</a></li>
@@ -240,7 +245,7 @@
           <li><a href="#f15">15. Risks &amp; compliance</a></li>
           <li><a href="#a">A. Worked simulation</a></li>
           <li><a href="#b">B. API reference</a></li>
-          <li><a href="#c">C. Code excerpts (Tolk)</a></li>
+          <li><a href="#c">C. Code excerpts (Solidity)</a></li>
           <li><a href="#d">D. Security &amp; audit appendix</a></li>
           <li><a href="#e">E. Off-chain services</a></li>
           <li><a href="#f">F. Deployment &amp; monitoring</a></li>
@@ -260,40 +265,41 @@
 
         <h2 id="f2">2. Architecture &amp; contracts</h2>
         <h3>2.1 Layer map</h3>
-        <pre class="code">L4  Fund           tokenised ETF shares; subscribe/redeem at NAV             [implemented]
-L3  Stability      tiered fees · elastic curve · arbitrage · bonds ·
-                   risk fund · circuit-breakers                            [implemented]
-L2  CAM            per-commodity adapter: price/vol/liquidity/risk state    [phase A]
-L1  Core           basket · on-chain PPI · mint/burn · fees · redemption
-                   mirror · governance basket ops                          [implemented]
+        <pre class="code">L4  Fund           tokenised ETF shares; subscribe/redeem at NAV             [design]
+L3  Stability      tiered fees · elastic curve · arbitrage · risk fund ·
+                   circuit-breakers                                        [fees live; bonds design]
+L2  CAM            per-commodity adapter: price/vol/liquidity/risk state    [design]
+L1  Core           basket · on-chain PPI · mint/redeem · fees · collateral   [implemented]
 L0  Reserve/RWA    physical &amp; ETF custody · proof-of-reserve               [future]
 (no self-built DEX/AMM; trades happen on external venues)</pre>
         <h3>2.2 Contracts</h3>
         <table class="doc-table">
           <thead><tr><th>Contract</th><th>Role</th><th>Status</th></tr></thead>
           <tbody>
-            <tr><td>PlanetCore</td><td>basket, on-chain PPI, mint/burn, fees, limits, oracle state, governance basket ops</td><td>implemented</td></tr>
-            <tr><td>JettonMinter / JettonWallet</td><td>PLT — a TEP-74 jetton; the Core is the minter’s admin</td><td>implemented</td></tr>
-            <tr><td>PlanetTimelock</td><td>owner of Core; <code>Propose → delay → Execute</code></td><td>implemented</td></tr>
-            <tr><td>PlanetGov</td><td>PLTG staking, pro-rata fee dividends, stake-weighted signalling</td><td>implemented</td></tr>
-            <tr><td>PlanetBond</td><td>stabilisation bonds (subscribe / request / operator-settled redeem)</td><td>implemented</td></tr>
-            <tr><td>PlanetFund</td><td>tokenised ETF shares; custodian-signed NAV actions; trustless TEP-74 redemption</td><td>implemented</td></tr>
+            <tr><td>PlanetCore</td><td>basket, on-chain PPI, mint/redeem against USDC, fees, oracle state</td><td>implemented</td></tr>
+            <tr><td>PlanetToken (ERC-20)</td><td>PLT — mint/burn restricted to the Core</td><td>implemented</td></tr>
+            <tr><td>PlanetTimelock</td><td>owner of Core; <code>propose → delay → execute</code></td><td>implemented</td></tr>
+            <tr><td>SignedPriceOracle</td><td>ECDSA M-of-N verifier for <code>updatePriceSigned</code></td><td>implemented (1-of-1)</td></tr>
+            <tr><td>PlanetBond</td><td>stabilisation bonds (request / operator-settled redeem)</td><td>ported, not deployed</td></tr>
+            <tr><td>PlanetGov / PlanetFund</td><td>PLTG staking/voting; tokenised ETF shares</td><td>design — not in this deployment</td></tr>
           </tbody>
         </table>
-        <h3>2.3 Data, fixed point and the TVM</h3>
+        <h3>2.3 Data, fixed point and the EVM</h3>
         <p class="small">
-          The TON Virtual Machine has <b>no floating point</b>. All arithmetic is integer
-          fixed-point: the index uses a <code>1e6</code> scale (<code>1e6 ≡ 1.0</code>), the weight
-          sum is <code>1e6</code>, and reward accounting uses <code>1e12</code>. Contract state
-          lives in cells (≤1023 bits inline, ≤4 refs), so the asset map is stored in a dictionary
-          reference. PLT is a TEP-74 jetton; the <b>jetton minter is the single source of truth for
-          supply</b>.
+          The EVM has <b>no floating point</b>. All arithmetic is integer fixed-point: the index uses
+          a <code>1e6</code> scale (<code>1e6 ≡ 1.0</code>), the weight sum is <code>1e6</code>, and
+          reward accounting uses <code>1e12</code>. State lives in ordinary contract storage: a fixed
+          <code>Asset[]</code> array plus scalar accounting fields. Solidity 0.8 checked arithmetic
+          reverts on overflow, and mixed <code>uint64</code>/<code>uint256</code> expressions are
+          explicitly cast. PLT is an ERC-20; <code>Core.totalSupply</code> is the accounting source,
+          and the token supply matches because mint/burn are Core-only.
         </p>
         <h3>2.4 Message flow</h3>
-        <pre class="code">mint      user wallet ──Mint─────────────────────────▶ PlanetCore ──MintNewJettons─▶ PLT minter ─▶ wallet
-burn      user wallet ──AskToBurn─▶ own jetton wallet ─▶ PLT minter ──BurnNotification─▶ PlanetCore (mirror)
-prices    relayer ──SignedPriceUpdate(payload, sigs)─▶ PlanetCore   (anyone may relay; the signature is authority)
-admin     owner ──TlPropose─▶ PlanetTimelock ──(wait delay)── operator ──TlExecute─▶ dest contract</pre>
+        <pre class="code">mint      user ──approve(USDC)──▶ USDC ──transferFrom──▶ PlanetCore ──mint──▶ PlanetToken
+redeem    user ──redeem(PLT)──▶ PlanetCore ──burn──▶ PlanetToken ; PlanetCore ──transfer(USDC)──▶ user
+prices    relayer ──updatePrice(index, price, …, ts)──▶ PlanetCore        (onlyRelayer)
+          anyone  ──updatePriceSigned(payload, sigs)──▶ PlanetCore        (ECDSA M-of-N via SignedPriceOracle)
+admin     owner ──propose(dest, body)──▶ PlanetTimelock ──(wait delay)──▶ execute ──▶ dest</pre>
 
         <h2 id="f3">3. The index: basket &amp; PPI</h2>
         <h3>3.1 The live basket (14 commodities)</h3>
@@ -305,12 +311,12 @@ admin     owner ──TlPropose─▶ PlanetTimelock ──(wait delay)── op
         <table class="doc-table">
           <thead><tr><th>#</th><th>Class</th><th>Commodity</th><th>Futures / index</th><th>ETF proxy</th><th>Weight</th><th>Price source</th></tr></thead>
           <tbody>
-            <tr><td>0</td><td>Energy</td><td>WTI Crude</td><td>CL=F (NYMEX)</td><td>USO</td><td>14.0%</td><td>Yahoo + Sina (median)</td></tr>
-            <tr><td>1</td><td>Energy</td><td>Brent Crude</td><td>BZ=F (ICE)</td><td>BNO</td><td>11.0%</td><td>Yahoo + Sina</td></tr>
-            <tr><td>2</td><td>Energy</td><td>Natural Gas</td><td>NG=F (NYMEX)</td><td>UNG</td><td>8.0%</td><td>Yahoo + Sina</td></tr>
-            <tr><td>3</td><td>Metals</td><td>Gold</td><td>GC=F (COMEX)</td><td>GLD</td><td>12.0%</td><td>Yahoo + Sina</td></tr>
-            <tr><td>4</td><td>Metals</td><td>Silver</td><td>SI=F (COMEX)</td><td>SLV</td><td>7.0%</td><td>Yahoo + Sina</td></tr>
-            <tr><td>5</td><td>Metals</td><td>Copper</td><td>HG=F (COMEX)</td><td>CPER</td><td>6.0%</td><td>Yahoo + Sina (unit-scaled)</td></tr>
+            <tr><td>0</td><td>Energy</td><td>WTI Crude</td><td>CL=F (NYMEX)</td><td>USO</td><td>14.0%</td><td>Yahoo + confirmations</td></tr>
+            <tr><td>1</td><td>Energy</td><td>Brent Crude</td><td>BZ=F (ICE)</td><td>BNO</td><td>11.0%</td><td>Yahoo + confirmations</td></tr>
+            <tr><td>2</td><td>Energy</td><td>Natural Gas</td><td>NG=F (NYMEX)</td><td>UNG</td><td>8.0%</td><td>Yahoo + confirmations</td></tr>
+            <tr><td>3</td><td>Metals</td><td>Gold</td><td>GC=F (COMEX)</td><td>GLD</td><td>12.0%</td><td>Yahoo + confirmations</td></tr>
+            <tr><td>4</td><td>Metals</td><td>Silver</td><td>SI=F (COMEX)</td><td>SLV</td><td>7.0%</td><td>Yahoo + confirmations</td></tr>
+            <tr><td>5</td><td>Metals</td><td>Copper</td><td>HG=F (COMEX)</td><td>CPER</td><td>6.0%</td><td>Yahoo + confirmations (unit-scaled)</td></tr>
             <tr><td>6</td><td>Agriculture</td><td>Wheat</td><td>ZW=F (CBOT)</td><td>WEAT</td><td>9.0%</td><td>Yahoo</td></tr>
             <tr><td>7</td><td>Agriculture</td><td>Corn</td><td>ZC=F (CBOT)</td><td>CORN</td><td>7.0%</td><td>Yahoo</td></tr>
             <tr><td>8</td><td>Agriculture</td><td>Soybean</td><td>ZS=F (CBOT)</td><td>SOYB</td><td>6.0%</td><td>Yahoo</td></tr>
@@ -377,12 +383,13 @@ admin     owner ──TlPropose─▶ PlanetTimelock ──(wait delay)── op
         </div>
         <h3>4.1 Mint gating</h3>
         <div class="eq">
-          <span class="row"><span class="lbl">(6)</span><i>t</i><sub>now</sub> − <i>t</i><sub>lastUpdate</sub> ≤ <i>MAX_ORACLE_AGE</i> = 6 h &nbsp;&nbsp;<span class="lbl">freshness</span></span>
+          <span class="row"><span class="lbl">(6)</span><i>t</i><sub>now</sub> − <i>oldestActiveUpdate</i> ≤ <i>MAX_ORACLE_AGE</i> = 6 h &nbsp;&nbsp;<span class="lbl">freshness of the stalest active asset</span></span>
           <span class="row"><span class="lbl">(7)</span>PPI &gt; 0 &nbsp;&nbsp;<span class="lbl">the index is defined (eq. 2)</span></span>
         </div>
         <p class="eq-note">
-          (6) means the protocol never mints while the oracle is stale; (7) closes the frozen-basket
-          hole. These are the only two “market” reasons a mint can be refused.
+          (6) uses the <b>stalest active asset</b>, not the most recent push: one fresh input must not
+          make thirteen stale ones look current. (7) closes the frozen-basket hole. These are the only
+          two “market” reasons a mint can be refused.
         </p>
         <h3>4.2 Fee routing</h3>
         <div class="eq">
@@ -397,9 +404,10 @@ admin     owner ──TlPropose─▶ PlanetTimelock ──(wait delay)── op
         </p>
         <h3>4.3 The redemption path</h3>
         <p class="small">
-          Redemption is a jetton burn: the wallet sends <code>AskToBurn</code> to its own jetton
-          wallet, which burns and notifies the PLT minter, which in turn notifies the Core so
-          accounting stays mirrored. Supply is authoritative at the minter, never at the Core.
+          Redemption is a single synchronous call: <code>redeem(burnAmount)</code> burns PLT,
+          computes the payout from the index and the burn fee, decrements <code>totalReserve</code>,
+          and transfers test USDC back to the caller. There is no mirror: the token and the core
+          accounting move in the same transaction, so they cannot drift.
         </p>
 
         <h2 id="f5">5. Stability mechanisms</h2>
@@ -440,6 +448,9 @@ admin     owner ──TlPropose─▶ PlanetTimelock ──(wait delay)── op
           Below peg, holders can subscribe at a discount to be repaid a premium. Bonds are
           <b>requested</b> by the holder and <b>settled by the operator</b> — asking to redeem can
           never destroy a claim before it has been paid. Owner-opened, owner-priced, bounded.
+          <b>Status:</b> the EVM port exists (<code>monad/src/PlanetBond.sol</code>, 10 tests) but is
+          <b>not deployed</b> in this Arbitrum deployment; the live stability tools are fees and the
+          risk fund.
         </p>
         <h3>5.5 Dual-track anchoring</h3>
         <table class="doc-table">
@@ -452,15 +463,17 @@ admin     owner ──TlPropose─▶ PlanetTimelock ──(wait delay)── op
         </table>
         <h3>5.6 Hard limits</h3>
         <p class="small">
-          Per-transaction limits (<code>SetLimits</code>), a global pause (<code>SetPaused</code>),
-          and the &gt;15% mint refusal are hard circuit-breakers that do not depend on incentives.
+          A global pause (<code>setPaused</code>) and the &gt;15% mint refusal are hard
+          circuit-breakers that do not depend on incentives. (A per-transaction cap is part of the
+          design; the EVM core does not implement one yet.)
         </p>
 
         <h2 id="f6">6. CAM adapter layer — failure isolation</h2>
         <p>
-          Each commodity has a <b>CAM</b> (Commodity Adapter Module) emitting a standardised tuple
-          <i>(price, volatility, liquidity, riskState)</i> with <i>riskState</i> ∈
-          {<b>normal</b>, <b>caution</b>, <b>frozen</b>}.
+          The CAM layer is a <b>design</b> in this deployment. The EVM core carries the standardised
+          fields <i>(price, volatility, liquidity, riskState)</i> with <i>riskState</i> ∈
+          {<b>normal</b>, <b>caution</b>, <b>frozen</b>}, and the relayer writes them with each price;
+          there is no separate CAM adapter contract yet.
         </p>
         <div class="eq">
           <span class="row"><span class="lbl">(15)</span>frozen ⇒ <i>i</i> ∉ <i>A</i> &nbsp;⇒ excluded from (1) <b>and</b> exempt from rebalancing</span>
@@ -475,39 +488,50 @@ admin     owner ──TlPropose─▶ PlanetTimelock ──(wait delay)── op
         <h2 id="f7">7. Oracle &amp; price integrity</h2>
         <h3>7.1 Sources</h3>
         <p class="small">
-          The relayer fetches each commodity from <b>two independent sources</b> (Yahoo Finance and
-          Sina for the energy/metals complex), takes the <b>median</b>, and signs the result. If the
-          two diverge beyond 2%, the asset is emitted as <b>frozen</b> rather than guessed.
+          The relayer reads up to <b>four independent channels</b> per asset. Yahoo Finance is the
+          primary because it covers all 14 instruments under the same instrument definition; Sina,
+          Tencent and Eastmoney are <b>confirmations</b> only when they land within <b>0.5%</b>. The
+          rule is primary + confirmation count, <b>not a median</b>: a 1% gap between venues is
+          usually two different contract expiries, and averaging those blends two different assets.
+          Natural gas is deliberately single-source because the other venues quote a later expiry.
+          The full matrix is published at <code>/api/v1/sources</code>.
         </p>
         <h3>7.2 Verification</h3>
         <div class="eq">
-          <span class="row"><span class="lbl">(16)</span>accept ⇔ |{ <i>s</i> ∈ <i>S</i> : verify(<i>H</i>, σ<sub>s</sub>, pub<sub>s</sub>) }| ≥ <i>threshold</i></span>
-          <span class="row"><span class="cond">H = hash(payload); distinct signers enforced by a used-signer bitmask; the price domain is separated from other message domains</span></span>
+          <span class="row"><span class="lbl">(16)</span>accept ⇔ <i>onlyRelayer</i>(updatePrice) &nbsp;∨&nbsp; |{ <i>s</i> ∈ <i>S</i> : verify(<i>H</i>, σ<sub>s</sub>, pub<sub>s</sub>) }| ≥ <i>threshold</i></span>
+          <span class="row"><span class="cond">H = ECDSA digest bound to the oracle address + chain id; distinct signers enforced by a used-signer bitmap; EIP-2 malleability rejected</span></span>
         </div>
+        <p class="eq-note">
+          The live write path is the authorised relayer. The <code>SignedPriceOracle</code> is deployed
+          and wired for <code>updatePriceSigned</code>, but its signer set is <b>1-of-1</b> today;
+          raising it to 2-of-3 is a <code>setSigners([a,b,c], 2)</code> call, not a redeploy.
+        </p>
         <h3>7.3 Guards</h3>
         <div class="eq">
           <span class="row"><span class="lbl">(17)</span><i>t</i><sub>payload</sub> &gt; <i>t</i><sub>lastUpdate</sub> &nbsp;<span class="lbl">strictly increasing ⇒ replay is dead</span></span>
-          <span class="row"><span class="lbl">(18)</span>|<i>P</i><sub>new</sub> − <i>P</i><sub>old</sub>| / <i>P</i><sub>old</sub> ≤ 50% &nbsp;<span class="lbl">single-update jump limit</span></span>
-          <span class="row"><span class="lbl">(19)</span>spread(sources)/median &gt; 2% ⇒ freeze &nbsp;<span class="lbl">divergence guard</span></span>
+          <span class="row"><span class="lbl">(18)</span>|<i>P</i><sub>new</sub> − <i>P</i><sub>old</sub>| / <i>P</i><sub>old</sub> ≤ 50% &nbsp;<span class="lbl">single-update jump limit; owner <code>forcePrice</code> is the timelocked escape hatch</span></span>
+          <span class="row"><span class="lbl">(19)</span>no confirmation within 0.5% ⇒ <i>riskState</i> = caution &nbsp;<span class="lbl">divergence guard</span></span>
         </div>
-        <h3>7.4 Freshness model (two different clocks)</h3>
+        <h3>7.4 Freshness model</h3>
         <table class="doc-table">
           <thead><tr><th>Clock</th><th>Value</th><th>Meaning</th></tr></thead>
           <tbody>
-            <tr><td>On-chain mint guard</td><td>6 h</td><td>minting is <b>refused</b> on stale prices — a safety property (eq. 6)</td></tr>
-            <tr><td>API/monitor health SLA</td><td>26 h</td><td>when the feed is reported UNHEALTHY, i.e. “the scheduled push actually missed”</td></tr>
+            <tr><td>On-chain mint guard</td><td>6 h</td><td>minting is <b>refused</b> when <code>oldestActiveUpdate</code> is older than 6 h — a safety property (eq. 6)</td></tr>
+            <tr><td>API health</td><td>6 h</td><td><code>/api/v1/oracle</code> reports <code>fresh=false</code> past the same limit and lists any stale inputs</td></tr>
           </tbody>
         </table>
         <p class="eq-note">
-          They are intentionally different. Stated plainly: with a daily push, minting is available
-          within 6 h of a push.
+          The hourly push leaves roughly five hours of slack. Redemption deliberately has no freshness
+          guard: an exit should not be blocked by a stale feed, and the payout is bounded by the
+          reserve and the fee cap.
         </p>
         <h3>7.5 Key management</h3>
         <p class="small">
-          Signer keys live in a set (<code>SetSigner{index,key}</code>); writing a slot revokes what
-          was there, and <code>SetThreshold{m}</code> raises M. Rotation goes through the
-          <b>timelock</b>, never directly. The price-signing key is deliberately separated from the
-          owner key: a leak of the former can only submit guarded prices, never touch funds.
+          The live writer is <code>Core.relayer</code>, a dedicated hot EOA; the owner / timelock key
+          is separate. The <code>SignedPriceOracle</code> keeps its own signer set and threshold.
+          Rotating any of them is an owner action through the <b>timelock</b>, never a direct EOA
+          call. A leak of the relayer key can submit guarded prices, but cannot move funds or change
+          ownership.
         </p>
 
         <h2 id="f8">8. Rebalancing (RTRA)</h2>
@@ -520,8 +544,10 @@ admin     owner ──TlPropose─▶ PlanetTimelock ──(wait delay)── op
           <li><b>Trigger:</b> drift-based and risk-adaptive — a frozen asset is not traded, and high
               volatility / low liquidity raises the trigger threshold.</li>
           <li><b>Execution is deliberately out of scope:</b> Planet does <b>not</b> build a
-              DEX/AMM/order-book. On TON, trades would be routed to external venues (e.g. STON.fi,
-              DeDust); the protocol only computes the target.</li>
+              DEX/AMM/order-book. On Arbitrum, trades would be routed to external venues (e.g.
+              Uniswap, Camelot); the protocol only computes the target.</li>
+          <li><b>Status:</b> RTRA is a <b>design</b> in this deployment; the EVM core does not
+              implement rebalancing yet.</li>
         </ul>
 
         <h2 id="f9">9. Governance &amp; the DAO plan</h2>
@@ -564,21 +590,20 @@ admin     owner ──TlPropose─▶ PlanetTimelock ──(wait delay)── op
         <table class="doc-table">
           <thead><tr><th>v1 DAO element</th><th>Today</th></tr></thead>
           <tbody>
-            <tr><td>PLTG token, fixed supply 1e9</td><td><span class="tag impl">implemented</span> — deployed; supply verified on-chain</td></tr>
-            <tr><td>PLTG staking</td><td><span class="tag impl">implemented</span> — <code>stake</code>/<code>unstake</code>, with a vote-lock so a voter cannot exit before the proposal closes</td></tr>
-            <tr><td>Staking dividends (fee revenue share)</td><td><span class="tag impl">implemented</span> — pro-rata reward-per-share, owner-notified</td></tr>
-            <tr><td>Stake-weighted parameter voting</td><td><span class="tag impl">implemented</span> — but <b>advisory</b>: proposals record an outcome and do not execute on-chain</td></tr>
-            <tr><td>DAO actually controlling weights / fees / thresholds</td><td><span class="tag design">design</span> — parameter control is the <b>owner (timelock)</b>; the vote signals</td></tr>
+            <tr><td>PLTG token, fixed supply 1e9</td><td><span class="tag design">design</span> — not deployed on Arbitrum</td></tr>
+            <tr><td>PLTG staking</td><td><span class="tag design">design</span> — prototype only; not in this deployment</td></tr>
+            <tr><td>Staking dividends (fee revenue share)</td><td><span class="tag design">design</span> — reward-per-share prototype; not deployed</td></tr>
+            <tr><td>Stake-weighted parameter voting</td><td><span class="tag design">design</span> — advisory in the prototype; not deployed</td></tr>
+            <tr><td>DAO actually controlling weights / fees / thresholds</td><td><span class="tag impl">live</span> — parameter control is the <b>owner (timelock)</b></td></tr>
             <tr><td>DAO choosing the reserve custodian</td><td><span class="tag future">future</span> — no custodian exists yet</td></tr>
-            <tr><td>1e9 allocation &amp; vesting (40/25/15/12/8)</td><td><span class="tag future">future</span> — the full supply is currently held by the deployer</td></tr>
+            <tr><td>1e9 allocation &amp; vesting (40/25/15/12/8)</td><td><span class="tag future">future</span> — not executed</td></tr>
           </tbody>
         </table>
         <p class="callout">
-          <b>Honest summary.</b> The <b>economic layer</b> of the DAO (PLTG staking and fee
-          dividends) is implemented and tested. The <b>decision layer</b> is not: votes are advisory,
-          and real parameter authority sits with the owner behind a 60-second timelock on testnet.
-          Closing that gap — binding, executed proposals — is a deliberate design step, not a claim
-          we make today.
+          <b>Honest summary.</b> The Arbitrum deployment has a <b>timelock owner</b> and no PLTG
+          token. The DAO layer below is <b>design</b>: there is no on-chain vote that controls
+          parameters today, and the allocation/vesting schedule has not been executed. Closing that
+          gap is a deliberate design step, not a claim we make today.
         </p>
 
         <h3>9.3 Privileged actions and the timelock</h3>
@@ -586,11 +611,12 @@ admin     owner ──TlPropose─▶ PlanetTimelock ──(wait delay)── op
           <span class="row"><span class="lbl">(21)</span>Execute ⇔ now ≥ <i>eta</i> = proposeTime + <i>delay</i> &nbsp;∧&nbsp; ∃ pending (dest, body)</span>
         </div>
         <p class="eq-note">
-          Owner-gated operations: basket weights / add-asset, fee parameters, limits, oracle signer
-          set, pause, and ownership itself. Ownership changes must themselves go through
-          <code>Propose → delay → Execute</code>; a direct owner call is rejected. The delay is the
-          holders’ reaction window, and the timelock’s owner should be a <b>multisig</b> (M-of-N
-          <i>plus</i> delay).
+          Owner-gated operations: basket assets and weights (<code>setAsset</code>), the token /
+          deposit-token / oracle / relayer setters, pause, <code>forcePrice</code>,
+          <code>setRiskState</code>, and ownership itself. Once the owner is the timelock, a direct
+          EOA call to these functions is rejected; changes must go through
+          <code>propose → delay → execute</code>. The delay is the holders’ reaction window, and the
+          timelock’s owner should be a <b>multisig</b>.
         </p>
         <h3>9.4 Staking dividend mathematics</h3>
         <div class="eq">
@@ -599,8 +625,9 @@ admin     owner ──TlPropose─▶ PlanetTimelock ──(wait delay)── op
           <span class="row"><span class="lbl">(24)</span>debt<sub>i</sub> ← ⌊ <i>s</i><sub>i</sub> · accRPS / 10<sup>12</sup> ⌋ &nbsp;&nbsp;<span class="lbl">on every stake/unstake/claim</span></span>
         </div>
         <p class="eq-note">
-          A classic reward-per-share accumulator. Note (22) floors: dust stays in the pool rather
-          than being minted. Reconciling that dust is one of the things an auditor should check.
+          A classic reward-per-share accumulator, part of the <b>PLTG design</b> (not deployed in
+          this Arbitrum deployment). Note (22) floors: dust stays in the pool rather than being
+          minted. Reconciling that dust is one of the things an auditor should check.
         </p>
 
         <h2 id="f10">10. Tokenomics</h2>
@@ -609,11 +636,11 @@ admin     owner ──TlPropose─▶ PlanetTimelock ──(wait delay)── op
           <thead><tr><th>Token</th><th>Symbol</th><th>Function</th><th>Supply</th></tr></thead>
           <tbody>
             <tr><td>Index token</td><td>PLT</td><td>payment / store / unit of account for the index</td><td><b>elastic</b> (mint/burn)</td></tr>
-            <tr><td>Governance token</td><td>PLTG</td><td>parameter voting + fee dividends</td><td><b>fixed</b> 1,000,000,000</td></tr>
+            <tr><td>Governance token</td><td>PLTG</td><td>parameter voting + fee dividends <b>(design — not deployed)</b></td><td><b>fixed</b> 1,000,000,000</td></tr>
           </tbody>
         </table>
         <div class="eq">
-          <span class="row"><span class="lbl">(25)</span>supply<sub>PLT</sub> = <span class="big">Σ</span> minted − <span class="big">Σ</span> burned &nbsp;&nbsp;<span class="lbl">the jetton minter is the source of truth</span></span>
+          <span class="row"><span class="lbl">(25)</span>supply<sub>PLT</sub> = <span class="big">Σ</span> minted − <span class="big">Σ</span> burned &nbsp;&nbsp;<span class="lbl">Core.totalSupply is the accounting source; token supply matches (Core-only mint/burn)</span></span>
           <span class="row"><span class="lbl">(26)</span><i>M</i><sub>new</sub> = <i>D</i>(1 − <i>f</i>) / PPI &nbsp;&nbsp;<span class="lbl">mint equation (as (3))</span></span>
           <span class="row"><span class="lbl">(27)</span><i>R</i> = <i>B</i> · PPI · (1 − <i>f</i>) &nbsp;&nbsp;<span class="lbl">redeem equation (as (4))</span></span>
         </div>
@@ -622,7 +649,7 @@ admin     owner ──TlPropose─▶ PlanetTimelock ──(wait delay)── op
           <span class="row"><span class="lbl">v1</span>45% buyback-and-burn · 30% reserve · 25% PLTG staking rewards</span>
           <span class="row"><span class="lbl">now</span>30% burn · 50% reserve · 20% staking, less a 10% risk-fund carve-out (net 30/40/20/10)</span>
         </div>
-        <h3>10.3 PLTG utility</h3>
+        <h3>10.3 PLTG utility (design — not deployed)</h3>
         <ul>
           <li><b>Staking dividends</b> — a pro-rata share of fee revenue, paid in stable value.</li>
           <li><b>Governance</b> — voting on commodity weights, fee rates, deviation thresholds and
@@ -637,22 +664,23 @@ admin     owner ──TlPropose─▶ PlanetTimelock ──(wait delay)── op
           binding governance, or the vote is meaningless.
         </p>
 
-        <h2 id="f11">11. Fund (tokenised ETF shares)</h2>
+        <h2 id="f11">11. Fund (tokenised ETF shares) — design</h2>
         <p>
           The Fund is the L4 wrapper: it issues shares against a basket of ETF positions at NAV, so
           holders get fund-style exposure rather than a purely synthetic index. Actions that move
           NAV (mint, custody changes) are <b>custodian-signed under an M-of-N policy</b>; redemption
-          is <b>trustless</b> — the fund receives its own TEP-74 share tokens on a normal transfer
-          notification and burns them, releasing the claim, without an operator having to co-operate.
+          is <b>trustless</b> — the fund receives its own ERC-20 shares on a normal transfer and
+          burns them, releasing the claim, without an operator having to co-operate.
+          <b>Status:</b> design; there is no Fund contract in the Arbitrum deployment.
         </p>
 
         <h2 id="f12">12. Trust &amp; threat model</h2>
         <table class="doc-table">
           <thead><tr><th>Actor</th><th>Can</th><th>Cannot</th></tr></thead>
           <tbody>
-            <tr><td>User</td><td>mint / redeem / stake / vote / transfer — always signing in their own wallet</td><td>—</td></tr>
-            <tr><td>Hot signing key</td><td>submit price payloads, bounded by eq. 16–19</td><td>touch ownership, parameters or funds</td></tr>
-            <tr><td>Owner</td><td>change parameters after the timelock delay</td><td>act instantly; bypass <code>Propose → delay → Execute</code></td></tr>
+            <tr><td>User</td><td>mint / redeem / transfer — always signing in their own wallet</td><td>—</td></tr>
+            <tr><td>Relayer hot key</td><td>submit price updates, bounded by eq. 16–19</td><td>touch ownership, parameters or funds</td></tr>
+            <tr><td>Owner</td><td>change parameters after the timelock delay</td><td>act instantly; bypass <code>propose → delay → execute</code></td></tr>
             <tr><td>Custodian (future)</td><td>attest NAV under an M-of-N policy</td><td>move user assets unilaterally</td></tr>
           </tbody>
         </table>
@@ -661,31 +689,36 @@ admin     owner ──TlPropose─▶ PlanetTimelock ──(wait delay)── op
               hence multisig + a longer delay before mainnet.</li>
           <li><b>Hot-key compromise</b> is bounded: prices only, inside the jump band and divergence
               freeze; funds are unreachable.</li>
-          <li><b>Payload replay</b> is defeated by the strictly increasing timestamp (eq. 17).</li>
-          <li><b>By design, not fixed:</b> the redemption mirror has no freshness guard (asymmetric
-              with minting), the burn bucket is accounting-only, and proposals do not execute. These
-              are documented, not hidden.</li>
+          <li><b>Payload replay</b> is defeated by the strictly increasing timestamp (eq. 17) and the
+              oracle's domain separation (oracle address + chain id).</li>
+          <li><b>By design, not fixed:</b> redemption has no freshness guard (asymmetric with
+              minting; an exit is not blocked by a stale feed), the fee buckets are accounting labels
+              rather than separate balances, and PLTG / executed proposals are design. These are
+              documented, not hidden.</li>
         </ul>
 
         <h2 id="f13">13. Evidence</h2>
         <ul>
-          <li><b>239 tests / 19 files</b>; coverage <b>95.9% lines / 85.1% branches / 91.8% score</b>, with a CI gate that can only ratchet up.</li>
-          <li>An <b>emulation dry-run</b> job validates the deploy scripts before any funds are committed.</li>
-          <li>On-chain verification of the live testnet build: 14 assets, base prices locked,
-              signer = the dedicated hot key, owner = the timelock, 14 prices written and read back
-              identical.</li>
-          <li>Independently reproducible from <code>docs/deploy-runbook.md</code>.</li>
+          <li><b>70 Foundry tests</b> across five suites (Core 31, Token 11, Oracle 10, Bond 10,
+              Timelock 8), all passing in CI (<code>monad-build.yml</code>).</li>
+          <li>A <b>deploy dry-run</b> workflow compiles and exercises the scripts before any gas is
+              spent; the deploy script passes constructor arguments from Solidity rather than the CLI.</li>
+          <li>On-chain verification of the live Arbitrum Sepolia deployment: 14 assets,
+              <code>weightSum = 1,000,000</code>, base prices locked, PPI ≈ 1.00383, owner = the
+              timelock, and every asset price read back.</li>
+          <li>Independently reproducible from <code>monad/</code> plus the workflows in
+              <code>.github/workflows/</code>; addresses and state in <code>docs/HANDOFF.md</code> §0.</li>
         </ul>
 
         <h2 id="f14">14. Roadmap</h2>
         <table class="doc-table">
           <thead><tr><th>Phase</th><th>Content</th><th>Status</th></tr></thead>
           <tbody>
-            <tr><td>P0</td><td>TON core — basket, on-chain PPI, mint/redeem, redemption mirror</td><td><span class="tag impl">done</span></td></tr>
+            <tr><td>P0</td><td>EVM core — basket, on-chain PPI, mint/redeem against USDC collateral</td><td><span class="tag impl">done</span></td></tr>
             <tr><td>P1</td><td>Stability — fee tiers, elastic slope, arbitrage rebate, risk fund</td><td><span class="tag impl">done</span></td></tr>
-            <tr><td>P2</td><td>Front end — site, dashboard, Telegram Mini App</td><td><span class="tag impl">done</span></td></tr>
-            <tr><td>P3</td><td>Real feeds — dual source, median, freeze guard, M-of-N signing</td><td><span class="tag impl">done</span></td></tr>
-            <tr><td>P3b</td><td>Tokenised ETF fund with trustless redemption</td><td><span class="tag impl">done</span></td></tr>
+            <tr><td>P2</td><td>Front end — site, dashboard, <code>/app</code> mint/redeem</td><td><span class="tag impl">done</span></td></tr>
+            <tr><td>P3</td><td>Real feeds — four channels, confirmations, freeze guard, signed oracle path</td><td><span class="tag impl">done</span></td></tr>
+            <tr><td>P3b</td><td>Collateral — Circle test USDC pulled on mint, paid on redeem</td><td><span class="tag impl">done</span></td></tr>
             <tr><td>P4</td><td>PLTG — allocation &amp; vesting; binding, executed governance</td><td><span class="tag design">design</span></td></tr>
             <tr><td>P5</td><td>RWA — real reserve, custody, proof-of-reserve, compliance (the “1:1” variant)</td><td><span class="tag future">future</span></td></tr>
             <tr><td>P6</td><td>Cross-chain distribution</td><td><span class="tag future">future</span></td></tr>
@@ -695,7 +728,7 @@ admin     owner ──TlPropose─▶ PlanetTimelock ──(wait delay)── op
 
         <h2 id="f15">15. Risks &amp; compliance</h2>
         <ul>
-          <li><b>Index divergence</b> — with no reserve, market price may diverge materially from PPI.</li>
+          <li><b>Index divergence</b> — the reserve is test USDC, not the commodity basket; market price may diverge materially from PPI.</li>
           <li><b>Oracle</b> — source coverage and availability; the guards bound but do not eliminate this.</li>
           <li><b>Liquidity</b> — thin at cold start, so the market price is manipulable.</li>
           <li><b>Compliance</b> — enabling real mint/redeem constitutes a financial product and needs
@@ -714,7 +747,7 @@ admin     owner ──TlPropose─▶ PlanetTimelock ──(wait delay)── op
           <span class="row"><span class="lbl">(A2)</span>a participant deposits <i>D</i> = 1,000,000</span>
           <span class="row"><span class="lbl">(A3)</span>fee <i>F</i> = 1,000,000 × 1% = 10,000</span>
           <span class="row"><span class="lbl">(A4)</span>minted <i>M</i> = 1,000,000 × 0.99 / 1.045 = <b>947,368.4 PLT</b></span>
-          <span class="row"><span class="lbl">(A5)</span>fee split: burn 3,000 · reserve 5,000 · staking 2,000; of the total fee, 1,000 funds the risk reserve (net 3,000/4,000/2,000/1,000)</span>
+          <span class="row"><span class="lbl">(A5)</span>fee split: burn 3,000 · reserve 4,000 · staking 2,000 · risk fund 1,000</span>
           <span class="row"><span class="lbl">(A6)</span>supply expands by 947,368.4 units at index 1.045 ⇒ buying pressure pushes market price back toward PPI</span>
         </div>
         <p class="eq-note">
@@ -731,118 +764,142 @@ admin     owner ──TlPropose─▶ PlanetTimelock ──(wait delay)── op
             <tr><td><code>/api/v1/status</code></td><td>GET</td><td>index PPI, supply, reserve, fee buckets, the full 14-asset basket with weights and prices, signer threshold</td></tr>
             <tr><td><code>/api/v1/oracle</code></td><td>GET</td><td>oracle health: freshness, age, maximum age, signer count/threshold, weights validity, frozen list, <code>healthy</code></td></tr>
             <tr><td><code>/api/v1/oracle?full=1</code></td><td>GET</td><td>the above plus a full basket scan</td></tr>
+            <tr><td><code>/api/v1/sources</code></td><td>GET</td><td>the four-channel matrix: primary, confirmations, spread, rejected channels and state</td></tr>
             <tr><td><code>/openapi.json</code></td><td>GET</td><td>OpenAPI 3.1 description of the above</td></tr>
             <tr><td><code>/api/status</code></td><td>GET</td><td>308 permanent redirect to <code>/api/v1/status</code> (with Deprecation/Sunset headers)</td></tr>
           </tbody>
         </table>
         <p class="eq-note">
-          On-chain interactions (mint, burn, stake, vote) are not REST calls: they are TON messages
-          signed in the user’s own wallet and constructed by the Mini App. The API is read-only.
+          On-chain interactions (mint, redeem, transfers) are not REST calls: they are EVM transactions
+          signed in the user’s own wallet and constructed by <a href="/app">/app</a>. The API is read-only.
         </p>
 
-        <h2 id="c">Appendix C — code excerpts (Tolk)</h2>
+        <h2 id="c">Appendix C — code excerpts (Solidity)</h2>
         <p class="small">
-          The v1 appendix carried Solana/Rust snippets. These are the TON equivalents that actually
-          run, abbreviated for readability.
+          Abbreviated excerpts from the contracts that actually run on Arbitrum Sepolia. The full
+          source is in <code>monad/src/</code>.
         </p>
         <h4>C.1 The index (§3)</h4>
-        <pre class="code">// Re-normalised weighted mean over ACTIVE (non-frozen) assets, 1e6 fixed point.
-fun computePpi(assets, count) {
-    var num = 0; var den = 0;
-    for (i in 0..count) {
-        val a = assets.mustGet(i);
-        if (a.riskState == FROZEN) { continue; }              // eq. (15)
-        num += a.weight * (a.currentPrice * SCALE / a.basePrice);
-        den += a.weight;
+        <pre class="code">function computePpi() public view returns (uint64) {
+    uint256 num; uint256 den;
+    for (uint256 i; i < assets.length; ++i) {
+        Asset storage a = assets[i];
+        if (a.riskState == RISK_FROZEN) continue;                 // eq. (15)
+        num += uint256(a.weight) * uint256(a.currentPrice) * SCALE / uint256(a.basePrice);
+        den += uint256(a.weight);
     }
-    if (den == 0) { return 0; }                                // eq. (2): undefined, not 1.0
-    return num / den;
+    if (den == 0) return 0;                                       // eq. (2): undefined, not 1.0
+    return uint64(num / den);
 }</pre>
         <h4>C.2 Fee band (§5.1)</h4>
-        <pre class="code">// Tiered fee + elastic slope; >15% is refused elsewhere as a hard breaker.
-fun feeBpsForPpi(ppi) {
-    val d = abs(ppi - SCALE);
-    var f = BASE_FEE;                                          // 0.5%
-    if (d > SCALE * 3 / 100) { f = 100; }                      // 1% at 3-5%
-    if (d > SCALE * 5 / 100) { f = 200 + SLOPE * (d - SCALE*5/100) / SCALE; }   // eq. (9)
-    return f;
+        <pre class="code">function feeBpsForPpi(uint64 ppi) public pure returns (uint64) {
+    uint256 d = ppi > SCALE ? ppi - SCALE : SCALE - ppi;
+    if (d * BPS_DENOM > SCALE * BAND_REJECT_BPS) revert BandReject();       // >15%
+    if (d * BPS_DENOM <= SCALE * 300) return FEE_BASE_BPS;                  // 0.5%
+    if (d * BPS_DENOM <= SCALE * 500) return FEE_MID_BPS;                   // 1%
+    uint256 extraBps = (d * BPS_DENOM / SCALE) - 500;
+    return uint64(FEE_HIGH_BPS + extraBps * SLOPE_BPS / 100);               // eq. (9)
 }</pre>
-        <h4>C.3 Oracle verification (§7.2)</h4>
-        <pre class="code">// Anyone may relay; the signature is the authority. Distinct signers via a bitmask.
-fun handleSignedPriceUpdateN(msg) {
-    val os = OracleState.fromCell(storage.oracleState);
-    val h  = priceHash(msg.payload);
-    var used = 0; var matched = 0;
-    for (k in 0..n) {
-        val sig = ...;
-        for (j in 0..os.signerCount) {
-            if (!((used >> j) & 1) && isSignatureValid(h, sig, os.signers.get(j))) {
-                used = used | (1 << j); matched += 1; break;
-            }
-        }
+        <h4>C.3 Mint: freshness, collateral, supply (§4.1)</h4>
+        <pre class="code">function mint(uint64 deposit) external returns (uint64 minted) {
+    if (paused) revert IsPaused();
+    if (deposit == 0) revert ZeroAmount();
+    uint64 ppi = currentPpi;
+    if (ppi == 0) revert NoActiveAsset();                                 // eq. (2)/(7)
+    uint64 oldest = oldestActiveUpdate();
+    if (oldest == 0 || block.timestamp > oldest + MAX_ORACLE_AGE) revert StaleOracle(); // eq. (6)
+    // ... fee + minted ...
+    if (address(token) == address(0)) revert NoToken();
+    if (address(depositToken) == address(0)) revert NoDepositToken();
+    if (!depositToken.transferFrom(msg.sender, address(this), deposit)) revert TransferFailed();
+    totalSupply += minted;
+    token.mint(msg.sender, minted);
+    totalReserve += deposit;
+    _routeFees(fee);
+}</pre>
+        <h4>C.4 Redeem: burn, payout, reserve (§4.3)</h4>
+        <pre class="code">function redeem(uint64 burnAmount) external returns (uint64 payout) {
+    if (paused) revert IsPaused();
+    if (burnAmount == 0) revert ZeroAmount();
+    if (currentPpi == 0) revert NoActiveAsset();
+    if (address(token) == address(0)) revert NoToken();
+    // ... gross, capped burn fee, payout ...
+    if (totalSupply < burnAmount) revert Underflow();
+    totalSupply -= burnAmount;
+    token.burn(msg.sender, burnAmount);
+    if (totalReserve < payout) revert Underflow();
+    totalReserve -= payout;
+    if (!depositToken.transfer(msg.sender, payout)) revert TransferFailed();
+    _routeFees(fee);
+}</pre>
+        <h4>C.5 Oracle verification (§7.2)</h4>
+        <pre class="code">function verify(PricePayload calldata p, bytes calldata sigs) external view returns (bool) {
+    bytes32 d = digest(p);                       // domain + address(this) + chainid + payload
+    uint256 usedMask; uint256 matched;
+    for (uint256 k; k < sigs.length / 65; ++k) {
+        (address who, bool ok) = _recover(d, sigs, k * 65);   // EIP-2 s-range check
+        if (!ok) continue;
+        uint256 slot = _signerSlot(who);
+        if (slot == type(uint256).max) continue;              // not a signer
+        if ((usedMask >> slot) & 1 == 1) continue;            // one key, one vote
+        usedMask |= (uint256(1) << slot);
+        if (++matched >= threshold) return true;              // eq. (16)
     }
-    assert (matched >= os.threshold);                          // eq. (16)
-    applyOraclePayload(msg.payload);                           // eqs. (17)-(18)
+    return false;
 }</pre>
-        <h4>C.4 Rebalancing (§8)</h4>
-        <pre class="code">// Target trade per asset; execution happens on external venues, never in-protocol.
-fun rebalanceDrift(assets, count, totalReserve) {
-    for (i in 0..count) {
-        val a = assets.mustGet(i);
-        if (a.riskState == FROZEN) { continue; }               // never trade a frozen asset
-        val delta = (a.weight - a.value * SCALE / totalReserve) * totalReserve / SCALE;   // eq. (20)
-    }
-}</pre>
-        <h4>C.5 Staking dividends (§9.4)</h4>
-        <pre class="code">// Reward-per-share accumulator, 1e12 fixed point.
-fun notifyRewards(r) {
-    assert (sender == storage.owner && storage.totalStaked > 0);
-    storage.accRewardPerShare += r * RPS_SCALE / storage.totalStaked;   // eq. (22)
-    storage.accRewards += r;
-}
-fun pending(s) { return s.amount * storage.accRewardPerShare / RPS_SCALE - s.rewardDebt; }  // eq. (23)</pre>
 
         <h2 id="d">Appendix D — security &amp; audit appendix</h2>
-        <h3>D.1 TVM-specific properties</h3>
+        <h3>D.1 EVM-specific properties</h3>
         <ul>
           <li><b>No floating point</b> ⇒ all invariant checks are exact integer comparisons; the
               classic float-rounding attack surface does not exist.</li>
-          <li><b>No EVM-style reentrancy</b>: a message handler sends an async message and returns;
-              cross-contract calls cannot re-enter mid-execution. Correctness instead depends on
-              <b>state-before-send</b> discipline, which the contracts follow.</li>
-          <li><b>Bounces</b>: every self-written contract implements <code>onBouncedMessage</code>
-              and ignores bounced bodies, so a failure cannot be misparsed as a valid message.</li>
-          <li><b>Arithmetic</b>: values are bounded and subtractions are guarded (e.g.
-              <code>totalIssued ≥ face</code>) so an underflow cannot wrap into a huge mint.</li>
-          <li><b>Cell layout</b>: the asset map is a dictionary ref, keeping the head cell under the
-              1023-bit limit as the basket grows.</li>
+          <li><b>Reentrancy discipline</b>: the only external calls are to the owner-wired PLT and
+              deposit tokens. <code>mint</code> validates first and pulls collateral before any state
+              change; <code>redeem</code> updates supply and reserve before transferring out. A
+              non-standard deposit token remains a trust assumption.</li>
+          <li><b>Checked arithmetic</b>: Solidity 0.8 reverts on overflow/underflow, and subtractions
+              (supply, reserve, bond face) are explicitly guarded. Mixed <code>uint64</code> /
+              <code>uint256</code> expressions are cast at every boundary.</li>
+          <li><b>Transfer results</b>: <code>transferFrom</code> / <code>transfer</code> return
+              values are checked; a false return reverts the transaction.</li>
+          <li><b>Timelock</b>: ownership changes and privileged calls go through
+              <code>propose → delay → execute</code>; failed inner calls are recorded (TL-2) and the
+              delay can never be reset to zero (TL-3).</li>
         </ul>
         <h3>D.2 The review register</h3>
         <p class="small">
-          A first-party review found and fixed 10 issues, each with a regression test: an undefined
-          index returned 1.0 and permitted minting; timelock ownership could bypass the delay; a
-          failed executed action could fail silently; a voter could unstake immediately; proposal
-          spam; bond redemption could destroy a claim without payment; the bond premium was
-          unbounded; and a supply underflow. Three further items are documented as <b>by design</b>
-          (mirror freshness asymmetry, accounting-only burn bucket, advisory proposals) and four as
-          <b>hardening</b> for the next version (per-asset staleness, sweeping parked TON, enabling
-          M&gt;1 threshold, wiring the fund).
+          A first-party review of the earlier implementation found and fixed 10 issues, each ported
+          with a regression test: an undefined index returned 1.0 and permitted minting; timelock
+          ownership could bypass the delay; a failed executed action could fail silently; a voter
+          could unstake immediately; proposal spam; bond redemption could destroy a claim without
+          payment; the bond premium was unbounded; and a supply underflow. The EVM port added its own
+          fixes: the fee buckets now net 30/40/20/10; mint and redeem refuse to run without a wired
+          token; <code>setAsset</code> bounds-checks before indexing; and the weight sum is enforced
+          on price updates rather than on every basket edit. The remaining design items are
+          documented (redemption has no freshness guard; fee buckets are labels; PLTG and executed
+          proposals are design).
         </p>
         <h3>D.3 What an auditor should attack</h3>
         <ol>
           <li>Manipulating the <i>freeze</i> state to profit from re-normalisation (eq. 1c).</li>
-          <li>Fee accounting: do the buckets reconcile with the actual token balance?</li>
-          <li>Payload encoding / domain separation: any ambiguity or cross-class replay?</li>
+          <li>Fee accounting: do the four buckets reconcile with the fee charged, and does
+              <code>totalReserve</code> reconcile with the USDC balance?</li>
+          <li>Payload encoding / domain separation: any ambiguity or cross-chain replay?</li>
           <li>Timelock: can <i>dest</i>/<i>body</i> be swapped between propose and execute?</li>
-          <li>Reward-per-share rounding: extractable dust, or a griefing path?</li>
-          <li>Supply identity (eq. 25) under adversarial ordering of mint/burn/mirror messages.</li>
+          <li>Reward-per-share rounding (PLTG design): extractable dust, or a griefing path?</li>
+          <li>Supply identity (eq. 25): do <code>Core.totalSupply</code> and
+              <code>token.totalSupply()</code> agree under every mint/redeem path?</li>
+          <li>Collateral: can a non-standard deposit token re-enter or return false without
+              reverting the accounting?</li>
         </ol>
 
         <h2 id="e">Appendix E — off-chain services</h2>
         <ul>
-          <li><b>Relayer</b> — fetches both sources, medians them, signs, and pushes. Gated by a
-              movement threshold (0.1%) with a heartbeat ceiling so a quiet feed cannot go stale.
-              Costs roughly 0.0023 TON of gas per asset update.</li>
+          <li><b>Relayer</b> — reads up to four channels per asset, picks the primary and records
+              confirmations, then pushes with the relayer key. Gated by a movement threshold (0.1%)
+              with a 6-hour heartbeat ceiling so a quiet feed cannot go stale. A calm hour costs
+              roughly 0.00003 ETH on Arbitrum Sepolia; the hourly workflow asserts that
+              <code>lastOracleUpdate</code> actually moved.</li>
           <li><b>Proof-of-reserve</b> <span class="tag future">future</span> — the v1 design was a
               daily Merkle root of custodian holdings published so anyone can verify inclusion.
               Requires the RWA custodian.</li>
@@ -856,9 +913,9 @@ fun pending(s) { return s.amount * storage.accRewardPerShare / RPS_SCALE - s.rew
         <table class="doc-table">
           <thead><tr><th>Concern</th><th>Mechanism</th></tr></thead>
           <tbody>
-            <tr><td>Build &amp; test</td><td>CI on every push: compile, unit tests, coverage gate (&gt;90, ratchet up only)</td></tr>
-            <tr><td>Deploy safety</td><td>an emulation dry-run job validates the deploy scripts before any TON is spent; a documented runbook covers the address set</td></tr>
-            <tr><td>Price feed</td><td>a scheduled push job; a gas-balance guard that fails loudly rather than silently halting</td></tr>
+            <tr><td>Build &amp; test</td><td>CI on every push (<code>monad-build.yml</code>): <code>forge build --sizes</code> + <code>forge test -vv</code> (70 tests)</td></tr>
+            <tr><td>Deploy safety</td><td><code>Deploy.s.sol</code> passes constructor arguments from Solidity, wires token/Core, and a dry-run workflow exercises it before any gas is spent; addresses and state live in <code>docs/HANDOFF.md</code> §0</td></tr>
+            <tr><td>Price feed</td><td>hourly <code>evm-push.yml</code>; delta gate + 6 h heartbeat; the run fails if <code>lastOracleUpdate</code> did not move</td></tr>
             <tr><td>Health</td><td>an oracle monitor alerts on state transitions (stale feed, invalid weights, signer mismatch)</td></tr>
             <tr><td>Reporting</td><td>a monthly basket report generated from chain state and published</td></tr>
             <tr><td>Key handling</td><td>the price key is a dedicated hot key funded minimally; the owner key is separate and the owner is a timelock (multisig is the production target)</td></tr>
@@ -873,14 +930,14 @@ fun pending(s) { return s.amount * storage.accRewardPerShare / RPS_SCALE - s.rew
       </article>
     </main>
 
-    <footer class="foot">
+      <footer class="foot">
       <div class="foot-row">
         <span class="wordmark">Planet</span>
-        <span class="ver">[ v1.9 · reference impl: TON testnet · EVM port: Arbitrum Sepolia ]</span>
+        <span class="ver">[ v2.0 · reference implementation: Arbitrum Sepolia ]</span>
       </div>
       <nav class="foot-nav">
         <a href="/">home</a>
-        <a href="https://app.ppppp.space">open app</a>
+        <a href="/app">open app</a>
         <a href="/#status">status</a>
       </nav>
     </footer>
@@ -914,7 +971,3 @@ fun pending(s) { return s.amount * storage.accRewardPerShare / RPS_SCALE - s.rew
         var saved = null;
         try { saved = localStorage.getItem("wp-mode"); } catch (e) {}
         apply(h === "light" || h === "full" ? h : saved === "light" ? "light" : "full", false);
-      })();
-    </script>
-  </body>
-</html>
