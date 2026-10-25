@@ -1,48 +1,50 @@
-// Live PPI ticker for the landing site. Reads PlanetCore's `ppi()` over the public TON
-// testnet RPC. Falls back to the previous deployment while a freshly redeployed core is
-// still being configured, and degrades gracefully (shows "—") if the RPC is unavailable.
-const CORE = "kQBUIDOcKIQZS_AMXjOL3usH69c3HIo0YudLoo_49eE0X2NJ"; // current (v1.7, 14-asset basket + staleness guard)
-const CORE_FALLBACK = "kQBUZM0RwN4SXnQDO1q9WzmG2aaiOSD6ybkpaG9LSQ1Aj3Jf"; // previous (populated)
-const ENDPOINT = "https://testnet.toncenter.com/api/v2/runGetMethod";
+// Live PPI ticker for the landing site. Reads PlanetCore.currentPpi() over the public Arbitrum
+// Sepolia RPC, straight from the browser — no API in front of it, so the number on the landing page
+// is the chain's own number. Degrades to "—" if the RPC is unavailable.
+//
+// EVM note: getters are addressed by 4-byte selector, not by name. The selector is a compile-time
+// constant (keccak256("currentPpi()")[0:4]) so no hashing library is needed at runtime — same reason
+// web/api/_evm.js hardcodes them. The previous TON build called runGetMethod("ppi"); there is no
+// ppi() on the EVM core, and asking for it reverts.
+const CORE = "0xcAdE768f59921e6eE09E57DE4cf974ffb3a5080D";
+const RPC = "https://sepolia-rollup.arbitrum.io/rpc";
+const SEL = {
+  assetCount: "0xeafe7a74",
+  currentPpi: "0x3070b56b",
+};
 
 const el = document.getElementById("ppi");
 const note = document.getElementById("ppi-note");
 
-async function runGet(address, method) {
-  const res = await fetch(ENDPOINT, {
+// A single uint256 return: one 32-byte word. A function that does not exist returns "0x" (empty),
+// which must be treated as failure rather than as zero.
+async function call(data) {
+  const res = await fetch(RPC, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ address, method, stack: [] }),
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ to: CORE, data }, "latest"] }),
   });
   if (!res.ok) throw new Error("HTTP " + res.status);
   const j = await res.json();
-  // exit_code != 0 means the get-method failed (e.g. account not initialised) — treat as
-  // a failure so the caller falls back instead of trusting a garbage stack.
-  if (j?.result?.exit_code !== 0) throw new Error("exit " + j?.result?.exit_code);
-  const hex = j?.result?.stack?.[0]?.[1];
-  if (!hex) throw new Error("no stack");
+  if (j.error) throw new Error(j.error.message || "rpc error");
+  const hex = j.result;
+  if (!hex || hex === "0x") throw new Error("no data");
   return Number(BigInt(hex));
-}
-
-// Prefer the current core, but only once it actually has a configured basket.
-async function activeCore() {
-  try {
-    if ((await runGet(CORE, "assetCount")) > 0) return { address: CORE, live: true };
-  } catch (_) {
-    /* fall through to the previous deployment */
-  }
-  return { address: CORE_FALLBACK, live: false };
 }
 
 async function tick() {
   try {
-    const { address, live } = await activeCore();
-    const v = (await runGet(address, "ppi")) / 1e6;
-    el.textContent = v.toFixed(6);
-    note.textContent = "live · PlanetCore · TON testnet" + (live ? "" : " (previous deployment)");
+    const [count, ppi] = await Promise.all([call(SEL.assetCount), call(SEL.currentPpi)]);
+    if (!count) {
+      el.textContent = "—";
+      note.textContent = "basket not configured";
+      return;
+    }
+    el.textContent = (ppi / 1e6).toFixed(6);
+    note.textContent = "live · PlanetCore · Arbitrum Sepolia";
   } catch (e) {
     el.textContent = "—";
-    note.textContent = "RPC unavailable (rate-limited) — open the app";
+    note.textContent = "RPC unavailable — open the app";
   }
 }
 

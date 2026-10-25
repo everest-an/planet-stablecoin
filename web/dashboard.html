@@ -6,7 +6,7 @@
     <title>Planet — live basket dashboard</title>
     <meta
       name="description"
-      content="Live on-chain commodity basket: per-asset weights, prices and index for Planet (PLT) on TON testnet. Rendered from our read API and re-verified against the chain in your browser. PoC, not a stablecoin."
+      content="Live on-chain commodity basket: per-asset weights, prices and index for Planet (PLT) on Arbitrum Sepolia. Rendered from our read API and re-verified against the chain in your browser. PoC, not a stablecoin."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -19,15 +19,15 @@
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Planet" />
     <meta property="og:url" content="https://ppppp.space/dashboard" />
-    <meta property="og:title" content="Planet — live commodity basket dashboard (TON)" />
+    <meta property="og:title" content="Planet — live commodity basket dashboard (Arbitrum)" />
     <meta
       property="og:description"
-      content="Live on-chain weights and prices for all 14 commodities in the Planet basket, re-verified against PlanetCore on TON testnet in your browser."
+      content="Live on-chain weights and prices for all 14 commodities in the Planet basket, re-verified against PlanetCore on Arbitrum Sepolia in your browser."
     />
     <meta property="og:image" content="https://ppppp.space/icon.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Planet — live commodity basket dashboard" />
-    <meta name="twitter:description" content="14 commodities, live on-chain weights and prices. TON testnet PoC." />
+    <meta name="twitter:description" content="14 commodities, live on-chain weights and prices. Arbitrum Sepolia PoC." />
     <meta name="twitter:image" content="https://ppppp.space/icon.png" />
     <link rel="stylesheet" href="/styles.css" />
     <style>
@@ -90,7 +90,7 @@
       </p>
       <h1>Live basket dashboard</h1>
       <p class="sub">
-        Rendered from our cached read API, then <b>re-verified against PlanetCore on TON testnet in your
+        Rendered from our cached read API, then <b>re-verified against PlanetCore on Arbitrum Sepolia in your
         browser</b> — the index you see is recomputed here from the same rows, and compared with the
         chain's own value. 2 RPC calls instead of ~21, so the public endpoint stops rate-limiting.
       </p>
@@ -103,7 +103,7 @@
         <div class="card"><div class="k">supply (PLT)</div><div class="v" id="c2">…</div></div>
         <div class="card"><div class="k">reserve (units)</div><div class="v" id="c3">…</div></div>
         <div class="card"><div class="k">oracle age</div><div class="v" id="c4">…</div></div>
-        <div class="card"><div class="k">M-of-N threshold</div><div class="v" id="c5">…</div></div>
+        <div class="card"><div class="k">oracle signers</div><div class="v" id="c5">…</div></div>
         <div class="card wide">
           <div class="k">stability</div>
           <div class="st"><div class="k">risk fund</div><div class="v" id="c6">…</div></div>
@@ -136,13 +136,15 @@
 
     <script>
       // ---- constants ----------------------------------------------------------------
-      const FALLBACK_CORE = "kQBUIDOcKIQZS_AMXjOL3usH69c3HIo0YudLoo_49eE0X2NJ";
+      const CORE = "0xcAdE768f59921e6eE09E57DE4cf974ffb3a5080D";
       const NAMES = [
         "WTI Crude", "Brent Crude", "Natural Gas", "Gold", "Silver", "Copper",
         "Wheat", "Corn", "Soybean", "Coffee", "Lumber (ETF)", "Lithium (ETF)",
         "Water (ETF)", "Carbon (ETF)",
       ];
-      const ENDPOINT = "https://testnet.toncenter.com/api/v2/runGetMethod";
+      const RPC = "https://sepolia-rollup.arbitrum.io/rpc";
+      // keccak256(signature)[0:4] — constants, so the browser needs no hashing library.
+      const SEL = { currentPpi: "0x3070b56b", lastOracleUpdate: "0xb609d0e6" };
       const SCALE = 1e6;
       const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -186,42 +188,44 @@
       }
 
       // ---- path 2: direct chain read (trust path) -----------------------------------
-      // toncenter v2 get-method (raw stack) with a small backoff on 429.
-      async function runGet(address, method, stack = [], tries = 4) {
+      // eth_call against the contract's own getters, with a small backoff on 429/5xx. Getters are
+      // addressed by 4-byte selector (compile-time constants), so no hashing library is needed.
+      async function callSel(selector, tries = 4) {
         for (let a = 0; a < tries; a++) {
           try {
-            const res = await fetch(ENDPOINT, {
+            const res = await fetch(RPC, {
               method: "POST",
               headers: { "content-type": "application/json" },
-              body: JSON.stringify({ address, method, stack }),
+              body: JSON.stringify({
+                jsonrpc: "2.0",
+                id: 1,
+                method: "eth_call",
+                params: [{ to: CORE, data: selector }, "latest"],
+              }),
             });
-            if (res.status === 429) { await sleep(1200 * (a + 1)); continue; }
+            if (res.status === 429 || res.status >= 500) { await sleep(600 * (a + 1)); continue; }
             if (!res.ok) throw new Error("HTTP " + res.status);
             const j = await res.json();
-            if (j?.result?.exit_code !== 0) throw new Error("exit_code " + j?.result?.exit_code);
-            return j.result.stack ?? [];
+            if (j.error) throw new Error(j.error.message || "rpc error");
+            // "0x" (empty return) is what a non-existent function returns — fail, do not read 0.
+            if (!j.result || j.result === "0x") throw new Error("no data (wrong selector?)");
+            return Number(BigInt(j.result));
           } catch (e) {
             if (a === tries - 1) throw e;
-            await sleep(1200 * (a + 1));
+            await sleep(600 * (a + 1));
           }
         }
         throw new Error("rate-limited");
       }
-      // toncenter returns hex strings, and NEGATIVE values as "-0x…" (BigInt() rejects those).
-      const toBig = (x) => {
-        const s = String(x).trim();
-        const neg = s[0] === "-";
-        const v = BigInt("0x" + (neg ? s.slice(1) : s).replace(/^0x/i, ""));
-        return neg ? -v : v;
-      };
-      const num = (entry) => Number(toBig(entry[1]));
+      // The EVM core returns a single 32-byte word per scalar getter, decoded inside callSel; there
+      // is no TON-style stack here, so the old toBig/num pair is gone.
 
       // Re-verify: read the chain's index + freshness, recompute the index here from the rows
       // we are actually displaying, and compare. If they agree, nothing on screen is a claim
       // we cannot back with the chain itself.
-      async function verifyOnChain(core, apiPpi, rows) {
-        const [ppiS, luS] = await Promise.all([runGet(core, "ppi"), runGet(core, "lastOracleUpdate")]);
-        const chainPpi = num(ppiS[0]) / SCALE;
+      async function verifyOnChain(apiPpi, rows) {
+        const [chainPpiRaw, lastUpdate] = await Promise.all([callSel(SEL.currentPpi), callSel(SEL.lastOracleUpdate)]);
+        const chainPpi = chainPpiRaw / SCALE;
         const sumW = rows.reduce((a, x) => a + x.weight, 0);
         const recomputed = sumW ? rows.reduce((a, x) => a + x.weight * (x.currentPrice / x.basePrice), 0) / sumW : 0;
         // The chain computes the index with INTEGER fixed-point arithmetic; this page recomputes
@@ -234,7 +238,7 @@
           recomputed,
           apiMatchesChain: near(apiPpi, chainPpi),
           rowsMatchChain: near(recomputed, chainPpi),
-          lastUpdate: num(luS[0]),
+          lastUpdate,
         };
       }
 
@@ -276,7 +280,7 @@
             riskState: a.riskState ?? 0,
           }));
           const ppi = Number(s.ppi);
-          const core = s.core || FALLBACK_CORE;
+          const core = s.core || CORE;
 
           document.getElementById("c0").textContent = fmt(ppi, 6);
           document.getElementById("c1").textContent = s.assetCount;
@@ -288,11 +292,20 @@
           const c4 = document.getElementById("c4");
           c4.textContent = ageText(s.lastOracleUpdate);
           c4.style.color = ageSec !== null && ageSec > 21600 ? "var(--signal, #c2401c)" : "";
-          document.getElementById("c5").textContent = s.signerThreshold;
+          // The EVM core authorises ONE relayer EOA (onlyRelayer); SignedPriceOracle (M-of-N) is not
+          // deployed. Show that truthfully instead of printing a "1" that reads like a threshold.
+          document.getElementById("c5").textContent = s.oracle?.multiSig
+            ? String(s.signerThreshold)
+            : "1 (single EOA)";
           document.getElementById("c6").textContent = "$" + fmt(Number(s.riskFund) / 1e6, 2);
           if (s.bond) {
             document.getElementById("c7").textContent = s.bond.open ? "open" : "closed";
             document.getElementById("c8").textContent = "$" + fmt(Number(s.bond.paid) / 1e6, 2);
+          } else {
+            // PlanetBond is not part of this deployment (Core + Token + Timelock only). Say so
+            // rather than leaving a dash that looks like "zero".
+            document.getElementById("c7").textContent = "not deployed";
+            document.getElementById("c8").textContent = "not deployed";
           }
           const staleNote = document.getElementById("staleNote");
           if (ageSec !== null && ageSec > 21600) {
@@ -309,7 +322,7 @@
 
           // 2) VERIFY: 2 direct chain calls, then compare. The API is never trusted blindly.
           try {
-            const v = await verifyOnChain(core, ppi, rows);
+            const v = await verifyOnChain(ppi, rows);
             if (v.apiMatchesChain && v.rowsMatchChain) {
               setFoot(core, "✓ verified on-chain — index and all " + rows.length + " rows recomputed in your browser", "ok");
             } else {

@@ -17,10 +17,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const WEB = join(HERE, "..", "web");
 const REPORTS = join(WEB, "reports");
 
-const CORES = [
-  "kQAwzh3O-52-QBtB8JFFTjtNaKFhw-uJMkd-zdnoHoGibzcU",
-  "kQBUZM0RwN4SXnQDO1q9WzmG2aaiOSD6ybkpaG9LSQ1Aj3Jf",
-];
+const CORES = [process.env.EVM_CORE || "0xcAdE768f59921e6eE09E57DE4cf974ffb3a5080D"];
 const NAMES = [
   "WTI Crude", "Brent Crude", "Natural Gas", "Gold", "Silver", "Copper",
   "Wheat", "Corn", "Soybean", "Coffee", "Lumber (ETF)", "Lithium (ETF)",
@@ -31,20 +28,31 @@ const SECTORS = [
   "agriculture", "agriculture", "agriculture", "agriculture",
   "industrial", "industrial", "industrial", "industrial",
 ];
-const ENDPOINT = process.env.TON_ENDPOINT || "https://testnet.toncenter.com/api/v2/runGetMethod";
-const API_KEY = process.env.TON_API_KEY || "";
+const RPC = process.env.EVM_RPC || "https://sepolia-rollup.arbitrum.io/rpc";
+// Getters are addressed by 4-byte selector on EVM; these are constants, no hashing at runtime.
+const SEL = {
+  assetCount: "0xeafe7a74",
+  currentPpi: "0x3070b56b",
+  totalSupply: "0x18160ddd",
+  totalReserve: "0x4c68df67",
+  lastOracleUpdate: "0xb609d0e6",
+  assets: "0xcf35bdd0",
+};
 const SCALE = 1e6;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let ACTIVE = CORES[0];
 
-async function runGet(method, stack = [], tries = 8) {
+async function runGet(method, arg, tries = 8) {
+  let data = SEL[method];
+  if (!data) throw new Error(`runGet: no selector for ${method}`);
+  if (method === "assets") data += Number(arg).toString(16).padStart(64, "0");
   for (let a = 0; a < tries; a++) {
     try {
-      const res = await fetch(ENDPOINT, {
+      const res = await fetch(RPC, {
         method: "POST",
-        headers: { "content-type": "application/json", ...(API_KEY ? { "X-API-Key": API_KEY } : {}) },
-        body: JSON.stringify({ address: ACTIVE, method, stack }),
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ to: ACTIVE, data }, "latest"] }),
       });
       if (res.status === 429 || res.status >= 500) {
         await sleep(600 * (a + 1));
@@ -52,15 +60,13 @@ async function runGet(method, stack = [], tries = 8) {
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const j = await res.json();
-      if (j?.result?.exit_code !== 0) throw new Error(`exit ${j?.result?.exit_code}`);
-      // toncenter: hex strings, and negatives as "-0x..." (BigInt() rejects those).
-      return (j?.result?.stack ?? []).map((e) => {
-        if (e[0] !== "num") return null;
-        const s = String(e[1]);
-        const neg = s[0] === "-";
-        const v = BigInt("0x" + (neg ? s.slice(1) : s).replace(/^0x/i, ""));
-        return Number(neg ? -v : v);
-      });
+      if (j.error) throw new Error(j.error.message);
+      const hex = j.result;
+      if (!hex || hex === "0x") throw new Error("no data");
+      const body = hex.slice(2);
+      const out = [];
+      for (let i = 0; i + 64 <= body.length; i += 64) out.push(Number(BigInt("0x" + body.slice(i, i + 64))));
+      return out;
     } catch (e) {
       if (a === tries - 1) throw e;
       await sleep(600 * (a + 1));
@@ -80,15 +86,15 @@ async function readBasket() {
   }
   const assetCount = (await runGet("assetCount"))[0];
   if (!assetCount) throw new Error("no configured core found");
-  const ppi = (await runGet("ppi"))[0] / SCALE;
-  const supply = (await runGet("supply"))[0];
-  const reserve = (await runGet("reserve"))[0];
+  const ppi = (await runGet("currentPpi"))[0] / SCALE;
+  const supply = (await runGet("totalSupply"))[0];
+  const reserve = (await runGet("totalReserve"))[0];
   const lastOracleUpdate = (await runGet("lastOracleUpdate"))[0];
 
   const assets = [];
   for (let i = 0; i < assetCount; i++) {
     await sleep(150);
-    const st = await runGet("assetAt", [["num", "0x" + i.toString(16)]]);
+    const st = await runGet("assets", i);
     const [weight, basePrice, currentPrice, , , riskState] = st;
     assets.push({
       index: i,

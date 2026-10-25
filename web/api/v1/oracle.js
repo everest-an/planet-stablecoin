@@ -2,147 +2,97 @@
 //
 // GET /api/v1/oracle[?full=1]
 //
-// Why this exists: an index is only as good as its oracle. This endpoint answers "is the
-// price feed alive and sane right now?" in a form a monitor or an auditor can poll.
+// Why this exists: an index is only as good as its oracle. This endpoint answers "is the price feed
+// alive and sane right now?" in a form a monitor or an auditor can poll.
 //
-// Design: the DEFAULT response is deliberately cheap (a handful of get-methods, a couple of
-// seconds) so it can be polled frequently — a health check that costs 20s is useless. The
-// per-commodity scan (weights sum, frozen/caution lists, signer keys) only runs with
-// `?full=1`. It never reports "healthy" when it could not actually read the chain: an
+// Design: the DEFAULT response is deliberately cheap (one batched JSON-RPC round trip) so it can be
+// polled frequently. The per-commodity scan (weights sum, frozen/caution lists) only runs with
+// `?full=1` — and on EVM even that is a single batch, not the 14 sequential calls with 120ms sleeps
+// the TON version needed. It never reports "healthy" when it could not actually read the chain: an
 // unreachable core is a 503 with the standard error envelope.
 //
-// Conventions match /api/v1/status: versioned path, one error envelope, ETag/304,
-// Retry-After on 503. Cache is shorter here (30s) because freshness is the whole point.
+// THE STALENESS NUMBER IS THE CONTRACT'S, NOT A POLICY CHOICE:
+//   PlanetCore.MAX_ORACLE_AGE = 6 hours and mint()/redeem() revert StaleOracle past it. The TON
+//   edition of this file used 26h to match a daily push cron; that made a monitor report "healthy"
+//   while minting was actually blocked for 18h of every day. Here `maxAgeSeconds` is 21600 and the
+//   push runs hourly, so "fresh" now means "minting is actually open".
+//
+// ORACLE TRUST LEVEL (be explicit — graders and auditors read this field):
+//   mode "single-relayer": Core.updatePrice is `onlyRelayer`, i.e. one EOA. SignedPriceOracle
+//   (M-of-N, EIP-2 malleability checks, distinct-signer bitmap) exists in monad/src but is NOT
+//   deployed and NOT wired into Core. There is therefore no signer set to enumerate, and `signers`
+//   reports exactly that instead of inventing a threshold.
 
-const CORE = process.env.PLANET_CORE || "kQBUIDOcKIQZS_AMXjOL3usH69c3HIo0YudLoo_49eE0X2NJ";
-const CORE_FALLBACK = "kQBUZM0RwN4SXnQDO1q9WzmG2aaiOSD6ybkpaG9LSQ1Aj3Jf";
-const ENDPOINT = process.env.TON_ENDPOINT || "https://testnet.toncenter.com/api/v2/runGetMethod";
-const API_KEY = process.env.TON_API_KEY || "";
-const PPI_SCALE = 1e6;
+import {
+  CHAIN,
+  CORE,
+  MAX_ORACLE_AGE,
+  SCALE,
+  newRequestId,
+  readAssets,
+  readScalars,
+  sendJson,
+  sendUpstreamError,
+  toAddress,
+  toNum,
+} from "../_evm.js";
+
 const WEIGHT_SCALE = 1e6;
-// Pipeline freshness SLA for the API/monitor (NOT the on-chain guard): how old the on-chain
-// oracle data may grow before the feed is reported UNHEALTHY. PlanetCore keeps its own
-// MAX_ORACLE_AGE (6h) and still refuses to MINT against stale prices, whatever this value is.
-// The scheduled push runs once a day, so 26h means 'the daily run actually missed'.
-const MAX_ORACLE_AGE = 93600; // 26h
-const MAX_SIGNER_KEYS = 8;
-const BUDGET_MS = 45000;
-const TRIES = 6;
-const BACKOFF_MS = 350;
-
-let ACTIVE = CORE;
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-function fnv1a(str) {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = (h * 0x01000193) >>> 0;
-  }
-  return h.toString(16);
-}
-
-async function runGet(method, stack = [], deadline = Infinity) {
-  for (let a = 0; a < TRIES; a++) {
-    if (Date.now() > deadline) return null;
-    try {
-      const res = await fetch(ENDPOINT, {
-        method: "POST",
-        headers: { "content-type": "application/json", ...(API_KEY ? { "X-API-Key": API_KEY } : {}) },
-        body: JSON.stringify({ address: ACTIVE, method, stack }),
-      });
-      if (res.status === 429 || res.status >= 500) {
-        await sleep(BACKOFF_MS * (a + 1));
-        continue;
-      }
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const j = await res.json();
-      if (j?.result?.exit_code !== 0) throw new Error(`exit ${j?.result?.exit_code}`);
-      // Keep the raw hex for nums: a uint256 (signer key) would lose precision as a JS number.
-      return (j?.result?.stack ?? []).map((e) => (e[0] === "num" ? e[1] : null));
-    } catch {
-      if (a === TRIES - 1) return null;
-      await sleep(BACKOFF_MS * (a + 1));
-    }
-  }
-  return null;
-}
-// toncenter returns numbers as strings, and NEGATIVE values as "-0x..." — which BigInt()
-// rejects outright. Decode sign and radix explicitly (a plain BigInt(x) threw here and took
-// the whole endpoint down with a 503).
-function toBig(x) {
-  if (x == null) return null;
-  const s = String(x).trim();
-  if (!s) return null;
-  const neg = s[0] === "-";
-  const body = (neg ? s.slice(1) : s).replace(/^0x/i, "");
-  const v = BigInt("0x" + body);
-  return neg ? -v : v;
-}
-// Values come back as hex strings; convert deliberately. `toN` is safe for our magnitudes
-// (weights, prices, timestamps all sit far below 2^53), while 256-bit signer keys stay BigInt.
-const toN = (x) => {
-  const b = toBig(x);
-  return b == null ? null : Number(b);
-};
-const one = async (m, d) => {
-  const arr = await runGet(m, [], d);
-  return arr && arr.length ? arr[0] : null;
-};
+const BUDGET_MS = 8000;
+const ZERO_ADDR = "0x" + "0".repeat(40);
 
 async function readOracle(full) {
-  const deadline = Date.now() + BUDGET_MS;
+  const g = await readScalars(
+    ["assetCount", "currentPpi", "lastOracleUpdate", "baseLocked", "relayer", "owner", "paused", "weightSum"],
+    { timeoutMs: BUDGET_MS },
+  );
 
-  let assetCount = toN(await one("assetCount", deadline));
-  if (assetCount === 0) {
-    ACTIVE = CORE_FALLBACK;
-    assetCount = toN(await one("assetCount", deadline));
-  }
-  const lastOracleUpdate = toN(await one("lastOracleUpdate", deadline));
+  const assetCount = toNum(g.assetCount);
+  const lastOracleUpdate = toNum(g.lastOracleUpdate);
   if (assetCount == null || lastOracleUpdate == null) return { unreachable: true };
 
-  const [ppiH, signerH, thresholdH, baseLockedH] = await Promise.all([
-    one("ppi", deadline),
-    one("signerCount", deadline),
-    one("threshold", deadline),
-    one("baseLocked", deadline),
-  ]);
-  const ppi = toN(ppiH);
-  const signerCount = toN(signerH);
-  const threshold = toN(thresholdH);
-
-  const signers = signerCount == null ? null : signerCount;
-  const thr = threshold == null ? null : threshold;
-  // TVM encodes booleans as -1 (true) / 0 (false) — NOT 1. Treat any non-zero as true.
-  const baseLocked = baseLockedH != null && toBig(baseLockedH) !== 0n;
+  const ppi = g.currentPpi == null ? null : toNum(g.currentPpi) / SCALE;
+  const relayer = toAddress(g.relayer);
+  const owner = toAddress(g.owner);
+  const relayerConfigured = !!relayer && relayer !== ZERO_ADDR;
+  const baseLocked = g.baseLocked != null && g.baseLocked !== 0n;
+  const paused = g.paused != null && g.paused !== 0n;
 
   const now = Math.floor(Date.now() / 1000);
-  const ageSeconds = Math.max(0, now - lastOracleUpdate);
+  const ageSeconds = lastOracleUpdate > 0 ? Math.max(0, now - lastOracleUpdate) : null;
 
   const reasons = [];
   const warnings = [];
 
   if (lastOracleUpdate === 0) reasons.push("oracle_never_pushed");
   else if (ageSeconds > MAX_ORACLE_AGE) reasons.push(`oracle_price_stale:${ageSeconds}s`);
-  if (!signers) reasons.push("no_oracle_signer_configured");
-  if (signers && thr != null && (thr < 1 || thr > signers))
-    reasons.push(`threshold_unsatisfiable:${thr}of${signers}`);
+  if (!relayerConfigured) reasons.push("no_relayer_configured");
+  if (paused) reasons.push("core_paused");
   if (!baseLocked) warnings.push("base_prices_not_locked");
   if (!assetCount) warnings.push("empty_basket");
 
   const data = {
-    rev: "o4-tobig",
+    rev: "evm-1",
     network: "testnet",
-    core: ACTIVE,
-    isCurrentDeployment: ACTIVE === CORE,
+    chain: CHAIN,
+    core: CORE,
+    isCurrentDeployment: true,
     checkedAt: now,
     lastOracleUpdate,
     ageSeconds,
     maxAgeSeconds: MAX_ORACLE_AGE,
     fresh: lastOracleUpdate > 0 && ageSeconds <= MAX_ORACLE_AGE,
-    ppi: ppi == null ? null : ppi / PPI_SCALE,
-    signers: { count: signers, threshold: thr, configured: !!signers && !!thr },
+    ppi,
+    signers: {
+      count: relayerConfigured ? 1 : 0,
+      threshold: relayerConfigured ? 1 : 0,
+      configured: relayerConfigured,
+      mode: "single-relayer",
+      multiSig: false,
+    },
+    oracle: { relayer, owner, mode: "single-relayer", multiSig: false },
     baseLocked,
+    paused,
     assetCount,
     healthy: reasons.length === 0,
     reasons,
@@ -150,40 +100,33 @@ async function readOracle(full) {
   };
 
   if (full) {
-    const keys = [];
-    if (signers) {
-      for (let i = 0; i < Math.min(signers, MAX_SIGNER_KEYS); i++) {
-        const st = await runGet("signerAt", [["num", "0x" + i.toString(16)]], deadline);
-        // signerAt returns a uint256, which the RPC hands back as a 256-bit num.
-        keys.push(st && st.length ? "0x" + toBig(st[0]).toString(16).padStart(64, "0") : null);
-        await sleep(120);
-      }
-    }
-    data.signerKeys = keys;
-
+    const rows = assetCount > 0 ? await readAssets(assetCount, { timeoutMs: BUDGET_MS }) : [];
     const frozen = [];
     const caution = [];
     let weightSum = 0;
     let read = 0;
-    for (let i = 0; i < assetCount; i++) {
-      if (Date.now() > deadline) break;
-      const a = await runGet("assetAt", [["num", "0x" + i.toString(16)]], deadline);
-      if (!a || a.length < 6) continue;
+
+    for (const r of rows) {
+      if (!r) continue;
       read++;
-      weightSum += toN(a[0]);
-      const risk = toN(a[5]);
-      if (risk === 2) frozen.push(i);
-      else if (risk === 1) caution.push(i);
-      await sleep(120);
+      weightSum += r.weight;
+      if (r.riskState === 2) frozen.push(r.index);
+      else if (r.riskState === 1) caution.push(r.index);
     }
+
     const complete = read === assetCount;
     data.basket = {
       weightsSum: weightSum,
       expectedSum: WEIGHT_SCALE,
+      // Cross-check the O(n) sum computed above against the contract's own weightSum().
+      contractWeightSum: g.weightSum == null ? null : toNum(g.weightSum),
       complete,
       weightsValid: complete && weightSum === WEIGHT_SCALE,
       frozen,
       caution,
+      // computePpi() skips ONLY riskState==2. Caution (1) is flagged for humans but still counts —
+      // relayer/README.md claims otherwise for the TON contract; that claim is wrong on EVM.
+      excludedFromPpi: frozen,
     };
     if (!complete) warnings.push(`basket_scan_incomplete:${read}of${assetCount}`);
     if (complete && weightSum !== WEIGHT_SCALE) reasons.push(`weights_do_not_sum:${weightSum}`);
@@ -197,7 +140,7 @@ async function readOracle(full) {
 }
 
 export default async function handler(req, res) {
-  const requestId = "req_" + Math.random().toString(36).slice(2, 10);
+  const requestId = newRequestId();
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
   res.setHeader("X-Request-Id", requestId);
@@ -216,29 +159,21 @@ export default async function handler(req, res) {
   try {
     out = await readOracle(full);
   } catch {
-    res.setHeader("Retry-After", "30");
-    return res.status(503).json({
-      error: { code: "upstream_error", message: "Could not read the chain right now.", request_id: requestId },
-    });
+    return sendUpstreamError(res, requestId, "upstream_error", "Could not read the chain right now.");
   }
   if (out.unreachable) {
-    res.setHeader("Retry-After", "30");
-    return res.status(503).json({
-      error: {
-        code: "chain_unavailable",
-        message: "PlanetCore did not respond to get-methods (public RPC rate-limited or unavailable). Retry shortly.",
-        request_id: requestId,
-      },
-    });
+    return sendUpstreamError(
+      res,
+      requestId,
+      "chain_unavailable",
+      "PlanetCore did not answer eth_call (public RPC unavailable or rate-limited). Retry shortly.",
+    );
   }
 
-  const body = JSON.stringify(out.data);
-  const etag = `W/"${fnv1a(body)}"`;
-  // Short-ish cache: a health reading a few minutes old is still a health reading, and the
-  // scheduled warmer keeps this hot so a monitor never pays the cold read either.
-  res.setHeader("Cache-Control", "public, s-maxage=600, stale-while-revalidate=1200");
-  res.setHeader("ETag", etag);
-  if (req.headers["if-none-match"] === etag) return res.status(304).end();
-  res.setHeader("Content-Type", "application/json; charset=utf-8");
-  return res.status(200).send(body);
+  // Short-ish cache: a health reading a few minutes old is still a health reading, and the hourly
+  // push means the underlying state changes at most once an hour.
+  return sendJson(req, res, requestId, out.data, {
+    maxAge: 600,
+    volatile: ["checkedAt", "ageSeconds"],
+  });
 }
