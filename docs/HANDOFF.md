@@ -22,6 +22,7 @@
 | 站点 | 已切 EVM 只读：`/api/v1/status`、`/api/v1/oracle`、dashboard、landing ticker |
 | 铸赎 UI | **`/app` 已上线**（零依赖、注入式钱包直连 Core）；TON Mini App 仍在 |
 | PriceOracle | `0xFC560cB20875dB79b8bd8FBA96a1c78B5B69548e` |
+| 抵押 | Circle 测试 USDC `0x75faf114…AA4d`（6 位）；`mint` 用 `transferFrom` 拉取，`redeem` 付回并减少 `totalReserve` |
 | 未部署 | PlanetBond / PlanetFund / PlanetGov / PLTG —— 仅存在于 `ton/` |
 | 审计 | 无 |
 
