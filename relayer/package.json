@@ -6,11 +6,14 @@
   "description": "Planet off-chain price relayer: fetch commodity/ETF prices, sign PricePayload, push SignedPriceUpdate to PlanetCore",
   "scripts": {
     "register": "node relayer.mjs register",
-    "push": "node relayer.mjs push"
+    "push": "node relayer.mjs push",
+    "push-evm": "node push-evm.mjs",
+    "push-evm:dry": "node push-evm.mjs --dry-run"
   },
   "dependencies": {
     "@ton/core": "^0.63.1",
     "@ton/crypto": "^3.3.0",
-    "@ton/ton": "^15.1.1"
+    "@ton/ton": "^15.1.1",
+    "viem": "^2.21.0"
   }
 }

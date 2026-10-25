@@ -1,0 +1,85 @@
+name: EVM price push (Arbitrum Sepolia)
+
+# The oracle's heartbeat. PlanetCore closes minting 6h after the last push
+# (MAX_ORACLE_AGE = 6 hours), so an hourly cadence leaves ~5h of slack for a delayed
+# or skipped GitHub schedule — the previous TON cron was daily, which left minting
+# blocked 18h out of every 24.
+#
+# Costs: 14 × updatePrice ≈ 0.00003 ETH per run on Arbitrum Sepolia, and the delta gate
+# skips assets that have not moved >0.1%, so a calm hour is usually 0–3 transactions.
+#
+# The signer must be Core.relayer (today: the deployer 0x68be…2C13). The secret holds the
+# key WITHOUT a 0x prefix; push-evm.mjs normalises it, and refuses to run if the derived
+# address is not the on-chain relayer — a wrong key fails in one line, before any gas.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Preflight only: fetch prices + eth_call simulate, send nothing (true/false)"
+        required: false
+        default: "false"
+  schedule:
+    # Hourly, offset off the hour to dodge the scheduler's busiest minute.
+    - cron: "12 * * * *"
+
+concurrency:
+  group: evm-price-push
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  push:
+    name: Fetch + push prices
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: relayer
+    env:
+      PRIVATE_KEY: ${{ secrets.MONAD_DEPLOY_KEY }}
+      RPC: ${{ vars.EVM_RPC || 'https://sepolia-rollup.arbitrum.io/rpc' }}
+      CORE: ${{ vars.EVM_CORE || '0xcAdE768f59921e6eE09E57DE4cf974ffb3a5080D' }}
+      ASSETS_JSON: assets.example.json
+      # Push even a flat price once the reading is this old, so the global timestamp
+      # can never idle past the on-chain 6h gate.
+      MAX_PUSH_AGE_H: "6"
+      MIN_PUSH_DELTA: "0.001"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install deps
+        run: npm install --no-audit --no-fund
+
+      - name: Preflight (simulate only, no transactions)
+        if: ${{ inputs.dry_run == 'true' }}
+        run: node push-evm.mjs --dry-run
+
+      - name: Push prices
+        if: ${{ inputs.dry_run != 'true' }}
+        run: node push-evm.mjs
+
+      - name: Confirm the oracle moved
+        if: ${{ inputs.dry_run != 'true' }}
+        run: |
+          # A green step that pushed nothing is not a success: assert the on-chain state actually changed.
+          node -e '
+            import("viem").then(async ({ createPublicClient, http, parseAbi }) => {
+              const c = createPublicClient({ transport: http(process.env.RPC) });
+              const abi = parseAbi(["function lastOracleUpdate() view returns (uint64)","function currentPpi() view returns (uint64)"]);
+              const lu = await c.readContract({ address: process.env.CORE, abi, functionName: "lastOracleUpdate" });
+              const ppi = await c.readContract({ address: process.env.CORE, abi, functionName: "currentPpi" });
+              console.log(`lastOracleUpdate=${lu} currentPpi=${Number(ppi)/1e6}`);
+              const now = Math.floor(Date.now()/1000);
+              const age = now - Number(lu);
+              console.log(`oracle age=${age}s (limit 21600s)`);
+              if (Number(lu) === 0) { console.error("FAIL: oracle has never been pushed"); process.exit(1); }
+              if (age > 21600) { console.error("FAIL: oracle is past the on-chain 6h gate"); process.exit(1); }
+            });
+          '
