@@ -149,6 +149,26 @@
         The push runs hourly from GitHub Actions (<code>.github/workflows/evm-push.yml</code>). That cadence is not cosmetic:
         <code>MAX_ORACLE_AGE</code> is 6 hours and <code>mint()</code>/<code>redeem()</code> revert <code>StaleOracle</code> past it, so minting would be closed
         most of the day on a daily schedule.
+      <h3>Which channels, and what happens when they disagree</h3>
+      <p>
+        Four independent venues are read per asset where they cover it: <b>Yahoo</b> (primary), <b>Sina</b>,
+        <b>Tencent</b> and <b>Eastmoney</b>. Today that is <b>34 channel reads across 14 assets</b> — 12 assets
+        have two or more channels, five have four. Tencent is what makes the four ETFs
+        (lumber/lithium/water/carbon) checkable at all, since Sina does not quote them.
+      </p>
+      <p>
+        The rule is <b>not</b> "median of everything". The primary sets the price; another channel only
+        counts as a confirmation if it lands within <b>0.5%</b>. With no confirmation the reading is
+        published as <code>riskState=1</code> (caution) at the primary's price. Averaging a dissenter is how
+        natgas once ended up at 3.276 when the front month was 3.05: a 1% gap between venues is usually two
+        contract expiries, not a disagreement about the same instrument. Natgas is now single-source for that
+        reason, and soybean's Tencent quote (1% off) is rejected rather than blended — both show up as caution.
+      </p>
+      <p>
+        This is inspectable, not just described: <a href="/api/v1/sources">/api/v1/sources</a> lists every
+        channel that answered, its raw reading, the confirmation count and any rejected channel with how far
+        off it was.
+      </p>
       </p>
       <p>There is no signer registration on EVM: the oracle is one address set by
         <code>setRelayer(address)</code> (owner action). The M-of-N verifier
@@ -204,6 +224,7 @@
         <tbody>
           <tr><th><code>GET /api/v1/status</code></th><td>Live index + full basket + accounting as JSON. Versioned path, <code>ETag</code> + <code>304</code>, one error envelope, <code>503</code>+<code>Retry-After</code> when the RPC is rate-limited.</td></tr>
           <tr><th><code>GET /api/v1/oracle</code></th><td>Is the price feed alive and sane? The age of the last push against the 6-hour limit, the relayer address (single key, no threshold), whether base prices are locked, and — with <code>?full=1</code> — the weights check plus frozen/caution commodities and the signer keys. Cheap by default so a monitor can poll it. <b>503</b> means "could not read the chain", never a false "healthy".</td></tr>
+          <tr><th><code>GET /api/v1/sources</code></th><td>Every price channel, its reading, and whether it confirmed the primary — the raw material behind each pushed price.</td></tr>
           <tr><th><code>GET /openapi.json</code></th><td>The OpenAPI 3.1 contract — generate a client from it instead of hand-parsing.</td></tr>
           <tr><th><code>/api/status</code></th><td>Deprecated alias; replies <code>308</code> with <code>Deprecation</code> / <code>Sunset</code> / <code>Link</code> headers.</td></tr>
         </tbody>
