@@ -222,7 +222,7 @@
           <li><b>Verifiable on-chain</b> — every price update is written on-chain by the authorised relayer and the index is computed on-chain, so the number on screen is recomputable from the contract.</li>
           <li><b>Fail-safe oracle</b> — two independent feeds with a median, staleness and price-jump guards, and a risk flag when the sources diverge.</li>
           <li><b>Governance</b> — owner actions can be migrated to a multisig and gated by a timelock (Propose → delay → Execute).</li>
-          <li><b>Honest limits</b> — <b>not audited yet</b>; the price oracle is a single relayer key (the M-of-N verifier is written but not deployed); Phase 1 holds no real reserve (see “what it is not”).</li>
+          <li><b>Honest limits</b> — <b>not audited yet</b>; both price paths run on one operator key (the M-of-N verifier is deployed, but its signer set is 1-of-1); Phase 1 holds no real reserve (see “what it is not”).</li>
         </ul>
       </section>
 
@@ -231,9 +231,10 @@
         <div class="sec-head"><span class="num">[ 08 ]</span><span class="lbl">contracts · Arbitrum Sepolia</span><span class="end">¬</span></div>
         <table class="status-table doc-table">
           <tbody>
-<tr><td>PlanetCore</td><td><code>0xcAdE768f59921e6eE09E57DE4cf974ffb3a5080D</code></td></tr>
-<tr><td>PLT token</td><td><code>0xfD656CECcb7B46E7A670ec7dedbb4853C82Ed586</code></td></tr>
-            <tr><td>Timelock</td><td><code>0x71E9dDf3c8E9B332d99A7Ea7D0d7305f7aAC95E2</code></td></tr>
+<tr><td>PlanetCore</td><td><code>0xB3FC376FF511B379fdC88A01406888Bd63F76C9A</code></td></tr>
+<tr><td>PLT token</td><td><code>0x5102B8A6F79c1b8bd11EcE6ddcA1a3884cCD5e93</code></td></tr>
+            <tr><td>Timelock</td><td><code>0x2d762e9A7B03569EFcCbA7AACDBAc0AAF0170016</code></td></tr>
+            <tr><td>PriceOracle</td><td><code>0x239Ac0311284D711e67D8864C655706E962dd893</code></td></tr>
           </tbody>
         </table>
         <p class="disclaimer">Verify these on sepolia.arbiscan.io. Addresses may change before mainnet.</p>

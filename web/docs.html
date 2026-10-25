@@ -105,9 +105,10 @@
       <h3>Arbitrum Sepolia (421614) — what this site reads</h3>
       <table>
         <tbody>
-          <tr><th>PlanetCore</th><td><code>0xcAdE768f59921e6eE09E57DE4cf974ffb3a5080D</code></td></tr>
-          <tr><th>PLT token</th><td><code>0xfD656CECcb7B46E7A670ec7dedbb4853C82Ed586</code></td></tr>
-          <tr><th>Timelock</th><td><code>0x71E9dDf3c8E9B332d99A7Ea7D0d7305f7aAC95E2</code></td></tr>
+          <tr><th>PlanetCore</th><td><code>0xB3FC376FF511B379fdC88A01406888Bd63F76C9A</code></td></tr>
+          <tr><th>PLT token</th><td><code>0x5102B8A6F79c1b8bd11EcE6ddcA1a3884cCD5e93</code></td></tr>
+          <tr><th>Timelock</th><td><code>0x2d762e9A7B03569EFcCbA7AACDBAc0AAF0170016</code></td></tr>
+<tr><th>PriceOracle (M-of-N verifier)</th><td><code>0x239Ac0311284D711e67D8864C655706E962dd893</code></td></tr>
         </tbody>
       </table>
       <p class="note">
@@ -150,7 +151,7 @@
       </p>
       <p>There is no signer registration on EVM: the oracle is one address set by
         <code>setRelayer(address)</code> (owner action). The M-of-N verifier
-        (<code>monad/src/SignedPriceOracle.sol</code>) is written and unit-tested but <b>not deployed and not wired into the core</b> — so this is a single-key oracle today, and we say so on the dashboard.</p>
+        is <b>deployed and wired in</b> (<code>updatePriceSigned</code>), but its signer set is <b>1-of-1 with the same operator key</b>, because one operator holds every key today. Raising it is a <code>setSigners()</code> call — no redeploy.</p>
 
       <h2 id="token">4. Token, mint &amp; redeem</h2>
       <p>

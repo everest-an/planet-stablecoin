@@ -16,7 +16,7 @@
 
 // Arbitrum Sepolia = 421614. The RPC is public and needs no key.
 export const RPC = process.env.EVM_RPC || "https://sepolia-rollup.arbitrum.io/rpc";
-export const CORE = process.env.EVM_CORE || "0xcAdE768f59921e6eE09E57DE4cf974ffb3a5080D";
+export const CORE = process.env.EVM_CORE || "0xB3FC376FF511B379fdC88A01406888Bd63F76C9A";
 export const CHAIN = { name: "arbitrum-sepolia", id: 421614 };
 export const SCALE = 1e6;
 // PlanetCore.MAX_ORACLE_AGE == 6 hours, and mint()/redeem() revert StaleOracle past it. This is a
@@ -28,6 +28,8 @@ export const SEL = {
   assetCount: "0xeafe7a74",
   currentPpi: "0x3070b56b",
   lastOracleUpdate: "0xb609d0e6",
+  oldestActiveUpdate: "0xb6ef7e0f",
+  oracle: "0x7dc0d1d0",
   baseLocked: "0x7b082610",
   weightSum: "0x8195c3f8",
   totalSupply: "0x18160ddd",
@@ -133,6 +135,8 @@ function decodeAsset(hex, index) {
     volatility: toNum(w[3]),
     liquidity: toNum(w[4]),
     riskState: toNum(w[5]),
+    // Appended to the struct in the per-asset-staleness upgrade; older cores do not return it.
+    lastUpdate: w.length > 6 ? toNum(w[6]) : null,
   };
 }
 

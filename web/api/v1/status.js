@@ -22,9 +22,14 @@
 //   * `bond`      is ABSENT: PlanetBond is not part of this deployment (Core + Token + Timelock
 //                 only). The key is omitted rather than faked with zeros; consumers must treat it
 //                 as optional (the dashboard already does).
-//   * `signerThreshold` is 1 and `oracle.mode` is "single-relayer": the EVM core authorises ONE
-//                 relayer EOA (`onlyRelayer`). SignedPriceOracle (M-of-N) exists in monad/src but is
-//                 NOT deployed and NOT wired into Core, so reporting a threshold > 1 would be false.
+//   * `signerThreshold` is 1 and `oracle.mode` is "single-relayer": the core authorises ONE relayer
+//                 EOA (`onlyRelayer`) AND accepts the separate SignedPriceOracle path
+//                 (`updatePriceSigned`, `oracle.signedPath`). The oracle IS deployed, but its signer
+//                 set is 1-of-1 with the same operator key, so reporting a threshold > 1 would be
+//                 false. Raising it is a setSigners() call, not a redeploy.
+//   * `oldestAssetUpdate` is the timestamp `mint()` gates on — the stalest active asset. It is NOT
+//                 `lastOracleUpdate` (the most recent push), which could be seconds old while some
+//                 other input is a week old.
 
 import {
   CHAIN,
@@ -71,6 +76,7 @@ async function readStatus() {
       "assetCount",
       "currentPpi",
       "lastOracleUpdate",
+      "oldestActiveUpdate",
       "totalSupply",
       "totalReserve",
       "riskFund",
@@ -79,6 +85,7 @@ async function readStatus() {
       "feesToStaking",
       "relayer",
       "paused",
+      "oracle",
     ],
     ASSET_SLOTS,
     { timeoutMs: BUDGET_MS },
@@ -118,12 +125,15 @@ async function readStatus() {
       volatility: r.volatility,
       liquidity: r.liquidity,
       riskState: r.riskState,
+      lastUpdate: r.lastUpdate,
     });
   }
   if (assets.length < assetCount) partial = true;
 
   const relayer = toAddress(g.relayer);
   const relayerSet = relayer && relayer !== "0x" + "0".repeat(40);
+  const oracleAddr = toAddress(g.oracle);
+  const oracleSet = oracleAddr && oracleAddr !== "0x" + "0".repeat(40);
 
   return {
     data: {
@@ -139,16 +149,20 @@ async function readStatus() {
       assetCount,
       assetsReturned: assets.length,
       lastOracleUpdate: toNum(g.lastOracleUpdate),
+      // The timestamp mint() actually gates on: the stalest ACTIVE asset, not the newest push.
+      oldestAssetUpdate: toNum(g.oldestActiveUpdate),
       maxOracleAge: MAX_ORACLE_AGE,
       riskFund: toNum(g.riskFund) ?? 0,
       paused: g.paused != null && g.paused !== 0n,
       // See the schema note above: 1-of-1 by construction, not a multi-signer threshold.
       signerThreshold: relayerSet ? 1 : 0,
       oracle: {
-        mode: "single-relayer",
+        mode: relayerSet ? "single-relayer" : "unset",
         relayer,
         threshold: relayerSet ? 1 : 0,
         multiSig: false,
+        address: oracleAddr,
+        signedPath: !!oracleSet,
       },
       fees: {
         burn: toNum(g.feesToBurn) ?? 0,

@@ -12,15 +12,16 @@
 | 项 | 值 |
 |---|---|
 | 读链 | Arbitrum Sepolia（chainId 421614） |
-| PlanetCore | `0xcAdE768f59921e6eE09E57DE4cf974ffb3a5080D` |
-| PLT token（ERC-20） | `0xfD656CECcb7B46E7A670ec7dedbb4853C82Ed586` |
-| Timelock | `0x71E9dDf3c8E9B332d99A7Ea7D0d7305f7aAC95E2` |
+| PlanetCore | `0xB3FC376FF511B379fdC88A01406888Bd63F76C9A` |
+| PLT token（ERC-20） | `0x5102B8A6F79c1b8bd11EcE6ddcA1a3884cCD5e93` |
+| Timelock | `0x2d762e9A7B03569EFcCbA7AACDBAc0AAF0170016` |
 | 篮子 | 14 资产 · `weightSum = 1,000,000` · `baseLocked = true` |
 | PPI | `1.003830`（2026-10-25 推送后，手算与链上一致） |
 | 预言机 | 每小时 GitHub Actions（`.github/workflows/evm-push.yml`）→ `updatePrice` |
-| 预言机信任级 | **单 relayer（1-of-1）**；`SignedPriceOracle` 已实现、**未部署、未接线** |
+| 预言机信任级 | **1-of-1**；两条路径（`updatePrice` onlyRelayer / `updatePriceSigned`）**都已接线**，`SignedPriceOracle` 已部署，但 signer set 是 1-of-1（一个运营方持有全部密钥）|
 | 站点 | 已切 EVM 只读：`/api/v1/status`、`/api/v1/oracle`、dashboard、landing ticker |
 | 铸赎 UI | **仍是 TON Mini App**（`app-tg/`）；**Arbitrum 上没有任何铸赎界面** |
+| PriceOracle | `0x239Ac0311284D711e67D8864C655706E962dd893` |
 | 未部署 | PlanetBond / PlanetFund / PlanetGov / PLTG —— 仅存在于 `ton/` |
 | 审计 | 无 |
 
@@ -34,8 +35,8 @@
 ### 仍未做（下一会话从这里接）
 
 - `web/whitepaper.html`：**27 处 TON 引用未处理**（§2 架构 / §7 oracle / §12 证据 / 附录 C 代码 / 附录 F 部署 / 地址）。**§3 PPI、§4 费率、§5 稳定、§9 治理、§10 代币经济不要动** —— 这些机制没变。
-- **M-of-N 接线**：`SignedPriceOracle` 要接进 Core（`updatePriceSigned`）需要改合约 + **重新部署（换地址）**。所以若要申请 grant，**先决定这一步再做 §8 地址**。
-- 合约级缺陷（改合约才能修）：`lastOracleUpdate` 是**全局**一个、不是每资产；`priceJumpOk` 拒绝 >50% 单次变动且**无旁路** ⇒ 一次 >50% 行情会让价格推不上去，6h 后铸造永久停摆。
+- **M-of-N 提高到 2-of-3**：合约与 oracle 都已就位，剩下的只是 `setSigners([a,b,c], 2)` + 把密钥分散到不同人手里。不需要重新部署。
+- ~~合约级缺陷~~ **已修（2026-10-25 重新部署到新地址）**：`Asset.lastUpdate` 逐资产 + `mint` 看 `oldestActiveUpdate()`；`forcePrice()` 提供 >50% 的 timelock 旁路；`setRiskState()` 可冻结死掉的源。
 - 铸赎 UI 迁到 EVM（TON Connect → viem/wagmi），工作量最大。
 
 ### 页面已声明的诚实边界

@@ -70,10 +70,11 @@ dashboard/API, a Telegram Mini App, and the public audit-preparation pack. Prior
 - We are **not** asking for funding to write a whitepaper; the code exists. We are asking for the audit and the
   first partner pilot, because those are the two things that cannot be faked.
 - KYC: the entity is disclosed and prepared to complete the Foundation's KYC.
-- **The oracle on Arbitrum is a single relayer address today.** `PlanetCore.updatePrice` is `onlyRelayer`;
-  `SignedPriceOracle` (M-of-N, distinct-signer bitmap, EIP-2 malleability checks) is written and unit-tested
-  but **not deployed and not wired into the core**. We would rather state that than let a reviewer assume a
-  threshold that does not exist.
+- **The oracle runs on one operator key today.** `PlanetCore.updatePrice` is `onlyRelayer`, and `SignedPriceOracle`
+  (M-of-N, distinct-signer bitmap, EIP-2 malleability checks) **is deployed and wired** via `updatePriceSigned` —
+  but its signer set is 1-of-1 with that same key, because one operator holds every key. Raising the threshold is
+  a `setSigners()` call, not a redeploy. We would rather state that than let a reviewer assume a threshold that
+  is not yet enforced by independent key holders.
 - **The Arbitrum deployment is read-only from this site.** Minting and redeeming still run through the TON
   Mini App. Porting the UI is part of the work this grant would fund, not something we are claiming is done.
 
@@ -82,9 +83,10 @@ dashboard/API, a Telegram Mini App, and the public audit-preparation pack. Prior
 - Repo: https://github.com/everest-an/planet-stablecoin
 - EVM implementation: `monad/` (Solidity 0.8.24, Foundry; CI: `.github/workflows/monad-build.yml`)
 - Deployed on **Arbitrum Sepolia** (chainId 421614):
-  - PlanetCore — `0xcAdE768f59921e6eE09E57DE4cf974ffb3a5080D`
-  - PLT token (ERC-20) — `0xfD656CECcb7B46E7A670ec7dedbb4853C82Ed586`
-  - PlanetTimelock — `0x71E9dDf3c8E9B332d99A7Ea7D0d7305f7aAC95E2`
+  - PlanetCore — `0xB3FC376FF511B379fdC88A01406888Bd63F76C9A`
+  - PLT token (ERC-20) — `0x5102B8A6F79c1b8bd11EcE6ddcA1a3884cCD5e93`
+  - PlanetTimelock — `0x2d762e9A7B03569EFcCbA7AACDBAc0AAF0170016`
+  - SignedPriceOracle — `0x239Ac0311284D711e67D8864C655706E962dd893`
 - Live read API (returns the on-chain index right now): https://ppppp.space/api/v1/status
 - Oracle health: https://ppppp.space/api/v1/oracle?full=1
 - Contact: e@ppppp.space

@@ -17,11 +17,16 @@
 //   while minting was actually blocked for 18h of every day. Here `maxAgeSeconds` is 21600 and the
 //   push runs hourly, so "fresh" now means "minting is actually open".
 //
+//   `ageSeconds` is measured from oldestActiveUpdate(), NOT lastOracleUpdate: the core gates minting
+//   on the STALEST active asset, so a health check based on the newest push would report healthy
+//   while one dead input keeps minting closed. This was the masking bug the per-asset upgrade fixed.
+//
 // ORACLE TRUST LEVEL (be explicit — graders and auditors read this field):
-//   mode "single-relayer": Core.updatePrice is `onlyRelayer`, i.e. one EOA. SignedPriceOracle
-//   (M-of-N, EIP-2 malleability checks, distinct-signer bitmap) exists in monad/src but is NOT
-//   deployed and NOT wired into Core. There is therefore no signer set to enumerate, and `signers`
-//   reports exactly that instead of inventing a threshold.
+//   mode "single-relayer": both price paths run on ONE operator key. Core.updatePrice is
+//   `onlyRelayer`, and SignedPriceOracle is deployed and wired (`updatePriceSigned` works) but its
+//   signer set is 1-of-1 with that same key, because one operator holds all the keys today.
+//   `oracle.signedPath` reports whether the signed path is available; `signers` never claims a
+//   threshold the deployment does not enforce.
 
 import {
   CHAIN,
@@ -43,28 +48,43 @@ const ZERO_ADDR = "0x" + "0".repeat(40);
 
 async function readOracle(full) {
   const g = await readScalars(
-    ["assetCount", "currentPpi", "lastOracleUpdate", "baseLocked", "relayer", "owner", "paused", "weightSum"],
+    [
+      "assetCount",
+      "currentPpi",
+      "lastOracleUpdate",
+      "oldestActiveUpdate",
+      "baseLocked",
+      "relayer",
+      "owner",
+      "paused",
+      "weightSum",
+      "oracle",
+    ],
     { timeoutMs: BUDGET_MS },
   );
 
   const assetCount = toNum(g.assetCount);
   const lastOracleUpdate = toNum(g.lastOracleUpdate);
-  if (assetCount == null || lastOracleUpdate == null) return { unreachable: true };
+  const oldestUpdate = toNum(g.oldestActiveUpdate);
+  if (assetCount == null || lastOracleUpdate == null || oldestUpdate == null) return { unreachable: true };
 
   const ppi = g.currentPpi == null ? null : toNum(g.currentPpi) / SCALE;
   const relayer = toAddress(g.relayer);
   const owner = toAddress(g.owner);
+  const oracleAddr = toAddress(g.oracle);
   const relayerConfigured = !!relayer && relayer !== ZERO_ADDR;
+  const oracleSet = !!oracleAddr && oracleAddr !== ZERO_ADDR;
   const baseLocked = g.baseLocked != null && g.baseLocked !== 0n;
   const paused = g.paused != null && g.paused !== 0n;
 
   const now = Math.floor(Date.now() / 1000);
-  const ageSeconds = lastOracleUpdate > 0 ? Math.max(0, now - lastOracleUpdate) : null;
+  const ageSeconds = oldestUpdate > 0 ? Math.max(0, now - oldestUpdate) : null;
 
   const reasons = [];
   const warnings = [];
 
   if (lastOracleUpdate === 0) reasons.push("oracle_never_pushed");
+  else if (oldestUpdate === 0) reasons.push("some_assets_never_updated");
   else if (ageSeconds > MAX_ORACLE_AGE) reasons.push(`oracle_price_stale:${ageSeconds}s`);
   if (!relayerConfigured) reasons.push("no_relayer_configured");
   if (paused) reasons.push("core_paused");
@@ -72,16 +92,17 @@ async function readOracle(full) {
   if (!assetCount) warnings.push("empty_basket");
 
   const data = {
-    rev: "evm-1",
+    rev: "evm-2",
     network: "testnet",
     chain: CHAIN,
     core: CORE,
     isCurrentDeployment: true,
     checkedAt: now,
     lastOracleUpdate,
+    oldestAssetUpdate: oldestUpdate || null,
     ageSeconds,
     maxAgeSeconds: MAX_ORACLE_AGE,
-    fresh: lastOracleUpdate > 0 && ageSeconds <= MAX_ORACLE_AGE,
+    fresh: oldestUpdate > 0 && ageSeconds <= MAX_ORACLE_AGE,
     ppi,
     signers: {
       count: relayerConfigured ? 1 : 0,
@@ -90,7 +111,7 @@ async function readOracle(full) {
       mode: "single-relayer",
       multiSig: false,
     },
-    oracle: { relayer, owner, mode: "single-relayer", multiSig: false },
+    oracle: { address: oracleAddr, signedPath: oracleSet, relayer, owner, mode: "single-relayer", multiSig: false },
     baseLocked,
     paused,
     assetCount,
@@ -103,6 +124,7 @@ async function readOracle(full) {
     const rows = assetCount > 0 ? await readAssets(assetCount, { timeoutMs: BUDGET_MS }) : [];
     const frozen = [];
     const caution = [];
+    const stale = [];
     let weightSum = 0;
     let read = 0;
 
@@ -112,6 +134,7 @@ async function readOracle(full) {
       weightSum += r.weight;
       if (r.riskState === 2) frozen.push(r.index);
       else if (r.riskState === 1) caution.push(r.index);
+      if (r.riskState !== 2 && (r.lastUpdate === 0 || now - r.lastUpdate > MAX_ORACLE_AGE)) stale.push(r.index);
     }
 
     const complete = read === assetCount;
@@ -124,6 +147,7 @@ async function readOracle(full) {
       weightsValid: complete && weightSum === WEIGHT_SCALE,
       frozen,
       caution,
+      stale,
       // computePpi() skips ONLY riskState==2. Caution (1) is flagged for humans but still counts —
       // relayer/README.md claims otherwise for the TON contract; that claim is wrong on EVM.
       excludedFromPpi: frozen,
@@ -131,6 +155,7 @@ async function readOracle(full) {
     if (!complete) warnings.push(`basket_scan_incomplete:${read}of${assetCount}`);
     if (complete && weightSum !== WEIGHT_SCALE) reasons.push(`weights_do_not_sum:${weightSum}`);
     if (frozen.length) warnings.push(`frozen_commodities:${frozen.length}`);
+    if (stale.length) warnings.push(`stale_inputs:${stale.length}`);
     data.healthy = reasons.length === 0;
     data.reasons = reasons;
     data.warnings = warnings;

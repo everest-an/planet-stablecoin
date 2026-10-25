@@ -286,11 +286,13 @@
           document.getElementById("c1").textContent = s.assetCount;
           document.getElementById("c2").textContent = fmt(s.supply, 0);
           document.getElementById("c3").textContent = fmt(s.reserve, 0);
-          const ageSec = s.lastOracleUpdate
-            ? Math.max(0, Math.floor(Date.now() / 1000) - Number(s.lastOracleUpdate))
-            : null;
+          // The card and the warning must reflect what mint() actually gates on: the STALEST active
+          // asset (oldestAssetUpdate). Using lastOracleUpdate here would show a fresh "oracle age"
+          // while one dead input keeps minting closed.
+          const stamp = s.oldestAssetUpdate ?? s.lastOracleUpdate;
+          const ageSec = stamp ? Math.max(0, Math.floor(Date.now() / 1000) - Number(stamp)) : null;
           const c4 = document.getElementById("c4");
-          c4.textContent = ageText(s.lastOracleUpdate);
+          c4.textContent = ageText(stamp);
           c4.style.color = ageSec !== null && ageSec > 21600 ? "var(--signal, #c2401c)" : "";
           // The EVM core authorises ONE relayer EOA (onlyRelayer); SignedPriceOracle (M-of-N) is not
           // deployed. Show that truthfully instead of printing a "1" that reads like a threshold.
@@ -310,7 +312,7 @@
           const staleNote = document.getElementById("staleNote");
           if (ageSec !== null && ageSec > 21600) {
             staleNote.textContent =
-              "oracle is stale (" + ageText(s.lastOracleUpdate) + ") — minting is blocked until a fresh price is pushed.";
+              "oracle is stale (" + ageText(stamp) + ") — minting is blocked until a fresh price is pushed.";
             staleNote.style.display = "block";
             staleNote.style.color = "#e8590c";
           } else {
