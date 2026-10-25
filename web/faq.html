@@ -154,10 +154,10 @@
         <h2>How do I mint or redeem PLT?</h2>
         <p>
           Open the Mini App at <a href="https://app.ppppp.space">app.ppppp.space</a> and connect a
-          TON wallet. Minting is <b>not available on the Arbitrum deployment yet</b>: this site reads
-          Arbitrum, but the mint/redeem flow still runs through the TON Mini App — it deposits a test
-          amount, issues PLT at the current index, and redeeming burns PLT through the jetton minter
-          back to the core. You always sign in your own wallet — Planet never holds keys.
+          wallet. There are two paths: <b><a href="/app">/app</a></b> mints and redeems against the
+          Arbitrum contracts from an EVM wallet (note: <code>mint()</code> takes a declared deposit and
+          transfers no collateral — it is a testnet accounting exercise), and the Telegram Mini App does
+          the same on TON. You always sign in your own wallet — Planet never holds keys.
         </p>
       </article>
 
@@ -251,7 +251,7 @@
           { "@type": "Question", "name": "What is in the basket and who sets the weights?", "acceptedAnswer": { "@type": "Answer", "text": "The live basket holds 14 commodities including WTI and Brent crude, natural gas, gold, silver, copper, wheat, corn, soybean, coffee and lumber, lithium, water and carbon proxies. No commodity may exceed 15% and weights must sum to 100%; governance sets them and base prices are frozen once locked." } },
           { "@type": "Question", "name": "Where do the prices come from?", "acceptedAnswer": { "@type": "Answer", "text": "An off-chain relayer fetches each commodity from two independent sources, takes the median, signs it with an ed25519 key and pushes it on-chain where the signature is verified. If the sources diverge by more than 2% the commodity is frozen and excluded." } },
           { "@type": "Question", "name": "How often are prices updated?", "acceptedAnswer": { "@type": "Answer", "text": "A scheduled run pushes a commodity only when its price moved more than 0.1% since the last on-chain value, refreshed by a daily scheduled run; minting is refused against prices older than the six-hour on-chain guard." } },
-          { "@type": "Question", "name": "How do I mint or redeem PLT?", "acceptedAnswer": { "@type": "Answer", "text": "Minting is not available on the Arbitrum deployment yet. That flow still runs through the TON Mini App at app.ppppp.space: connect a TON wallet, mint PLT at the current index, and redeem by burning PLT through the jetton minter. You always sign in your own wallet." } },
+          { "@type": "Question", "name": "How do I mint or redeem PLT?", "acceptedAnswer": { "@type": "Answer", "text": "Two paths. The /app page mints and redeems against the Arbitrum contracts from an EVM wallet (mint takes a declared deposit and transfers no collateral - a testnet accounting exercise). The Telegram Mini App at app.ppppp.space does the same on TON. You always sign in your own wallet." } },
           { "@type": "Question", "name": "What fees are there?", "acceptedAnswer": { "@type": "Answer", "text": "A band-based fee of 0.5% near the index, 1% when the index is 3-5% off, and 2% beyond, with an extra penalty for exiting far below. Fees split 30% burn, 40% reserve, 20% staking and 10% risk fund." } },
           { "@type": "Question", "name": "Is there a governance token?", "acceptedAnswer": { "@type": "Answer", "text": "Yes, PLTG: a fixed-supply 1,000,000,000 TON-side token (not deployed on Arbitrum) with a staking and voting contract. Stakers receive the staking share of fees pro-rata and voting power is weighted by stake. It is testnet-only and not for sale." } },
           { "@type": "Question", "name": "Which network is it on?", "acceptedAnswer": { "@type": "Answer", "text": "Two testnets: Arbitrum Sepolia holds the basket, the on-chain index and the PLT token (what this site reads), and the TON testnet build serves the Mini App's mint/redeem. There is no mainnet deployment, no public sale and no exchange listing. Published addresses are testnet and their tokens carry no value." } },

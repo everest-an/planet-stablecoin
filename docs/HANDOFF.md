@@ -20,7 +20,7 @@
 | 预言机 | 每小时 GitHub Actions（`.github/workflows/evm-push.yml`）→ `updatePrice` |
 | 预言机信任级 | **1-of-1**；两条路径（`updatePrice` onlyRelayer / `updatePriceSigned`）**都已接线**，`SignedPriceOracle` 已部署，但 signer set 是 1-of-1（一个运营方持有全部密钥）|
 | 站点 | 已切 EVM 只读：`/api/v1/status`、`/api/v1/oracle`、dashboard、landing ticker |
-| 铸赎 UI | **仍是 TON Mini App**（`app-tg/`）；**Arbitrum 上没有任何铸赎界面** |
+| 铸赎 UI | **`/app` 已上线**（零依赖、注入式钱包直连 Core）；TON Mini App 仍在 |
 | PriceOracle | `0x239Ac0311284D711e67D8864C655706E962dd893` |
 | 未部署 | PlanetBond / PlanetFund / PlanetGov / PLTG —— 仅存在于 `ton/` |
 | 审计 | 无 |
@@ -37,7 +37,7 @@
 - `web/whitepaper.html`：**27 处 TON 引用未处理**（§2 架构 / §7 oracle / §12 证据 / 附录 C 代码 / 附录 F 部署 / 地址）。**§3 PPI、§4 费率、§5 稳定、§9 治理、§10 代币经济不要动** —— 这些机制没变。
 - **M-of-N 提高到 2-of-3**：合约与 oracle 都已就位，剩下的只是 `setSigners([a,b,c], 2)` + 把密钥分散到不同人手里。不需要重新部署。
 - ~~合约级缺陷~~ **已修（2026-10-25 重新部署到新地址）**：`Asset.lastUpdate` 逐资产 + `mint` 看 `oldestActiveUpdate()`；`forcePrice()` 提供 >50% 的 timelock 旁路；`setRiskState()` 可冻结死掉的源。
-- 铸赎 UI 迁到 EVM（TON Connect → viem/wagmi），工作量最大。
+- ~~铸赎 UI 迁到 EVM~~ **已做**：`web/app.html`（`/app`）零依赖直连；`mint(1000e6)` 链上返回 991203689，页面显示 991.203689。**`mint()` 不收抵押物**，页面已显著警示。
 
 ### 页面已声明的诚实边界
 

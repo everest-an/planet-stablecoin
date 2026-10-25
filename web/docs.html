@@ -66,9 +66,9 @@
       </p>
       <div class="note" style="border-left:3px solid #c2401c;padding:10px 14px;margin:18px 0">
         <b>Two chains, one protocol.</b> The EVM deployment described in §1–§4 is live on <b>Arbitrum Sepolia</b>
-        (PlanetCore, the PLT token and a timelock). It is <b>read-only from this site</b>: the public API, the
-        dashboard and the landing ticker all read it directly. <b>Minting and redeeming are not available on
-        Arbitrum yet</b> — that flow still runs through the TON Mini App (<code>app-tg/</code>), which is why the
+        (PlanetCore, the PLT token, a timelock and the price oracle). The public API, the dashboard and the
+        landing ticker all read it directly, and <a href="/app">/app</a> mints and redeems by calling the core
+        from your own wallet. The Telegram Mini App still runs its own mint flow on TON, which is why the
         TON addresses are still listed in §2. PlanetBond, PlanetFund, PlanetGov and PLTG exist in
         <code>ton/</code> and are <b>not deployed on Arbitrum</b> (§5).
       </div>
@@ -168,7 +168,7 @@
         <li><b>Burn/redeem:</b> <code>redeem(uint64 burnAmount)</code> burns the caller's PLT and credits
           the payout to <code>totalReserve</code>; the off-chain delivery of the underlying is the operator's
           job, handled separately from the burn so a failed delivery cannot desynchronise
-          supply. <b>There is no mint/redeem UI for the EVM deployment yet</b> — see the banner.</li>
+          supply. Mint and redeem from <a href="/app">/app</a>: it encodes the two calls directly and previews the contract's own arithmetic.</li>
       </ul>
       <p>
         Fees are band-based (0.5% near the index, 1% at 3–5% off, 2% beyond, plus a

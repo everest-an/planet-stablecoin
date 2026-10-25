@@ -75,8 +75,9 @@ dashboard/API, a Telegram Mini App, and the public audit-preparation pack. Prior
   but its signer set is 1-of-1 with that same key, because one operator holds every key. Raising the threshold is
   a `setSigners()` call, not a redeploy. We would rather state that than let a reviewer assume a threshold that
   is not yet enforced by independent key holders.
-- **The Arbitrum deployment is read-only from this site.** Minting and redeeming still run through the TON
-  Mini App. Porting the UI is part of the work this grant would fund, not something we are claiming is done.
+- **Mint/redeem now works on Arbitrum** at /app, but read what the contract does: `mint(uint64 deposit)` takes a
+  DECLARED deposit and transfers no collateral, so anyone can mint any amount. It exercises the accounting; it is
+  not a sale and not a redemption right. Wiring real collateral is the work this grant would fund.
 
 ## 8. Links
 
