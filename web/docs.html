@@ -61,10 +61,19 @@
 
     <main class="doc">
       <p class="notice" style="font-family: 'DM Mono', monospace">
-        [ developer docs · TON testnet PoC · unaudited ]
+        [ developer docs · Arbitrum Sepolia · unaudited ]
       </p>
+      <div class="note" style="border-left:3px solid #c2401c;padding:10px 14px;margin:18px 0">
+        <b>Two chains, one protocol.</b> The EVM deployment described in §1–§4 is live on <b>Arbitrum Sepolia</b>
+        (PlanetCore, the PLT token and a timelock). It is <b>read-only from this site</b>: the public API, the
+        dashboard and the landing ticker all read it directly. <b>Minting and redeeming are not available on
+        Arbitrum yet</b> — that flow still runs through the TON Mini App (<code>app-tg/</code>), which is why the
+        TON addresses are still listed in §2. PlanetBond, PlanetFund, PlanetGov and PLTG exist in
+        <code>ton/</code> and are <b>not deployed on Arbitrum</b> (§5).
+      </div>
+
       <h1>Architecture &amp; interfaces</h1>
-      <p class="sub">v1.7 · October 2026 · everything below is the deployed testnet reality, not a plan</p>
+      <p class="sub">v1.8 · October 2026 · §1–§4 describe the Arbitrum Sepolia deployment that this site reads; §5 is explicit about what is NOT deployed there</p>
 
       <p class="toc">
         <a href="#stack">1. Stack</a> · <a href="#addresses">2. Live contracts</a> ·
@@ -76,25 +85,36 @@
 
       <h2 id="stack">1. Stack</h2>
       <pre>
-   off-chain                       on-chain (TON, Tolk)
-   ─────────                       ─────────────────────
-   Yahoo + Sina  ──► relayer ──►   PlanetCore ──► JettonMinter (PLT)
-   (median, signed ed25519)        │  index, basket, fees, limits
-                                   ├──► PlanetBasket (composition registry)
-                                   ├──► PlanetBond   (stable-bond ledger)
-                                   ├──► PlanetFund   (tokenised fund: NAV, subscribe/redeem)
-                                   └──► PlanetGov    (PLTG staking, dividends, voting)
-                                          ▲
-                                       PlanetTimelock (delayed owner actions)</pre>
+  off-chain                        on-chain (Arbitrum Sepolia, Solidity)
+  ─────────                        ────────────────────────────────────
+  Yahoo + Sina ──► GitHub Actions ──► PlanetCore ──► PlanetToken (PLT, ERC-20)
+  (median of sources)   (hourly)     │  basket, on-chain index, fees, limits
+                                     └──► PlanetTimelock (delayed owner actions)
+
+  TON build (still live, powers the Mini App's mint/redeem):
+  ton/ = PlanetCore · PlanetBasket · PlanetBond · PlanetFund · PlanetGov · PLTG</pre>
       <p>
-        The core is deliberately small: it holds the basket, verifies signed prices, computes the
+        The EVM core is deliberately small: it holds the basket, accepts prices from its authorised relayer, computes the
         index, and accounts fees. Everything that does not need to be atomic with that lives in a
         separate contract. Every privileged action is owner-gated, and the owner can be migrated
         to a timelock (§6) so changes are proposed, delayed, then executed.
       </p>
 
-      <h2 id="addresses">2. Live contracts (TON testnet)</h2>
+      <h2 id="addresses">2. Live contracts</h2>
       <p class="note">Testnet only. These tokens have no value; nothing is listed anywhere.</p>
+      <h3>Arbitrum Sepolia (421614) — what this site reads</h3>
+      <table>
+        <tbody>
+          <tr><th>PlanetCore</th><td><code>0xcAdE768f59921e6eE09E57DE4cf974ffb3a5080D</code></td></tr>
+          <tr><th>PLT token</th><td><code>0xfD656CECcb7B46E7A670ec7dedbb4853C82Ed586</code></td></tr>
+          <tr><th>Timelock</th><td><code>0x71E9dDf3c8E9B332d99A7Ea7D0d7305f7aAC95E2</code></td></tr>
+        </tbody>
+      </table>
+      <p class="note">
+        Open any address on <b>sepolia.arbiscan.io</b>, or call <code>eth_call</code> yourself with the
+        selectors in §9 — no library required.
+      </p>
+      <h3>TON testnet — powers the Mini App's mint/redeem</h3>
       <table>
         <tbody>
           <tr><th>PlanetCore</th><td><code>kQBUIDOcKIQZS_AMXjOL3usH69c3HIo0YudLoo_49eE0X2NJ</code></td></tr>
@@ -105,47 +125,48 @@
           <tr><th>Fund owner timelock (older, separate)</th><td><code>kQBo0345y-RGi49-7WWaWAHyyNtiWe-JrT44iO3G9Cyom6YK</code></td></tr>
         </tbody>
       </table>
-      <p class="note">
-        Open any address in a TON testnet explorer (e.g. tonviewer) and call the get-methods
-        yourself — see §9.
-      </p>
 
       <h2 id="oracle">3. The oracle flow</h2>
       <p>
-        Planet does not depend on a third-party oracle network. Instead it accepts a signed price
-        and verifies the signature on-chain, which means "connecting a real data source" reduces
-        to publishing a public key.
+        Planet does not depend on a third-party oracle network. On the EVM deployment the core accepts a price
+        from a single authorised relayer address and recomputes the index on-chain, which means "connecting a real
+        data source" reduces to funding one key.
       </p>
       <ol>
         <li>The relayer builds a payload <code>{index, price, volatility, liquidity, riskState, timestamp}</code>.</li>
-        <li>It signs <code>hash(domain_tag ‖ core_address ‖ payload)</code> with its ed25519 key —
-          the domain tag and contract address prevent replaying the payload on another deployment.</li>
-        <li><code>SignedPriceUpdate</code> (or <code>SignedPriceUpdateN</code> for M&gt;2) carries the
-          signature(s) and payload; anyone may relay it — authenticity comes from the signature,
-          not from the sender.</li>
-        <li>The core checks: enough distinct registered signers, strictly increasing timestamp,
+        <li>On EVM: no signature is involved at all. The relayer calls <code>updatePrice(index, price, volatility,
+          liquidity, riskState, timestamp)</code> directly; authorisation is <code>msg.sender == core.relayer</code>.</li>
+        <li>The strictly increasing <code>timestamp</code> is the replay guard: every call sets
+          <code>lastOracleUpdate</code>, so a repeated timestamp reverts <code>BadTimestamp</code>.
+          Anyone may <i>call</i> it, but only the relayer's call is accepted.</li>
+        <li>The core checks: caller is the relayer, timestamp is strictly increasing,
           index in range, basket weights sum to 100%, and the price-jump guard.</li>
         <li>It recomputes the index over the active basket and stores the new value.</li>
       </ol>
-      <p>Registration is two owner messages: <code>SetSigner{index, key}</code> and
-        <code>SetThreshold{m}</code>. A registered CAM adapter address can push instead
-        (<code>SetCam</code> + <code>CamUpdate</code>).</p>
+      <p class="note">
+        The push runs hourly from GitHub Actions (<code>.github/workflows/evm-push.yml</code>). That cadence is not cosmetic:
+        <code>MAX_ORACLE_AGE</code> is 6 hours and <code>mint()</code>/<code>redeem()</code> revert <code>StaleOracle</code> past it, so minting would be closed
+        most of the day on a daily schedule.
+      </p>
+      <p>There is no signer registration on EVM: the oracle is one address set by
+        <code>setRelayer(address)</code> (owner action). The M-of-N verifier
+        (<code>monad/src/SignedPriceOracle.sol</code>) is written and unit-tested but <b>not deployed and not wired into the core</b> — so this is a single-key oracle today, and we say so on the dashboard.</p>
 
       <h2 id="token">4. Token, mint &amp; redeem</h2>
       <p>
-        PLT is a standard <b>TEP-74</b> jetton; the minter's supply is the source of truth, and
-        the core keeps a mirror for accounting.
+        On EVM, PLT is a plain <b>ERC-20</b> (<code>PlanetToken</code>). The core is its only minter
+        (<code>token.minter == core</code>), and the core keeps the supply accounting.
       </p>
       <ul>
-        <li><b>Mint:</b> <code>Mint{queryId, amount}</code> to the core → the core computes
-          <code>amount·(1−fee)/index</code>, forwards <code>MintNewJettons</code> to the minter,
+        <li><b>Mint:</b> <code>mint(uint64 deposit)</code> on the core → it computes
+          <code>deposit·(1−fee)/index</code> and mints PLT to the caller,
           and updates reserve/supply. Minting is refused if the basket is far off peg
           (<code>ERR_DEVIATION</code>), above the per-tx cap, or if the oracle price is older than
           six hours (<code>ERR_STALE_PRICE</code>).</li>
-        <li><b>Burn/redeem:</b> the user's own jetton wallet receives a standard
-          <code>AskToBurn</code>; the minter burns and notifies the core, which mirrors the
-          accounting (<code>BurnMirror</code>). The payout rails are the operator's job, handled
-          separately from the burn so a delivery failure cannot desynchronise supply.</li>
+        <li><b>Burn/redeem:</b> <code>redeem(uint64 burnAmount)</code> burns the caller's PLT and credits
+          the payout to <code>totalReserve</code>; the off-chain delivery of the underlying is the operator's
+          job, handled separately from the burn so a failed delivery cannot desynchronise
+          supply. <b>There is no mint/redeem UI for the EVM deployment yet</b> — see the banner.</li>
       </ul>
       <p>
         Fees are band-based (0.5% near the index, 1% at 3–5% off, 2% beyond, plus a
@@ -153,7 +174,7 @@
         fund</b>.
       </p>
 
-      <h2 id="fund">5. The fund</h2>
+      <h2 id="fund">5. The fund — TON build only, NOT deployed on Arbitrum</h2>
       <p>
         <code>PlanetFund</code> is the "real product" shape: subscribers deposit, a custodian set
         confirms the purchase at the attested NAV (<b>M-of-N</b>, and shares are minted only on
@@ -165,7 +186,7 @@
         cannot be paid out.
       </p>
 
-      <h2 id="gov">6. Governance</h2>
+      <h2 id="gov">6. Governance — PLTG and PlanetGov are TON-only; on Arbitrum the owner is the timelock</h2>
       <ul>
         <li><b>PLTG</b> — a fixed-supply (1e9) TEP-74 token. <code>PlanetGov</code> holds stakes and
           distributes the staking fee bucket pro-rata using a reward-per-share accumulator;
@@ -181,7 +202,7 @@
       <table>
         <tbody>
           <tr><th><code>GET /api/v1/status</code></th><td>Live index + full basket + accounting as JSON. Versioned path, <code>ETag</code> + <code>304</code>, one error envelope, <code>503</code>+<code>Retry-After</code> when the RPC is rate-limited.</td></tr>
-          <tr><th><code>GET /api/v1/oracle</code></th><td>Is the price feed alive and sane? The age of the last push against the 6-hour limit, the signer set and threshold, whether base prices are locked, and — with <code>?full=1</code> — the weights check plus frozen/caution commodities and the signer keys. Cheap by default so a monitor can poll it. <b>503</b> means "could not read the chain", never a false "healthy".</td></tr>
+          <tr><th><code>GET /api/v1/oracle</code></th><td>Is the price feed alive and sane? The age of the last push against the 6-hour limit, the relayer address (single key, no threshold), whether base prices are locked, and — with <code>?full=1</code> — the weights check plus frozen/caution commodities and the signer keys. Cheap by default so a monitor can poll it. <b>503</b> means "could not read the chain", never a false "healthy".</td></tr>
           <tr><th><code>GET /openapi.json</code></th><td>The OpenAPI 3.1 contract — generate a client from it instead of hand-parsing.</td></tr>
           <tr><th><code>/api/status</code></th><td>Deprecated alias; replies <code>308</code> with <code>Deprecation</code> / <code>Sunset</code> / <code>Link</code> headers.</td></tr>
         </tbody>
@@ -194,7 +215,8 @@
 
       <h2 id="run">8. Run it yourself</h2>
       <pre>repo layout
-  ton/            Tolk contracts + tests (Acton toolchain; builds in CI)
+  monad/          Solidity contracts + tests (Foundry) — the Arbitrum deployment this site reads
+  ton/            Tolk contracts + tests (Acton toolchain; builds in CI) — the Mini App's chain
     contracts/    planet_core, planet_fund, planet_gov, planet_timelock, jetton/*
     scripts/      deploy + migration scripts
   relayer/        the off-chain price relayer (node, no third-party oracle)
@@ -203,7 +225,8 @@
       <ul>
         <li><b>Contracts:</b> <code>acton build &amp;&amp; acton wrapper --all &amp;&amp; acton test --coverage</code>
           (Acton needs Linux/WSL; CI does it on every push).</li>
-        <li><b>Relayer:</b> <code>node relayer.mjs configure|register|push</code> with
+        <li><b>EVM push:</b> <code>node push-evm.mjs [--dry-run]</code> (Yahoo+Sina median → <code>updatePrice</code>).</li>
+        <li><b>TON relayer:</b> <code>node relayer.mjs configure|register|push</code> with
           <code>PLANET_CORE</code>, <code>RELAYER_MNEMONIC</code> and <code>ASSETS_JSON</code>.</li>
         <li><b>Site/app:</b> static + serverless; the Mini App reads <code>VITE_PLANET_ADDRESS</code>
           and <code>VITE_PLT_MINTER_ADDRESS</code> at build time.</li>

@@ -6,24 +6,24 @@
     <title>Planet — on-chain commodity purchasing-power index</title>
     <meta
       name="description"
-      content="Planet (PLT) aggregates real commodity prices into an on-chain purchasing-power index on TON. Synthetic index token — Phase 1 PoC, not a fully-collateralised stablecoin."
+      content="Planet (PLT) aggregates real commodity prices into an on-chain purchasing-power index on Arbitrum Sepolia. Synthetic index token — Phase 1 PoC, not a fully-collateralised stablecoin."
     />
     <link rel="canonical" href="https://ppppp.space/" />
     <meta name="theme-color" content="#0f0f0f" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Planet" />
     <meta property="og:url" content="https://ppppp.space/" />
-    <meta property="og:title" content="Planet — on-chain commodity purchasing-power index (TON)" />
+    <meta property="og:title" content="Planet — on-chain commodity purchasing-power index (Arbitrum)" />
     <meta
       property="og:description"
-      content="A basket of 14 global commodities priced on-chain, expressed as one index (PPI) and the PLT token. Phase 1 PoC on TON — no reserve, not a stablecoin."
+      content="A basket of 14 global commodities priced on-chain, expressed as one index (PPI) and the PLT token. Phase 1 PoC on Arbitrum Sepolia — no reserve, not a stablecoin."
     />
     <meta property="og:image" content="https://ppppp.space/icon.png" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Planet — on-chain commodity purchasing-power index (TON)" />
+    <meta name="twitter:title" content="Planet — on-chain commodity purchasing-power index (Arbitrum)" />
     <meta
       name="twitter:description"
-      content="14 commodities, one on-chain index. Phase 1 PoC on TON — no reserve, not a stablecoin."
+      content="14 commodities, one on-chain index. Phase 1 PoC on Arbitrum Sepolia — no reserve, not a stablecoin."
     />
     <meta name="twitter:image" content="https://ppppp.space/icon.png" />
     <script type="application/ld+json">
@@ -36,7 +36,7 @@
             "name": "Planet",
             "url": "https://ppppp.space/",
             "logo": "https://ppppp.space/icon.png",
-            "description": "Planet builds an on-chain commodity purchasing-power index (PPI) on TON. Phase 1 synthetic index token — not a stablecoin."
+            "description": "Planet builds an on-chain commodity purchasing-power index (PPI) on Arbitrum Sepolia. Phase 1 synthetic index token — not a stablecoin."
           },
           {
             "@type": "WebSite",
@@ -50,7 +50,7 @@
             "@type": "WebPage",
             "url": "https://ppppp.space/",
             "isPartOf": { "@id": "https://ppppp.space/#site" },
-            "about": "On-chain commodity purchasing-power index (PPI) on TON"
+            "about": "On-chain commodity purchasing-power index (PPI) on Arbitrum Sepolia"
           }
         ]
       }
@@ -85,11 +85,11 @@
       <!-- HERO -->
       <section class="hero">
         <p class="notice">[ PoC — no reserve, no redemption, no market price · not a stablecoin · not an investment ]</p>
-        <p class="eyebrow">[ on-chain commodity purchasing-power index · TON ]</p>
+        <p class="eyebrow">[ on-chain commodity purchasing-power index · Arbitrum Sepolia ]</p>
         <h1>A purchasing-power index for the world's commodities, <em>on-chain</em>.</h1>
         <p class="lede">
           Planet (PLT) aggregates the real prices of energy, metals and agriculture into one
-          on-chain index — a synthetic index token (TEP-74), verifiable on TON and mintable from
+          on-chain index — a synthetic index token (ERC-20), verifiable on Arbitrum Sepolia and mintable from
           your wallet.
         </p>
         <div class="hero-cta">
@@ -110,7 +110,7 @@
           <div class="sec-head"><span class="num">[ 01 ]</span><span class="lbl">what it is</span><span class="end">¬</span></div>
           <ul class="marks yes">
             <li>An on-chain <b>commodity purchasing-power index</b> expressed as the PLT token.</li>
-            <li>A <b>synthetic index token</b> (TEP-74) on <b>TON</b>, with mint / burn / redemption accounting.</li>
+            <li>A <b>synthetic index token</b> (ERC-20) on <b>Arbitrum Sepolia</b>, with mint / burn / redemption accounting.</li>
             <li>Prices sourced by an <b>off-chain relayer</b> from <b>two independent feeds</b>, verified on-chain by ed25519 signatures.</li>
             <li>Governed by an <b>owner + timelock</b> (Propose → delay → Execute), multisig-ready.</li>
           </ul>
@@ -155,7 +155,7 @@
             <span class="step-n">04</span>
             <div>
               <h3>Mint / burn</h3>
-              <p>Deposit to mint PLT at the current PPI (fee split 30/50/20, +10% risk fund). Burns mirror through the jetton minter back to core accounting.</p>
+              <p>Deposit to mint PLT at the current PPI (fee split 30/50/20, +10% risk fund). Burns are executed by the core against the PLT token, so token supply and core accounting stay in step.</p>
             </div>
           </li>
         </ol>
@@ -167,7 +167,7 @@
         <div class="props">
           <div class="prop"><span class="pk">oracle</span><span class="pv">multi-source · M-of-N</span></div>
           <div class="prop"><span class="pk">governance</span><span class="pv">owner + timelock</span></div>
-          <div class="prop"><span class="pk">token</span><span class="pv">TEP-74 (Jetton)</span></div>
+          <div class="prop"><span class="pk">token</span><span class="pv">ERC-20 (PLT)</span></div>
           <div class="prop"><span class="pk">guards</span><span class="pv">price-jump · staleness · freeze</span></div>
           <div class="prop"><span class="pk">fees</span><span class="pv">45 / 30 / 25 split</span></div>
           <div class="prop"><span class="pk">tests</span><span class="pv">108 · 90% coverage</span></div>
@@ -179,8 +179,8 @@
         <div class="sec-head"><span class="num">[ 05 ]</span><span class="lbl">status</span><span class="end">¬</span></div>
         <table class="status-table">
           <tbody>
-            <tr><td>network</td><td>TON testnet (live)</td></tr>
-            <tr><td>contracts</td><td>PlanetCore · PLT Jetton · Basket · Bond · Timelock</td></tr>
+            <tr><td>network</td><td>Arbitrum Sepolia (live)</td></tr>
+            <tr><td>contracts</td><td>PlanetCore · PLT token · Timelock</td></tr>
             <tr><td>phase</td><td>Phase 1 PoC — synthetic index token</td></tr>
             <tr><td>audit</td><td>not yet — pre-mainnet gate</td></tr>
             <tr><td>1:1 reserve</td><td>future — requires RWA custody + compliance</td></tr>
@@ -197,19 +197,19 @@
         <ol class="steps">
           <li>
             <span class="step-n">01</span>
-            <div><h3>Get a wallet</h3><p>Install a TON wallet (e.g. Tonkeeper) and keep your recovery phrase safe.</p></div>
+            <div><h3>Get a wallet</h3><p>Reading needs no wallet. To transact, install an EVM wallet (e.g. MetaMask or Rabby) and keep your recovery phrase safe.</p></div>
           </li>
           <li>
             <span class="step-n">02</span>
-            <div><h3>Get testnet TON</h3><p>This is TON <b>testnet</b> — request free test TON from a faucet (e.g. the Telegram bot <code>@testgiver_ton_bot</code>).</p></div>
+            <div><h3>Get testnet ETH</h3><p>This is Arbitrum Sepolia — get free test ETH from a faucet (e.g. <code>faucet.arbitrum.io</code>) if you want to send transactions.</p></div>
           </li>
           <li>
             <span class="step-n">03</span>
-            <div><h3>Open the app</h3><p>Open the Mini App and tap <b>Connect wallet</b>. Planet never sees your keys.</p></div>
+            <div><h3>Open the app</h3><p>Open the <a href="/dashboard">live dashboard</a> — it renders straight from the contract and needs no wallet. Planet never sees your keys.</p></div>
           </li>
           <li>
             <span class="step-n">04</span>
-            <div><h3>Mint / burn</h3><p>Enter an amount and approve in your wallet; burn PLT back through the jetton wallet.</p></div>
+            <div><h3>Mint / burn</h3><p>Not available on Arbitrum yet: mint and redeem still run through the TON Mini App. This Arbitrum deployment is read-only from this site.</p></div>
           </li>
         </ol>
       </section>
@@ -219,24 +219,24 @@
         <div class="sec-head"><span class="num">[ 07 ]</span><span class="lbl">trust &amp; safety</span><span class="end">¬</span></div>
         <ul class="marks yes">
           <li><b>Non-custodial</b> — the app never holds keys; you sign in your own wallet, so the site cannot move funds.</li>
-          <li><b>Verifiable on-chain</b> — every price update is ed25519-signed and verified on TON; the index is computed on-chain.</li>
-          <li><b>Fail-safe oracle</b> — two independent feeds, median, M-of-N signers, staleness + price-jump guards, auto-freeze on divergence.</li>
+          <li><b>Verifiable on-chain</b> — every price update is written on-chain by the authorised relayer and the index is computed on-chain, so the number on screen is recomputable from the contract.</li>
+          <li><b>Fail-safe oracle</b> — two independent feeds with a median, staleness and price-jump guards, and a risk flag when the sources diverge.</li>
           <li><b>Governance</b> — owner actions can be migrated to a multisig and gated by a timelock (Propose → delay → Execute).</li>
-          <li><b>Honest limits</b> — <b>not audited yet</b>; Phase 1 holds no real reserve (see “what it is not”).</li>
+          <li><b>Honest limits</b> — <b>not audited yet</b>; the price oracle is a single relayer key (the M-of-N verifier is written but not deployed); Phase 1 holds no real reserve (see “what it is not”).</li>
         </ul>
       </section>
 
       <!-- CONTRACTS -->
       <section id="contracts">
-        <div class="sec-head"><span class="num">[ 08 ]</span><span class="lbl">contracts · TON testnet</span><span class="end">¬</span></div>
+        <div class="sec-head"><span class="num">[ 08 ]</span><span class="lbl">contracts · Arbitrum Sepolia</span><span class="end">¬</span></div>
         <table class="status-table doc-table">
           <tbody>
-<tr><td>PlanetCore</td><td><code>kQBUIDOcKIQZS_AMXjOL3usH69c3HIo0YudLoo_49eE0X2NJ</code></td></tr>
-<tr><td>PLT Jetton</td><td><code>kQC6zZ83qploNLCy0MdUNhKkBD9Tx25N-xWF7iDHkd3IJ2k3</code></td></tr>
-            <tr><td>Timelock</td><td><code>kQDc_iZ7Y8lQ1r_TxXhOXrhKVrjShyyOgp5c2pUwtGGGJGDe</code></td></tr>
+<tr><td>PlanetCore</td><td><code>0xcAdE768f59921e6eE09E57DE4cf974ffb3a5080D</code></td></tr>
+<tr><td>PLT token</td><td><code>0xfD656CECcb7B46E7A670ec7dedbb4853C82Ed586</code></td></tr>
+            <tr><td>Timelock</td><td><code>0x71E9dDf3c8E9B332d99A7Ea7D0d7305f7aAC95E2</code></td></tr>
           </tbody>
         </table>
-        <p class="disclaimer">Verify these on a TON explorer (e.g. tonviewer testnet). Addresses may change before mainnet.</p>
+        <p class="disclaimer">Verify these on sepolia.arbiscan.io. Addresses may change before mainnet.</p>
       </section>
 
       <!-- HOW WE COMPARE -->
@@ -266,7 +266,7 @@
     <footer class="foot">
       <div class="foot-row">
         <span class="wordmark">Planet</span>
-        <span class="ver">[ v0.1 · TON testnet ]</span>
+        <span class="ver">[ v0.1 · Arbitrum Sepolia ]</span>
       </div>
       <nav class="foot-nav">
         <a href="https://app.ppppp.space">open app</a>

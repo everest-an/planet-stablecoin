@@ -3,12 +3,12 @@
   "info": {
     "title": "Planet public API",
     "version": "1.0.0",
-    "summary": "Read-only access to the Planet commodity purchasing-power index (PPI) on TON testnet.",
-    "description": "Planet is an on-chain commodity purchasing-power index on TON. This API exposes the live basket and index. It is READ-ONLY: minting and redemption happen on-chain, signed by the user's own wallet (Planet never holds keys). Phase 1 proof of concept — the index is a synthetic construction, not a stablecoin, and carries no monetary value.",
+    "summary": "Read-only access to the Planet commodity purchasing-power index (PPI) on Arbitrum Sepolia.",
+    "description": "Planet is an on-chain commodity purchasing-power index on Arbitrum Sepolia (chain id 421614). This API exposes the live basket and index. It is READ-ONLY: minting and redemption happen on-chain, signed by the user's own wallet (Planet never holds keys). Phase 1 proof of concept — the index is a synthetic construction, not a stablecoin, and carries no monetary value.",
     "contact": { "url": "https://ppppp.space/faq" },
     "license": { "name": "Apache-2.0" }
   },
-  "servers": [{ "url": "https://ppppp.space", "description": "Production (TON testnet)" }],
+  "servers": [{ "url": "https://ppppp.space", "description": "Production (Arbitrum Sepolia)" }],
   "tags": [
     {
       "name": "status",
@@ -114,13 +114,13 @@
           "readMs": { "type": "integer", "description": "Wall-clock milliseconds the API spent reading the chain." },
           "partial": { "type": "boolean", "description": "True when some values could not be read in the time budget (the response is still 200)." },
           "ppi": { "type": "number", "description": "Purchasing-power index. 1.0 = the base date; 6 decimals on-chain.", "examples": [1.001311] },
-          "supply": { "type": "integer", "description": "Core-side mirrored supply of PLT (the jetton minter is the source of truth)." },
+          "supply": { "type": "integer", "description": "PLT supply as tracked by PlanetCore (totalSupply()). The PLT token only lets the core mint, so the two agree." },
           "reserve": { "type": "integer", "description": "Core-side reserve accounting units." },
           "assetCount": { "type": "integer", "description": "Number of registered commodities." },
           "assetsReturned": { "type": "integer" },
           "lastOracleUpdate": { "type": "integer", "description": "Unix seconds of the last accepted oracle push." },
           "riskFund": { "type": "integer" },
-          "signerThreshold": { "type": "integer", "description": "M-of-N distinct signatures required by the oracle." },
+          "signerThreshold": { "type": "integer", "description": "1. The EVM core authorises a single relayer address (updatePrice is onlyRelayer); the M-of-N SignedPriceOracle is written but NOT deployed, so this is 1-of-1 by construction. See the `oracle` object for the mode." },
           "fees": {
             "type": "object",
             "properties": {
