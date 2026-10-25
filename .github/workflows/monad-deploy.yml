@@ -28,6 +28,12 @@ on:
       owner:
         description: "owner address for the deployed contracts (blank = the deployer)"
         required: false
+      core:
+        description: "configure only: PlanetCore address to configure (blank = the last Arbitrum deployment)"
+        required: false
+      threshold:
+        description: "deploy only: SignedPriceOracle threshold (blank = 1, correct while one operator holds every key)"
+        required: false
 
 jobs:
   monad:
@@ -69,6 +75,7 @@ jobs:
           KEY: 0x${{ secrets.MONAD_DEPLOY_KEY }}
           RPC: ${{ inputs.rpc }}
           CHAIN: ${{ inputs.chain }}
+          CORE: ${{ inputs.core }}
         run: |
           forge script script/ConfigureBasket.s.sol:ConfigureBasket \
             --rpc-url "$RPC" --chain "$CHAIN" --private-key "$KEY" \
@@ -80,6 +87,7 @@ jobs:
           KEY: 0x${{ secrets.MONAD_DEPLOY_KEY }}
           RPC: ${{ inputs.rpc }}
           CHAIN: ${{ inputs.chain }}
+          THRESHOLD: ${{ inputs.threshold }}
         run: |
           # Use the deployer directly as owner. The previous version routed through an optional
           # input, and an unset input made the constructor-args list split into three values.
@@ -88,7 +96,10 @@ jobs:
 
           # Constructor arguments are passed from Solidity (script/Deploy.s.sol), not through the
           # shell, because CLI constructor-args were being re-split (3 values for 2 parameters).
-          OWNER="$DEPLOYER" DELAY="60" \
+          # SIGNER_A wires a SignedPriceOracle with the deployer as its only signer and threshold 1:
+          # the signed path is then deployed and exercised, and raising the threshold is a
+          # setSigners() call once the keys actually live with different people.
+          OWNER="$DEPLOYER" DELAY="60" SIGNER_A="$DEPLOYER" THRESHOLD="${THRESHOLD:-1}" \
           forge script script/Deploy.s.sol:Deploy \
             --rpc-url "$RPC" --chain "$CHAIN" --private-key "$KEY" \
             --broadcast -vv
