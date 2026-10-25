@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Planet — mint / redeem PLT (Arbitrum Sepolia)</title>
+    <meta
+      name="description"
+      content="Mint and redeem PLT against the Planet on-chain commodity index on Arbitrum Sepolia. Testnet proof of concept: no collateral is transferred, not a stablecoin."
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <style>
+      .app { max-width: 720px; margin: 0 auto; padding: 32px 20px 64px; }
+      .app h1 { font-family: "Space Grotesk", sans-serif; font-size: 28px; margin: 24px 0 4px; }
+      .app .sub { color: var(--muted, #8a8a8a); font-family: "DM Mono", monospace; font-size: 12px; margin-bottom: 20px; line-height: 1.7; }
+      .panel { border: 1px solid var(--muted, #2a2a2a); padding: 16px; margin: 16px 0; }
+      .panel h2 { font-family: "Space Grotesk", sans-serif; font-size: 16px; margin: 0 0 12px; }
+      .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+      .row label { font-family: "DM Mono", monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted, #8a8a8a); min-width: 96px; }
+      input[type="text"] { flex: 1; min-width: 160px; padding: 9px 10px; border: 1px solid var(--muted, #2a2a2a); background: transparent; color: inherit; font-family: "DM Mono", monospace; font-size: 14px; }
+      button { padding: 9px 16px; border: 1px solid var(--ink, #111); background: var(--ink, #111); color: var(--bg, #fff); font-family: "DM Mono", monospace; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; cursor: pointer; }
+      button.ghost { background: transparent; color: inherit; border-color: var(--muted, #2a2a2a); }
+      button:disabled { opacity: 0.45; cursor: not-allowed; }
+      .out { font-family: "DM Mono", monospace; font-size: 12px; line-height: 1.9; color: var(--muted, #8a8a8a); }
+      .out b { color: var(--ink, #111); }
+      .warn { border: 1px solid #c2401c; color: #c2401c; padding: 12px 14px; font-family: "DM Mono", monospace; font-size: 12px; line-height: 1.7; margin: 16px 0; }
+      .ok { color: #2f9e44; }
+      .bad { color: #e03131; }
+      .addr { font-family: "DM Mono", monospace; font-size: 11px; word-break: break-all; color: var(--muted, #8a8a8a); }
+      #status { font-family: "DM Mono", monospace; font-size: 12px; margin-top: 12px; min-height: 18px; }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="wordmark" href="/">Planet</a>
+      <nav class="nav">
+        <a href="/">home</a>
+        <a href="/dashboard">dashboard</a>
+        <a href="/docs">docs</a>
+        <a href="/methodology">methodology</a>
+        <a href="/whitepaper.html">whitepaper</a>
+      </nav>
+    </header>
+
+    <main class="app">
+      <p class="notice" style="font-family: 'DM Mono', monospace">
+        [ Arbitrum Sepolia · unaudited PoC · no reserve · not a stablecoin ]
+      </p>
+      <h1>Mint / redeem PLT</h1>
+      <p class="sub">
+        Calls <b>PlanetCore</b> directly from your own wallet — no backend, no custody, no permission.
+        The preview below mirrors the contract's own integer arithmetic, so the number you see is the
+        number the chain will compute.
+      </p>
+
+      <div class="warn">
+        <b>Minting takes a declared deposit, not collateral.</b> This deployment has no payment token:
+        <code>mint(uint64 deposit)</code> mints PLT against the number you type and transfers nothing.
+        Anyone can mint any amount. That is fine for a testnet accounting exercise and unacceptable for
+        a product — do not read PLT here as redeemable for anything.
+      </div>
+
+      <div class="panel">
+        <div class="row">
+          <label>wallet</label>
+          <button id="connect" class="ghost">connect</button>
+          <span class="addr" id="account">not connected</span>
+        </div>
+        <div class="out" id="chainLine"></div>
+      </div>
+
+      <div class="panel">
+        <h2>State</h2>
+        <div class="out" id="state">reading the chain…</div>
+      </div>
+
+      <div class="panel">
+        <h2>Mint</h2>
+        <div class="row">
+          <label>deposit</label>
+          <input id="mintIn" type="text" inputmode="decimal" placeholder="1000" value="1000" />
+          <button id="mintBtn" disabled>mint</button>
+        </div>
+        <div class="out" id="mintPreview"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Redeem</h2>
+        <div class="row">
+          <label>PLT to burn</label>
+          <input id="redeemIn" type="text" inputmode="decimal" placeholder="100" value="100" />
+          <button id="redeemBtn" disabled>redeem</button>
+        </div>
+        <div class="out" id="redeemPreview"></div>
+      </div>
+
+      <div id="status"></div>
+
+      <p class="note">
+        core <span id="coreAddr"></span> · token <span id="tokenAddr"></span><br />
+        Minting reverts <code>StaleOracle</code> once the <b>oldest</b> basket input is older than 6
+        hours, <code>BandReject</code> beyond 15% index deviation, and <code>PriceJump</code> on a
+        single &gt;50% price move. Those guards live in the contract; this page only previews them.
+      </p>
+    </main>
+
+    <script>
+      const CORE = "0xB3FC376FF511B379fdC88A01406888Bd63F76C9A";
+      const TOKEN = "0x5102B8A6F79c1b8bd11EcE6ddcA1a3884cCD5e93";
+      const RPC = "https://sepolia-rollup.arbitrum.io/rpc";
+      const CHAIN_ID = 421614;
+      const SCALE = 1000000n;
+      const SEL = {
+        currentPpi: "0x3070b56b",
+        totalSupply: "0x18160ddd",
+        oldestActiveUpdate: "0xb6ef7e0f",
+        feeBpsForPpi: "0x7a71bb7a",
+        balanceOf: "0x70a08231",
+        mint: "0xfb9d09c8",
+        redeem: "0x3a4db838",
+      };
+
+      let account = null;
+      let ppi = null;
+      let feeBps = null;
+
+      document.getElementById("coreAddr").textContent = CORE;
+      document.getElementById("tokenAddr").textContent = TOKEN;
+
+      const $ = (id) => document.getElementById(id);
+      const hex = (v, pad = 64) => v.toString(16).padStart(pad, "0");
+      const fmt = (v, d = 4) =>
+        Number(v) / 1e6 === undefined ? "—" : (Number(v) / 1e6).toLocaleString(undefined, { maximumFractionDigits: d });
+
+      async function rpcCall(to, data, from) {
+        const res = await fetch(RPC, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ to, data, ...(from ? { from } : {}) }, "latest"] }),
+        });
+        const j = await res.json();
+        if (j.error) throw new Error(j.error.message);
+        return j.result && j.result !== "0x" ? BigInt(j.result) : null;
+      }
+
+      // Parse a decimal string into 1e6 fixed point without floating point, so the preview matches
+      // the contract's integer maths exactly. Anything below 1e-6 is dropped deliberately.
+      function toFixed6(str) {
+        const s = String(str).trim();
+        if (!/^\d*(\.\d*)?$/.test(s) || s === "" || s === ".") return null;
+        const [i, f = ""] = s.split(".");
+        return BigInt(i || "0") * SCALE + BigInt((f + "000000").slice(0, 6));
+      }
+
+      function fromFixed6(v) {
+        const n = Number(v);
+        return (n / 1e6).toLocaleString(undefined, { maximumFractionDigits: 6 });
+      }
+
+      async function readState() {
+        try {
+          const [p, supply, oldest] = await Promise.all([
+            rpcCall(CORE, SEL.currentPpi),
+            rpcCall(CORE, SEL.totalSupply),
+            rpcCall(CORE, SEL.oldestActiveUpdate),
+          ]);
+          ppi = p;
+          feeBps = await rpcCall(CORE, SEL.feeBpsForPpi + hex(p));
+          const ageSec = oldest ? Math.floor(Date.now() / 1000) - Number(oldest) : null;
+          const bal = account ? await rpcCall(TOKEN, SEL.balanceOf + account.slice(2).toLowerCase().padStart(64, "0")) : null;
+          $("state").innerHTML =
+            `index (PPI)  <b>${(Number(p) / 1e6).toFixed(6)}</b><br />` +
+            `PLT supply   <b>${supply === null ? "—" : fromFixed6(supply)}</b><br />` +
+            `your PLT     <b>${bal === null ? "connect a wallet" : fromFixed6(bal)}</b><br />` +
+            `mint fee     <b>${(Number(feeBps) / 100).toFixed(2)}%</b><br />` +
+            `oracle age   <b>${ageSec === null ? "never pushed" : ageSec + "s"}</b>` +
+            (ageSec !== null && ageSec > 21600 ? ' <span class="bad">— stale, minting is blocked</span>' : "");
+          previewMint();
+          previewRedeem();
+        } catch (e) {
+          $("state").innerHTML = `<span class="bad">could not read the chain: ${e.message}</span>`;
+        }
+      }
+
+      function previewMint() {
+        const deposit = toFixed6($("mintIn").value);
+        if (deposit === null || deposit === 0n || ppi === null || feeBps === null) {
+          $("mintPreview").textContent = "enter an amount";
+          $("mintBtn").disabled = true;
+          return;
+        }
+        const fee = (deposit * feeBps) / 10000n;
+        const net = deposit - fee;
+        const minted = (net * SCALE) / ppi;
+        $("mintPreview").innerHTML =
+          `fee ${fromFixed6(fee)} · net ${fromFixed6(net)}<br />you receive <b>${fromFixed6(minted)} PLT</b>`;
+        $("mintBtn").disabled = !account || minted === 0n;
+      }
+
+      function previewRedeem() {
+        const burn = toFixed6($("redeemIn").value);
+        if (burn === null || burn === 0n || ppi === null || feeBps === null) {
+          $("redeemPreview").textContent = "enter an amount";
+          $("redeemBtn").disabled = true;
+          return;
+        }
+        const burnFee = feeBps > 500n ? 500n : feeBps;
+        const gross = (burn * ppi) / SCALE;
+        const fee = (gross * burnFee) / 10000n;
+        const payout = gross - fee;
+        $("redeemPreview").innerHTML =
+          `gross ${fromFixed6(gross)} · fee ${fromFixed6(fee)} (${(Number(burnFee) / 100).toFixed(2)}%)<br />you receive <b>${fromFixed6(payout)}</b> — paid out by the operator, not by this page`;
+        $("redeemBtn").disabled = !account || burn === 0n;
+      }
+
+      async function ensureChain() {
+        const id = await window.ethereum.request({ method: "eth_chainId" });
+        if (Number(id) === CHAIN_ID) return true;
+        try {
+          await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x66eee" }] });
+          return true;
+        } catch {
+          await window.ethereum.request({
+            method: "wallet_addEthereumChain",
+            params: [
+              {
+                chainId: "0x66eee",
+                chainName: "Arbitrum Sepolia",
+                nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+                rpcUrls: [RPC],
+                blockExplorerUrls: ["https://sepolia.arbiscan.io"],
+              },
+            ],
+          });
+          return true;
+        }
+      }
+
+      async function connect() {
+        if (!window.ethereum) {
+          $("status").innerHTML = '<span class="bad">no injected wallet found — install MetaMask or Rabby</span>';
+          return;
+        }
+        try {
+          const accts = await window.ethereum.request({ method: "eth_requestAccounts" });
+          account = accts[0];
+          await ensureChain();
+          $("account").textContent = account;
+          $("chainLine").innerHTML = `chain <b>${CHAIN_ID}</b> · reads via the public RPC · writes signed by your wallet`;
+          $("connect").textContent = "reconnect";
+          window.ethereum.on?.("accountsChanged", (a) => {
+            account = a[0] ?? null;
+            $("account").textContent = account ?? "not connected";
+            readState();
+          });
+          readState();
+        } catch (e) {
+          $("status").innerHTML = `<span class="bad">${e.message}</span>`;
+        }
+      }
+
+      async function send(selector, amount) {
+        if (!account || amount === null) return;
+        $("status").textContent = "waiting for your wallet…";
+        try {
+          await ensureChain();
+          const data = selector + hex(amount);
+          const hash = await window.ethereum.request({
+            method: "eth_sendTransaction",
+            params: [{ from: account, to: CORE, data }],
+          });
+          $("status").innerHTML = `sent <a href="https://sepolia.arbiscan.io/tx/${hash}" target="_blank" rel="noopener">${hash.slice(0, 18)}…</a> — waiting for the receipt`;
+          for (let i = 0; i < 60; i++) {
+            const rc = await fetch(RPC, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_getTransactionReceipt", params: [hash] }),
+            }).then((r) => r.json());
+            if (rc.result) {
+              const ok = rc.result.status === "0x1";
+              $("status").innerHTML = ok
+                ? '<span class="ok">confirmed on Arbitrum Sepolia</span>'
+                : '<span class="bad">transaction reverted — the contract refused it (stale oracle, band, or jump guard)</span>';
+              readState();
+              return;
+            }
+            await new Promise((r) => setTimeout(r, 2000));
+          }
+          $("status").textContent = "still pending — check the explorer";
+        } catch (e) {
+          $("status").innerHTML = `<span class="bad">${e.message}</span>`;
+        }
+      }
+
+      $("connect").addEventListener("click", connect);
+      $("mintIn").addEventListener("input", previewMint);
+      $("redeemIn").addEventListener("input", previewRedeem);
+      $("mintBtn").addEventListener("click", () => send(SEL.mint, toFixed6($("mintIn").value)));
+      $("redeemBtn").addEventListener("click", () => send(SEL.redeem, toFixed6($("redeemIn").value)));
+
+      readState();
+      setInterval(readState, 60000);
+    </script>
+  </body>
+</html>
