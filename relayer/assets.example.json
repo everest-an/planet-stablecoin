@@ -2,7 +2,7 @@
   "assets": [
     { "index": 0,  "symbol": "CL=F", "sina": "hf_CL",  "sinaScale": 1,    "name": "WTI Crude (NYM)",   "weight": 140000 },
     { "index": 1,  "symbol": "BZ=F", "sina": "hf_OIL", "sinaScale": 1,    "name": "Brent Crude (ICE)", "weight": 110000 },
-    { "index": 2,  "symbol": "NG=F", "sina": "hf_NG",  "sinaScale": 1,    "name": "Natural Gas (NYM)", "weight": 80000 },
+    { "index": 2,  "symbol": "NG=F", "sina": null,     "sinaScale": 1,    "name": "Natural Gas (NYM)", "weight": 80000, "note": "Yahoo-only: Sina hf_NG quotes a LATER expiry, not the front month (2026-10-24: 3.502 vs front-month 3.05 = 14.8%). Averaging two different contract months corrupted this reading by ~7%, so the cross-check is disabled until a same-expiry Sina code is confirmed." },
     { "index": 3,  "symbol": "GC=F", "sina": "hf_GC",  "sinaScale": 1,    "name": "Gold (COMEX)",      "weight": 120000 },
     { "index": 4,  "symbol": "SI=F", "sina": "hf_SI",  "sinaScale": 1,    "name": "Silver (COMEX)",    "weight": 70000 },
     { "index": 5,  "symbol": "HG=F", "sina": "hf_HG",  "sinaScale": 0.01, "name": "Copper (COMEX)",    "weight": 60000 },
