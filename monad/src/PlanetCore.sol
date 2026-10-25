@@ -107,6 +107,7 @@ contract PlanetCore {
     error NoOracle();
     error BadSignature();
     error NoDepositToken();
+    error NoToken();
     error TransferFailed();
 
     modifier onlyOwner() {
@@ -340,11 +341,12 @@ contract PlanetCore {
 
         // Pull the collateral BEFORE any state change. Every check above has already run, so this
         // cannot leave the contract holding a deposit it refused to mint against.
+        if (address(token) == address(0)) revert NoToken();
         if (address(depositToken) == address(0)) revert NoDepositToken();
         if (!depositToken.transferFrom(msg.sender, address(this), uint256(deposit))) revert TransferFailed();
 
         totalSupply += minted;
-        if (address(token) != address(0)) token.mint(msg.sender, minted); // EVM: synchronous, no mirror
+        token.mint(msg.sender, minted); // EVM: synchronous, no mirror
         totalReserve += deposit;
         _routeFees(fee);
         emit Minted(msg.sender, deposit, uint64(fee), minted, ppi);
@@ -356,6 +358,8 @@ contract PlanetCore {
         if (burnAmount == 0) revert ZeroAmount();
         uint64 ppi = currentPpi;
         if (ppi == 0) revert NoActiveAsset();
+        // Without a token, redeem would pay the reserve out without burning anything.
+        if (address(token) == address(0)) revert NoToken();
 
         uint64 feeBps = feeBpsForPpi(ppi);
         uint64 burnFee = feeBps > MAX_BURN_FEE_BPS ? MAX_BURN_FEE_BPS : feeBps; // I9 / payout >= 0
@@ -365,7 +369,7 @@ contract PlanetCore {
 
         if (totalSupply < burnAmount) revert Underflow(); // no silent wrap
         totalSupply -= burnAmount;
-        if (address(token) != address(0)) token.burn(msg.sender, burnAmount);
+        token.burn(msg.sender, burnAmount);
 
         // The payout leaves the reserve; the fee does not (it stays in the contract and _routeFees
         // labels it). Without this decrement totalReserve only ever grows and overstates the backing.
@@ -380,9 +384,10 @@ contract PlanetCore {
 
     function _routeFees(uint256 fee) internal {
         uint64 burn = uint64(fee * uint256(BURN_SHARE_BPS) / uint256(BPS_DENOM));
-        uint64 reserve = uint64(fee * uint256(RESERVE_SHARE_BPS) / uint256(BPS_DENOM));
         uint64 stake = uint64(fee * uint256(STAKE_SHARE_BPS) / uint256(BPS_DENOM));
         uint64 risk = uint64(fee * uint256(RISK_SHARE_BPS) / uint256(BPS_DENOM));
+        // The 10% risk carve-out comes out of the reserve bucket: net 30 / 40 / 20 / 10.
+        uint64 reserve = uint64(fee * uint256(RESERVE_SHARE_BPS) / uint256(BPS_DENOM)) - risk;
 
         feesToBurn += burn;
         feesToReserve += reserve;

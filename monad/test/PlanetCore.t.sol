@@ -12,6 +12,7 @@ import {MockERC20} from "./MockERC20.sol";
 contract PlanetCoreTest is Test {
     PlanetCore core;
     MockERC20 usd;
+    PlanetToken plt;
     address owner = address(0xA11CE);
     address relayer = address(0xB0B);
     address stranger = address(0xCAFE);
@@ -22,6 +23,8 @@ contract PlanetCoreTest is Test {
         vm.startPrank(owner);
         core = new PlanetCore(owner, relayer);
         usd = new MockERC20();
+        plt = new PlanetToken(owner, address(core));
+        core.setToken(address(plt));
         core.setDepositToken(address(usd));
         // 8 assets x 12.5% == 100%, each within the 15% per-asset cap
         for (uint256 i; i < 8; ++i) {
@@ -152,7 +155,7 @@ contract PlanetCoreTest is Test {
         core.feeBpsForPpi(1_160_000); // >15% -> refuse
     }
 
-    function test_mint_splits_fee_30_50_20_10() public {
+    function test_mint_splits_fee_30_40_20_10() public {
         pushAll(100 * SCALE);
         uint64 deposit = 1_000_000 * SCALE; // 1M units
         vm.prank(stranger);
@@ -160,8 +163,10 @@ contract PlanetCoreTest is Test {
 
         uint64 fee = uint64(uint256(deposit) * 50 / 10_000); // 0.5%
         assertEq(core.feesToBurn(), fee * 30 / 100);
+        assertEq(core.feesToReserve(), fee * 40 / 100);
         assertEq(core.feesToStaking(), fee * 20 / 100);
         assertEq(core.riskFund(), fee * 10 / 100);
+        assertEq(core.feesToBurn() + core.feesToReserve() + core.feesToStaking() + core.riskFund(), fee);
         assertEq(minted, uint64((uint256(deposit) - fee) * SCALE / 1_000_000));
         assertEq(core.totalSupply(), minted);
     }
@@ -342,6 +347,26 @@ contract PlanetCoreTest is Test {
         vm.prank(stranger);
         vm.expectRevert(PlanetCore.NoDepositToken.selector);
         core.mint(1_000 * SCALE);
+    }
+
+    function test_mint_reverts_without_token() public {
+        pushAll(100 * SCALE);
+        vm.prank(owner);
+        core.setToken(address(0));
+        vm.prank(stranger);
+        vm.expectRevert(PlanetCore.NoToken.selector);
+        core.mint(1_000 * SCALE);
+    }
+
+    function test_redeem_reverts_without_token() public {
+        pushAll(100 * SCALE);
+        vm.prank(stranger);
+        uint64 minted = core.mint(1_000 * SCALE);
+        vm.prank(owner);
+        core.setToken(address(0));
+        vm.prank(stranger);
+        vm.expectRevert(PlanetCore.NoToken.selector);
+        core.redeem(minted);
     }
 
     function test_mint_pulls_the_collateral() public {
