@@ -5,6 +5,45 @@
 
 ---
 
+## 0. 当前状态（2026-10-25，**以此为准**）
+
+> 本节覆盖下文所有更早的描述。下文（§1 起）是 **TON 时代**的记录，保留作设计依据，但不代表当前部署。
+
+| 项 | 值 |
+|---|---|
+| 读链 | Arbitrum Sepolia（chainId 421614） |
+| PlanetCore | `0xcAdE768f59921e6eE09E57DE4cf974ffb3a5080D` |
+| PLT token（ERC-20） | `0xfD656CECcb7B46E7A670ec7dedbb4853C82Ed586` |
+| Timelock | `0x71E9dDf3c8E9B332d99A7Ea7D0d7305f7aAC95E2` |
+| 篮子 | 14 资产 · `weightSum = 1,000,000` · `baseLocked = true` |
+| PPI | `1.003830`（2026-10-25 推送后，手算与链上一致） |
+| 预言机 | 每小时 GitHub Actions（`.github/workflows/evm-push.yml`）→ `updatePrice` |
+| 预言机信任级 | **单 relayer（1-of-1）**；`SignedPriceOracle` 已实现、**未部署、未接线** |
+| 站点 | 已切 EVM 只读：`/api/v1/status`、`/api/v1/oracle`、dashboard、landing ticker |
+| 铸赎 UI | **仍是 TON Mini App**（`app-tg/`）；**Arbitrum 上没有任何铸赎界面** |
+| 未部署 | PlanetBond / PlanetFund / PlanetGov / PLTG —— 仅存在于 `ton/` |
+| 审计 | 无 |
+
+### 本轮实际完成的（都有验证）
+
+1. **EVM 读层**：`web/api/_evm.js` 零依赖（硬编码 selector + 静态字解码），`status`/`oracle`/dashboard/ticker 全部改读 EVM；一次批量 `eth_call` ≈ 330ms（原 TON 约 20s）。线上已验证 `ppi=1.00383`。
+2. **预言机**：`relayer/push-evm.mjs` + 每小时 workflow；14 资产实推、0 失败、PPI 与手算一致。
+3. **天然气数据修正**：`hf_NG` 报的是**更晚到期月**（3.502 vs 前月 3.05，差 14.8%），不是错号；已改为 Yahoo 单源，链上已由 3.276 纠正为 3.05。
+4. **文案**：`index/docs/faq/methodology/openapi` 不再声称"链上验证 ed25519 签名"或"M-of-N"——EVM 核根本没有签名验证。
+
+### 仍未做（下一会话从这里接）
+
+- `web/whitepaper.html`：**27 处 TON 引用未处理**（§2 架构 / §7 oracle / §12 证据 / 附录 C 代码 / 附录 F 部署 / 地址）。**§3 PPI、§4 费率、§5 稳定、§9 治理、§10 代币经济不要动** —— 这些机制没变。
+- **M-of-N 接线**：`SignedPriceOracle` 要接进 Core（`updatePriceSigned`）需要改合约 + **重新部署（换地址）**。所以若要申请 grant，**先决定这一步再做 §8 地址**。
+- 合约级缺陷（改合约才能修）：`lastOracleUpdate` 是**全局**一个、不是每资产；`priceJumpOk` 拒绝 >50% 单次变动且**无旁路** ⇒ 一次 >50% 行情会让价格推不上去，6h 后铸造永久停摆。
+- 铸赎 UI 迁到 EVM（TON Connect → viem/wagmi），工作量最大。
+
+### 页面已声明的诚实边界
+
+站点现在明确写着：Arbitrum 部署**只读**、铸赎仍在 TON、预言机是**单个 relayer 地址**、`PlanetBond/Fund/Gov/PLTG` **未在 Arbitrum 部署**。不要为了好看把这几句改回去。
+
+---
+
 ## 0. 一句话 + 链接
 
 Planet（PLT）= 全球大宗商品购买力指数协议；当前实现为 **TON 上的合成指数代币 + TEP-74 代币 + 铸赎骨架**。
@@ -308,8 +347,8 @@ as owner.
   line, stability panel (bond sale/premium/face + risk fund), manual refresh, top error banner,
   first-load state, English copy, 320px no-overflow.
 - `web/dashboard.html`: risk-fund + bond strip, stale oracle styling, responsive table (drops
-  `#`/`BASE` ��640px, `��` ��360px; horizontal wrapper retained).
+  `#`/`BASE` ��640px, `��` ��360px; horizontal wrapper retained).
 - `web/api/v1/status.js`: additive `bond: { open, paid }` when the Core getters exist (omitted on
-  the live v1.8 Core, so the dashboard shows "��").
+  the live v1.8 Core, so the dashboard shows "��").
 - Live Bond address corrected after on-chain verification: `kQDMxJXroCmuxBw9Sw7oj9LhO9Y0mLxdPS3Tr4vY-sdq65hz`
-  (exit=0, premium 5%, totalIssued 0). The `kQDYY��` entry in the v1.8 rebuild table is uninitialized.
+  (exit=0, premium 5%, totalIssued 0). The `kQDYY��` entry in the v1.8 rebuild table is uninitialized.

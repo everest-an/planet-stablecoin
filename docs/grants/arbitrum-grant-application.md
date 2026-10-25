@@ -70,19 +70,32 @@ dashboard/API, a Telegram Mini App, and the public audit-preparation pack. Prior
 - We are **not** asking for funding to write a whitepaper; the code exists. We are asking for the audit and the
   first partner pilot, because those are the two things that cannot be faked.
 - KYC: the entity is disclosed and prepared to complete the Foundation's KYC.
+- **The oracle on Arbitrum is a single relayer address today.** `PlanetCore.updatePrice` is `onlyRelayer`;
+  `SignedPriceOracle` (M-of-N, distinct-signer bitmap, EIP-2 malleability checks) is written and unit-tested
+  but **not deployed and not wired into the core**. We would rather state that than let a reviewer assume a
+  threshold that does not exist.
+- **The Arbitrum deployment is read-only from this site.** Minting and redeeming still run through the TON
+  Mini App. Porting the UI is part of the work this grant would fund, not something we are claiming is done.
 
 ## 8. Links
 
-- Repo: https://github.com/everest-an/planet
-- EVM implementation: `monad/` (Solidity 0.8.24, Foundry)
-- Deployed on Arbitrum: **⟨to be filled after deployment⟩**
+- Repo: https://github.com/everest-an/planet-stablecoin
+- EVM implementation: `monad/` (Solidity 0.8.24, Foundry; CI: `.github/workflows/monad-build.yml`)
+- Deployed on **Arbitrum Sepolia** (chainId 421614):
+  - PlanetCore — `0xcAdE768f59921e6eE09E57DE4cf974ffb3a5080D`
+  - PLT token (ERC-20) — `0xfD656CECcb7B46E7A670ec7dedbb4853C82Ed586`
+  - PlanetTimelock — `0x71E9dDf3c8E9B332d99A7Ea7D0d7305f7aAC95E2`
+- Live read API (returns the on-chain index right now): https://ppppp.space/api/v1/status
+- Oracle health: https://ppppp.space/api/v1/oracle?full=1
 - Contact: e@ppppp.space
 
 ---
 
 ### Submission checklist
 
-- [ ] Deploy the five contracts to Arbitrum Sepolia; verify the source
-- [ ] Paste the deployed addresses into §8
+- [x] Deploy the core stack to Arbitrum Sepolia (3 contracts: PlanetCore, PLT token, Timelock)
+      — PlanetBond / PlanetFund / PlanetGov are TON-only and deliberately NOT part of this deployment
+- [x] Paste the deployed addresses into §8
+- [ ] Verify the source on Arbiscan (addresses are live and readable via eth_call; verification not confirmed)
 - [ ] Confirm the live app URL in §5
 - [ ] Complete KYC
