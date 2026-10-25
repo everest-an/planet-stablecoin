@@ -38,7 +38,7 @@ import { createPublicClient, createWalletClient, http, parseAbi, formatEther, fo
 import { privateKeyToAccount } from "viem/accounts";
 import { arbitrumSepolia } from "viem/chains";
 
-const CORE = (process.env.CORE ?? "0xcAdE768f59921e6eE09E57DE4cf974ffb3a5080D");
+const CORE = (process.env.CORE ?? "0xB3FC376FF511B379fdC88A01406888Bd63F76C9A");
 const RPC = (process.env.RPC ?? "https://sepolia-rollup.arbitrum.io/rpc");
 const ASSETS_JSON = process.env.ASSETS_JSON ?? "assets.example.json";
 const MIN_PUSH_DELTA = Number(process.env.MIN_PUSH_DELTA ?? "0.001");
@@ -55,7 +55,7 @@ const ABI = parseAbi([
   "function relayer() view returns (address)",
   "function lastOracleUpdate() view returns (uint64)",
   "function currentPpi() view returns (uint64)",
-  "function assets(uint256) view returns (uint64 weight, uint64 basePrice, uint64 currentPrice, uint64 volatility, uint64 liquidity, uint8 riskState)",
+  "function assets(uint256) view returns (uint64 weight, uint64 basePrice, uint64 currentPrice, uint64 volatility, uint64 liquidity, uint8 riskState, uint64 lastUpdate)",
   "function updatePrice(uint256 index, uint64 price, uint64 volatility, uint64 liquidity, uint8 riskState, uint64 timestamp)",
 ]);
 
@@ -160,7 +160,7 @@ if (Number(assetCount) !== cfg.assets.length) {
 }
 
 const stale = MAX_PUSH_AGE_H > 0 && nowSec - Number(lastUpd) >= MAX_PUSH_AGE_H * 3600;
-console.log(`gate: minDelta=${(MIN_PUSH_DELTA * 100).toFixed(2)}% maxAge=${MAX_PUSH_AGE_H}h stale=${stale}`);
+console.log(`gate: minDelta=${(MIN_PUSH_DELTA * 100).toFixed(2)}% maxAge=${MAX_PUSH_AGE_H}h newestPush=${stale ? "stale" : "fresh"}`);
 
 // Globally monotonic: every updatePrice must carry a timestamp strictly greater than the previous one.
 let ts = Math.max(nowSec, Number(lastUpd) + 1);
@@ -169,7 +169,7 @@ const plan = [];
 for (const asset of cfg.assets) {
   const i = asset.index;
   const onchain = await pub.readContract({ address: CORE, abi: ABI, functionName: "assets", args: [BigInt(i)] });
-  const [, basePrice, currentPrice, , , riskState] = onchain;
+  const [, basePrice, currentPrice, , , riskState, lastUpdate] = onchain;
 
   let agg;
   try {
@@ -184,12 +184,18 @@ for (const asset of cfg.assets) {
   const rel = currentPrice > 0n ? Math.abs(Number(price - currentPrice)) / Number(currentPrice) : 1;
   const riskChanged = Number(riskState) !== risk;
   const changePct = basePrice > 0n ? ((Number(price) / Number(basePrice)) - 1) * 100 : 0;
+  // Staleness is PER ASSET: mint() gates on the oldest active input, so a quiet asset that the
+  // delta gate keeps skipping would eventually close minting on its own. The heartbeat must
+  // refresh each asset individually, not just the basket as a whole.
+  const assetAge = Number(lastUpdate);
+  const assetStale = MAX_PUSH_AGE_H > 0 && (assetAge === 0 || nowSec - assetAge >= MAX_PUSH_AGE_H * 3600);
 
   const line = `#${String(i).padStart(2)} ${asset.symbol.padEnd(6)} ${agg.median.toFixed(4).padStart(10)}` +
     `  vsBase ${changePct >= 0 ? "+" : ""}${changePct.toFixed(2)}%  vsChain ${(rel * 100).toFixed(3)}%` +
-    `  spread ${(agg.spread * 100).toFixed(1)}%  risk ${riskState}->${risk}`;
+    `  spread ${(agg.spread * 100).toFixed(1)}%  risk ${riskState}->${risk}` +
+    `  age ${assetAge === 0 ? "never" : Math.floor((nowSec - assetAge) / 60) + "m"}`;
 
-  if (!stale && rel < MIN_PUSH_DELTA && !riskChanged) {
+  if (!assetStale && rel < MIN_PUSH_DELTA && !riskChanged) {
     console.log(`${line}  SKIP (below delta)`);
     continue;
   }
