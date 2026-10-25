@@ -41,7 +41,7 @@ jobs:
     env:
       PRIVATE_KEY: ${{ secrets.MONAD_DEPLOY_KEY }}
       RPC: ${{ vars.EVM_RPC || 'https://sepolia-rollup.arbitrum.io/rpc' }}
-      CORE: ${{ vars.EVM_CORE || '0xB3FC376FF511B379fdC88A01406888Bd63F76C9A' }}
+      CORE: ${{ vars.EVM_CORE || '0x65362ef75028700855E842F903FF6FBD65A97f65' }}
       ASSETS_JSON: assets.example.json
       # Push even a flat price once the reading is this old, so the global timestamp
       # can never idle past the on-chain 6h gate.

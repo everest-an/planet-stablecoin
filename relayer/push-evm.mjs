@@ -38,7 +38,7 @@ import { createPublicClient, createWalletClient, http, parseAbi, formatEther, fo
 import { privateKeyToAccount } from "viem/accounts";
 import { arbitrumSepolia } from "viem/chains";
 
-const CORE = (process.env.CORE ?? "0xB3FC376FF511B379fdC88A01406888Bd63F76C9A");
+const CORE = (process.env.CORE ?? "0x65362ef75028700855E842F903FF6FBD65A97f65");
 const RPC = (process.env.RPC ?? "https://sepolia-rollup.arbitrum.io/rpc");
 const ASSETS_JSON = process.env.ASSETS_JSON ?? "assets.example.json";
 const MIN_PUSH_DELTA = Number(process.env.MIN_PUSH_DELTA ?? "0.001");

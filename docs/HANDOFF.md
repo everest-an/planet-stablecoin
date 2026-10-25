@@ -12,16 +12,16 @@
 | 项 | 值 |
 |---|---|
 | 读链 | Arbitrum Sepolia（chainId 421614） |
-| PlanetCore | `0xB3FC376FF511B379fdC88A01406888Bd63F76C9A` |
-| PLT token（ERC-20） | `0x5102B8A6F79c1b8bd11EcE6ddcA1a3884cCD5e93` |
-| Timelock | `0x2d762e9A7B03569EFcCbA7AACDBAc0AAF0170016` |
+| PlanetCore | `0x65362ef75028700855E842F903FF6FBD65A97f65` |
+| PLT token（ERC-20） | `0x367e62f6fd68FDe2698A65022713Ef99ca9a4c80` |
+| Timelock | `0x9e8a685090704A3cd41590594BA5cf281c0b020d` |
 | 篮子 | 14 资产 · `weightSum = 1,000,000` · `baseLocked = true` |
 | PPI | `1.003830`（2026-10-25 推送后，手算与链上一致） |
 | 预言机 | 每小时 GitHub Actions（`.github/workflows/evm-push.yml`）→ `updatePrice` |
 | 预言机信任级 | **1-of-1**；两条路径（`updatePrice` onlyRelayer / `updatePriceSigned`）**都已接线**，`SignedPriceOracle` 已部署，但 signer set 是 1-of-1（一个运营方持有全部密钥）|
 | 站点 | 已切 EVM 只读：`/api/v1/status`、`/api/v1/oracle`、dashboard、landing ticker |
 | 铸赎 UI | **`/app` 已上线**（零依赖、注入式钱包直连 Core）；TON Mini App 仍在 |
-| PriceOracle | `0x239Ac0311284D711e67D8864C655706E962dd893` |
+| PriceOracle | `0xFC560cB20875dB79b8bd8FBA96a1c78B5B69548e` |
 | 未部署 | PlanetBond / PlanetFund / PlanetGov / PLTG —— 仅存在于 `ton/` |
 | 审计 | 无 |
 
