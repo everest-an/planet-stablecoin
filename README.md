@@ -1,78 +1,81 @@
 # Planet — 全球大宗商品购买力指数协议
 
-> **当前主线：TON**（Tolk 合约 + TEP-74 PLT 代币 + Telegram Mini App）。
-> Solana/Anchor 实现已归档为**算法参考**，见 [`legacy-solana/`](legacy-solana/)。
-> 会话交接与「唯一可信状态」见 [`docs/HANDOFF.md`](docs/HANDOFF.md)。
+> **当前部署：Arbitrum Sepolia（chainId 421614）** — Solidity + ERC-20 + Timelock + SignedPriceOracle。
+> 唯一可信状态见 [`docs/HANDOFF.md`](docs/HANDOFF.md) §0；更早的实现已归档，不参与当前部署。
 
 Planet（PLT）把一篮子全球大宗商品（能源/金属/农产品/工业原料）的真实价格聚合为链上**购买力指数 PPI**，
-以合成指数代币 PLT 表达。
+以 ERC-20 代币 PLT 表达。`mint()` 拉取测试 USDC 作为抵押，`redeem()` 销毁 PLT 并从储备付回测试 USDC。
 
-> ⚠️ **版本声明**：当前为**阶段一概念验证（PoC）** —— 链上**合成指数代币** + TEP-74 代币 + 铸赎骨架；
-> **不含真实链下大宗商品储备，不是足额抵押稳定币**。白皮书完整版「1:1 大宗商品储备算法稳定币」
-> 需对接 RWA 托管方 + 合规背书后方可实现。
+> ⚠️ **版本声明**：这是**阶段一概念验证（PoC）**。抵押物是 **Circle Arbitrum Sepolia 测试 USDC**
+> （无价值），**没有真实大宗商品储备，不是足额抵押稳定币**。主网/1:1 RWA 版本需托管方 + 合规 + 审计。
 
-## 产品架构（分层）
+## 线上地址（Arbitrum Sepolia）
 
-> **L1 核心、L2 CAM（Phase A）、L3 稳定机制（含债券自动联动）、L4 基金均已实现**；
-> L0 储备/RWA 与外部 DEX 实际成交为设计/未来（详见 [`docs/PRODUCT-DESIGN.md`](docs/PRODUCT-DESIGN.md)）。
+| 合约 | 地址 |
+|---|---|
+| PlanetCore | `0x65362ef75028700855E842F903FF6FBD65A97f65` |
+| PLT token（ERC-20） | `0x367e62f6fd68FDe2698A65022713Ef99ca9a4c80` |
+| PlanetTimelock | `0x9e8a685090704A3cd41590594BA5cf281c0b020d` |
+| SignedPriceOracle | `0xFC560cB20875dB79b8bd8FBA96a1c78B5B69548e` |
+| 抵押物（test USDC） | `0x75faf114…AA4d`（Circle，6 位小数） |
+
+- 篮子：14 资产，`weightSum = 1,000,000`，`baseLocked = true`，单资产 ≤15%。
+- PPI：约 `1.00383`（随每小时推价变化）。
+- 预言机：每小时 GitHub Actions → `updatePrice`（授权 relayer）；4 个独立渠道
+  （Yahoo 主源 + Sina/腾讯/东财确认，0.5% 容差，不取中位数）。`SignedPriceOracle` 已部署，
+  但签名集目前为 **1-of-1**；升到 2-of-3 只需 `setSigners([a,b,c],2)`，无需重新部署。
+
+## 产品架构（当前部署）
 
 ```
-L3 稳定/风控   分档费 · 弹性铸赎曲线 · 套利入口 · 稳定债券 · 风险基金 · 熔断   [已实现]
-L2 适配层      CAM：每商品标准化 价格/波动率/流动性/风险                     [设计]
-L1 核心        PlanetCore：篮子 / 链上 PPI / 铸赎 / 费率 / RTRA / 赎回镜像    [已实现]
+L3 稳定/风控   分档费 · 弹性曲线 · 套利返还 · 风险基金 · 暂停/偏离熔断      [已实现]
+L2 适配层      CAM（设计；核心已有 volatility/liquidity/riskState 字段）    [设计]
+L1 核心        PlanetCore：篮子 / 链上 PPI / 抵押铸赎 / 费率 / 预言机状态    [已实现]
+L4 基金        PlanetFund（设计，未部署）                                    [设计]
 L0 储备/RWA    实物/ETF 储备 + 托管 + 储备证明                               [未来]
 （不自建 DEX/AMM；交易走外部场所）
 ```
 
-## 主线（TON）
-
-- **合约**：`ton/contracts/`（Tolk，Acton 工具链）
-  - `planet_core.tolk` — **链上多资产 PPI**（篮子 + `computePpi`）/ 铸赎 / **赎回镜像** / 风控 / 费率 30-50-20(+10 风险基金) / RTRA / Jetton 接线
-  - `planet_basket.tolk` — 链上组合注册表（`assetCount()` / `assetAt(i)`）
-  - `jetton/*.tolk` — PLT TEP-74（minter + wallet，vendored 自 `ton-blockchain/tolk-bench`）
-- **前端**：`app-tg/`（Telegram Mini App，Vite + React + TON Connect）
-- **测试 / CI**：`ton/contracts/tests/`；`.github/workflows/ton-build.yml`
-  （Acton 只能运行在 Linux/WSL/Docker，**CI 即编译环境**）
-
-### 构建与测试
-
-TON（Acton 不支持 Windows 原生，需 WSL/Linux/Docker，或直接走 CI）：
-```bash
-cd ton && acton build && acton wrapper --all && acton test --coverage
-```
-
-TG 小程序（本机 Node 可跑）：
-```bash
-cd app-tg && npm install && npm run build
-```
-
-## 文档（唯一可信来源）
-
-- **状态/交接**：`docs/HANDOFF.md`（唯一可信状态）
-- **产品/架构**：`PRODUCT-DESIGN.md`（v2 分层架构 + 稳健性）、`PRD.md`、`GTM.md`、`PLAN-TON.md`、`TON-MAPPING.md`
-- **机制设计**：`ppi-multiasset.md`（链上 PPI）、`commodity-cam.md`（CAM）、`peg-stability.md`（稳定机制，借 AMM 设计，不自建 DEX）、`burn-linkage.md`（赎回）
-- **调研/审计**：`oracle-ton.md`（RedStone/DIA）、`AUDIT.md`
-- **白皮书**：`WHITEPAPER.md`（v1.5 工程增补正文）、`whitepaper-extracted.md`（v1 抽取）
-
 ## 仓库结构
 
 ```
-ton/            TON / Tolk 合约 + 测试（主线）
-app-tg/         Telegram Mini App（主线）
-docs/           白皮书与设计文档
-.github/        CI（TON build）
-legacy-solana/  Solana / Anchor 遗留实现（算法参考，非主线）
+monad/          Solidity 合约 + Foundry 测试（当前部署）
+  src/          PlanetCore · PlanetToken · PlanetTimelock · SignedPriceOracle · PlanetBond
+  script/       Deploy.s.sol · ConfigureBasket.s.sol
+  test/         70 个 Foundry 测试
+relayer/        EVM 推价（push-evm.mjs + sources.mjs）
+web/            官网 + /dashboard + /docs + /faq + /app + /api/v1/*
+docs/           HANDOFF（唯一可信状态）· 机制设计 · 审计准备 · 资助材料
+ton/            早期非 EVM 实现（归档，仅作参考，不参与当前部署）
+legacy-solana/  更早的 Solana/Anchor 实现（归档）
 ```
 
-## 遗留：Solana（`legacy-solana/`）
+## 构建与测试
 
-早期 Solana/Anchor 版（`programs/planet`、`scripts/`、`tests/`、`app/`）保留作算法参考，**不再维护**。
-原 Solana README 见 [`legacy-solana/README.md`](legacy-solana/README.md)。
+```bash
+# 合约（需要 Foundry）
+cd monad && forge test -vv          # 70 tests
+
+# 推价（dry-run 不需要私钥）
+cd relayer && npm install && node push-evm.mjs --dry-run
+
+# 官网 / app（静态 + serverless；本地可用任意静态服务器）
+cd web && python -m http.server 4174
+```
+
+CI：`.github/workflows/monad-build.yml`（build + 70 tests）、`evm-push.yml`（每小时推价）、
+`oracle-monitor.yml`、`cache-warmer.yml`。
+
+## 文档
+
+- **状态/交接**：`docs/HANDOFF.md` §0（唯一可信状态）
+- **白皮书**：`web/whitepaper.html`（v2.0，EVM 参考实现）· `docs/WHITEPAPER.md`
+- **机制设计**：`docs/ppi-multiasset.md` · `commodity-cam.md` · `peg-stability.md` · `burn-linkage.md`
+- **审计/安全**：`docs/audit-prep.md` · `docs/security.md` · `docs/contract-review.md`
+- **资助**：`docs/grants/arbitrum-grant-application.md`
 
 ## 免责声明
 
-本协议为技术提案，不构成投资建议。大宗商品价格波动可能导致 PLT 短期偏离锚定。
-早期 PLT-index 无底层实物兜底，市场价可能大幅偏离理论 PPI。
-稳定机制（分档费/弹性曲线/套利返还/风险基金/稳定债券自动联动）与 CAM 适配层 Phase A 已实现；
-但**实际成交（外部 DEX）与 RWA 储备仍为设计/未来**，且稳定债券目前为 **mock 记账**（真实付款与到期阶梯未实现）。
-Planet **不自建 DEX**。
+本协议为技术提案与概念验证，不构成投资建议，且**未经第三方审计**。PLT 是合成指数代币；
+抵押物为无价值的测试 USDC，没有实物商品兜底，市场价格可能大幅偏离理论 PPI。
+不要在无法承受损失的金额上使用。

@@ -20,11 +20,11 @@
 | 预言机 | 每小时 GitHub Actions（`.github/workflows/evm-push.yml`）→ `updatePrice` |
 | 预言机信任级 | **1-of-1**；两条路径（`updatePrice` onlyRelayer / `updatePriceSigned`）**都已接线**，`SignedPriceOracle` 已部署，但 signer set 是 1-of-1（一个运营方持有全部密钥）|
 | 站点 | 已切 EVM 只读：`/api/v1/status`、`/api/v1/oracle`、dashboard、landing ticker |
-| 铸赎 UI | **`/app` 已上线**（零依赖、注入式钱包直连 Core）；TON Mini App 仍在 |
+| 铸赎 UI | **`/app` 已上线**（零依赖、注入式钱包直连 Core）；旧 TON 前端已归档 |
 | PriceOracle | `0xFC560cB20875dB79b8bd8FBA96a1c78B5B69548e` |
 | 抵押 | Circle 测试 USDC `0x75faf114…AA4d`（6 位）；`mint` 用 `transferFrom` 拉取，`redeem` 付回并减少 `totalReserve` |
 | 价格渠道 | **4 个独立渠道**：Yahoo（主）/ Sina / 腾讯 / 东财；实测 34 次渠道读取、12/14 资产有 2+ 渠道。规则是「主源 + 确认数（0.5% 容差）」，**不取中位数**；无确认 → `riskState=1`。可查：`/api/v1/sources` |
-| 未部署 | PlanetBond / PlanetFund / PlanetGov / PLTG —— 仅存在于 `ton/` |
+| 未部署 | PlanetBond / PlanetFund / PlanetGov / PLTG —— 设计/原型，未在 Arbitrum 部署 |
 | 审计 | 无 |
 
 ### 本轮实际完成的（都有验证）
@@ -36,22 +36,24 @@
 
 ### 仍未做（下一会话从这里接）
 
-- `web/whitepaper.html`：**27 处 TON 引用未处理**（§2 架构 / §7 oracle / §12 证据 / 附录 C 代码 / 附录 F 部署 / 地址）。**§3 PPI、§4 费率、§5 稳定、§9 治理、§10 代币经济不要动** —— 这些机制没变。
+- ~~`web/whitepaper.html` TON 引用~~ **已完成（v2.0）**：白皮书、docs、FAQ、首页、dashboard、reports 已全部改为 EVM/Arbitrum 叙事；代码附录换成 Solidity，安全附录换成 EVM 属性。§3/§4/§5/§9/§10 的机制数学未动。
 - **M-of-N 提高到 2-of-3**：合约与 oracle 都已就位，剩下的只是 `setSigners([a,b,c], 2)` + 把密钥分散到不同人手里。不需要重新部署。
 - ~~合约级缺陷~~ **已修（2026-10-25 重新部署到新地址）**：`Asset.lastUpdate` 逐资产 + `mint` 看 `oldestActiveUpdate()`；`forcePrice()` 提供 >50% 的 timelock 旁路；`setRiskState()` 可冻结死掉的源。
 - ~~铸赎 UI 迁到 EVM~~ **已做**：`web/app.html`（`/app`）零依赖直连，含 `approve` 两步流程。**`mint()` 现在通过 `transferFrom` 拉取测试 USDC**（Circle Arbitrum Sepolia `0x75faf114…AA4d`）；`redeem` 从储备付出并**减少** `totalReserve`（旧代码只付不减，背书被永久高估）。
 
 ### 页面已声明的诚实边界
 
-站点现在明确写着：Arbitrum 部署**只读**、铸赎仍在 TON、预言机是**单个 relayer 地址**、`PlanetBond/Fund/Gov/PLTG` **未在 Arbitrum 部署**。不要为了好看把这几句改回去。
+站点现在明确写着：**Arbitrum Sepolia 是唯一线上部署**；mint/redeem 在 `/app`（拉取/返还测试 USDC）；
+预言机是**单个 relayer 地址**（SignedPriceOracle 已部署但签名集 1-of-1）；
+`PlanetBond/Fund/Gov/PLTG` **未在 Arbitrum 部署**。不要为了好看把这几句改回去。
 
 ---
 
 ## 0. 一句话 + 链接
 
-Planet（PLT）= 全球大宗商品购买力指数协议；当前实现为 **TON 上的合成指数代币 + TEP-74 代币 + 铸赎骨架**。
+Planet（PLT）= 全球大宗商品购买力指数协议；当前实现为 **Arbitrum Sepolia 上的 Solidity 核心 + ERC-20 PLT + 测试 USDC 抵押**。
 仓库：`github.com/everest-an/planet-stablecoin`（**private**），分支 `main`。
-最后验证：`main`（TON 主线：合成指数 + TEP-74 PLT + 铸赎骨架 + 稳定机制 A/C1/C2/C3a+C3b + CAM + 签名预言机（多源 M-of-N，支持 M>2）+ 价格护栏 + 跨合约 `onBouncedMessage` + 域分离 + `SetOwner`/`PlanetTimelock` 时间锁 + **PlanetFund（ETF 基金：两阶段申购 + 托管 M-of-N 确认按 NAV 铸 + 赎回，含 TEP-74 份额收款/burn 的**无信任赎回**）+ 测试网 live**），本地 Acton 全绿（**252 测试 / 20 文件**，All files 96.1% 行 / 85.2% 分支 / 92.0% 评分；门禁 90 只升不降；待 push 后 CI 复核）。
+最后验证：`main`（EVM 主线：链上 PPI + 抵押铸赎 + 分档费 30/40/20/10 + 风险基金 + 4 渠道确认式预言机 + SignedPriceOracle（1-of-1）+ Timelock；**70 个 Foundry 测试**全绿；线上 PPI ≈ 1.00383）。更早的 TON/Solana 实现归档在 `ton/` 与 `legacy-solana/`，不参与当前部署。
 
 ---
 
@@ -227,21 +229,22 @@ cd app-tg && npm install && npm run build
 
 ## 8. 需外部输入（给下个会话的清单）
 
-1. RedStone/DIA 在 TON 上**已部署的 adapter 地址**（`price_manager`/`price_feed`）+ 篮子对应的 **feed_id 清单**（详见 `docs/oracle-ton.md`）。
-2. 一个**有资金的 TON 测试网钱包**（地址或 `wallets.toml`）。
-3. （可选）WSL Ubuntu 安装（让合约测试秒级迭代）。
+1. **三个独立签名者的地址**（把 SignedPriceOracle 从 1-of-1 升到 2-of-3；只需 `setSigners`，不用重新部署）。
+2. 一个**有 Arbitrum Sepolia ETH 的部署/relayer 钱包**（部署与推价用；当前 relayer 已有余额）。
+3. **第三方审计**（主网前置门槛）。
+4. （可选）RWA 托管方 / 合规意见（1:1 版本）。
 
 ---
 
 ## 9. 下一次开局的推荐指令
 
-> "读 `docs/HANDOFF.md`。仓库已整理（主线 `ton/`+`app-tg/`，Solana 归档 `legacy-solana/`）。**252 测试全绿**，覆盖率 96.1% 行 / 85.2% 分支 / 92.0% 评分（门禁 90，只升不降）；链上 PPI/赎回/稳定机制 A/C1/C2/C3a+C3b（**债券已与 Core 自动联动**）/CAM+隔离/签名预言机（M-of-N 多源，支持 M>2）/价格护栏/`SetOwner`+`PlanetTimelock` 时间锁 **+ PlanetFund（ETF 基金：两阶段申购 + 托管 M-of-N 确认按 NAV 铸 + 赎回，含 TEP-74 份额收款/burn 的无信任赎回）** 均已就绪，TON 测试网 live + mint/burn 端到端验证；白皮书 v1.5 + `docs/security.md`。下一步：真实数据源接入 / 外部审计 / 1:1（RWA 托管 + 合规）或前端完善。改动保持 CI 绿。"
+> "读 `docs/HANDOFF.md` §0。当前主线是 **Arbitrum Sepolia 的 Solidity 部署**（`monad/`）：PlanetCore + ERC-20 PLT + Timelock + SignedPriceOracle；`mint` 拉取测试 USDC，`redeem` 销毁 PLT 并返还 USDC；4 渠道确认式推价，每小时 CI；**70 个 Foundry 测试全绿**。站点/API/`/app` 都已切 EVM，白皮书 v2.0。下一步：把签名集升到 2-of-3（需三个独立密钥）/ 第三方审计 / 1:1 RWA。改动保持 CI 绿。"
 
 ---
 
 ## 10. 上下文管理教训（给 Agent）
 
-- **别把大文档整页抓进主上下文**：用 `task` 派子智能体读 TON docs/大文件，只回收结论。
+- **别把大文档整页抓进主上下文**：用 `task` 派子智能体读大文件，只回收结论。
 - **CI 日志用 grep 抓关键行**，别整段 dump。
 - **中间结果写进仓库文件**（`docs/*`），让持久状态在磁盘而非上下文。
 - 一次 2 万 token 的抓取 ≈ 几十轮对话；节流就是续命。
@@ -355,3 +358,37 @@ as owner.
   the live v1.8 Core, so the dashboard shows "��").
 - Live Bond address corrected after on-chain verification: `kQDMxJXroCmuxBw9Sw7oj9LhO9Y0mLxdPS3Tr4vY-sdq65hz`
   (exit=0, premium 5%, totalIssued 0). The `kQDYY��` entry in the v1.8 rebuild table is uninitialized.
+
+---
+
+## v2.0 close-out (2026-10-25) �� EVM fixes + site rewrite
+
+### Contract fixes (source; the live deployment predates them, so a redeploy is required)
+
+1. **Fee buckets now net 30 / 40 / 20 / 10.** `_routeFees` computed reserve 50% and risk 10%
+   independently, so the four labels summed to 110% of the fee. The risk carve-out is now
+   subtracted from the reserve bucket, matching the TON implementation and the documentation.
+2. **Mint and redeem require a wired PLT token (`NoToken`).** Previously `redeem` skipped the
+   burn when `token == address(0)` and still paid the reserve out. `mint` could also take a
+   deposit without minting anything. Both now fail fast.
+3. Tests: **70 Foundry tests** (added a fee-netting assertion and two `NoToken` regression tests);
+   `forge test -vv` is green. CI: `monad-build.yml`.
+
+### Public surfaces
+
+- `web/whitepaper.html` �� **v2.0**: EVM/Arbitrum reference implementation, Solidity appendix C,
+  EVM security appendix D, 70-test evidence, Arbitrum deployment appendix F. No TON references.
+- `web/docs.html`, `faq.html`, `index.html`, `dashboard.html`, `methodology.html`, `pitch/`,
+  `reports/`, `security.txt`, `robots.txt`, `api/tg-webhook.js` �� EVM-only copy; every
+  `app.ppppp.space` link now points at `https://ppppp.space/app`.
+- `README.md` �� EVM-first; `ton/` and `legacy-solana/` are described as archived prototypes.
+- Fixed `web/api/v1/status.js`'s stale `0xcAdE��5080D` comment to the deployed
+  `0x65362e��7f65`; corrected the `mint()/redeem()` staleness claim (only mint gates on freshness).
+
+### Still open
+
+- **M-of-N 2-of-3**: requires three independent key holders; the contract/oracle already support
+  `setSigners([a,b,c], 2)` without a redeploy.
+- **Redeploy** the EVM core to apply the fee/token fixes, then rewire the API/relayer/app.
+- **Third-party audit**, mainnet, RWA/custody.
+- Bond / Fund / Gov / PLTG remain design-only on Arbitrum.

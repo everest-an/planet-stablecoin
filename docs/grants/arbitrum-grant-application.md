@@ -14,7 +14,7 @@ An **on-chain commodity purchasing-power index (PPI)** — a basket of 14 global
 single index, expressed as an ERC-20, with a governance timelock and an M-of-N signed price oracle.
 
 **Repo (public):** https://github.com/everest-an/planet — the EVM implementation is in `monad/`.
-**Evidence:** **5 contracts, 57 Foundry tests, all passing in CI** (`monad-build.yml`).
+**Evidence:** **5 contracts, 70 Foundry tests, all passing in CI** (`monad-build.yml`).
 **Docs:** `monad/` contains the contracts; `docs/audit-prep.md` holds the scope, the 10 invariants, and the
 trust/threat model that an auditor would start from.
 
