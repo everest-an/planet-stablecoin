@@ -4,7 +4,7 @@
 //
 // EVM note: getters are addressed by 4-byte selector, not by name. The selector is a compile-time
 // constant (keccak256("currentPpi()")[0:4]) so no hashing library is needed at runtime — same reason
-// web/api/_evm.js hardcodes them. The previous TON build called runGetMethod("ppi"); there is no
+      // web/api/_evm.js hardcodes them. The previous build called runGetMethod("ppi"); there is no
 // ppi() on the EVM core, and asking for it reverts.
 const CORE = "0x65362ef75028700855E842F903FF6FBD65A97f65";
 const RPC = "https://sepolia-rollup.arbitrum.io/rpc";

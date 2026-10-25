@@ -98,7 +98,7 @@ async function tg(method, payload) {
 }
 
 const FOOTER =
-  "\n\n—\nPlanet is a TON testnet proof of concept: not a stablecoin, no reserve, no market " +
+  "\n\n—\nPlanet is a Arbitrum Sepolia proof of concept: not a stablecoin, no reserve, no market " +
   "price, not investment advice. Full FAQ: https://ppppp.space/faq\n" +
   "I will never ask for your seed phrase or private key.";
 
@@ -106,7 +106,7 @@ const MENU = {
   inline_keyboard: [
     [
       { text: "Live dashboard", web_app: { url: "https://ppppp.space/dashboard" } },
-      { text: "Open app", web_app: { url: "https://app.ppppp.space" } },
+      { text: "Open app", web_app: { url: "https://ppppp.space/app" } },
     ],
     [{ text: "FAQ", url: "https://ppppp.space/faq" }],
   ],
@@ -172,7 +172,7 @@ export default async function handler(req, res) {
       chatId,
       "Hi — I'm the Planet support bot. Ask me anything about the commodity index, the " +
         "basket, minting, fees, governance or risks, and I'll answer from the FAQ.\n" +
-        "Commands: /status (live index) · /faq (full list) · /app (open the Mini App)" +
+        "Commands: /status (live index) · /faq (full list) · /app (open the app)" +
         FOOTER,
       { reply_markup: MENU }
     );
@@ -180,7 +180,7 @@ export default async function handler(req, res) {
   }
 
   if (cmd === "/app" || cmd === "/planet") {
-    await reply(chatId, "Open the Mini App: https://app.ppppp.space — you sign in your own wallet." + FOOTER, {
+    await reply(chatId, "Open the app: https://ppppp.space/app — you sign in your own wallet." + FOOTER, {
       reply_markup: MENU,
     });
     return res.status(200).json({ ok: true });
@@ -189,10 +189,10 @@ export default async function handler(req, res) {
   if (cmd === "/mint" || cmd === "/burn") {
     const kind = cmd.slice(1);
     const amt = (text.split(/\s+/)[1] || "").replace(/[^0-9.]/g, "");
-    const url = `https://app.ppppp.space/?intent=${kind}${amt ? "_" + amt : ""}`;
+    const url = `https://ppppp.space/app?intent=${kind}${amt ? "_" + amt : ""}`;
     await reply(
       chatId,
-      `Ready to ${kind}${amt ? " " + amt : ""}. Tap below to open the Mini App — it opens ` +
+      `Ready to ${kind}${amt ? " " + amt : ""}. Tap below to open the app — it opens ` +
         "pre-filled, and you sign in your own wallet. The bot never holds keys and never signs " +
         "for you." +
         FOOTER,

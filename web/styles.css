@@ -138,3 +138,18 @@ section { padding: var(--sp-7) 0; border-bottom: 1px solid var(--hair); }
 .doc-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12.5px; margin-bottom: var(--sp-4); }
 .doc-table th { text-align: left; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; font-size: 10px; color: var(--muted); padding: var(--sp-3) var(--sp-2); border-bottom: 1px solid var(--ink); }
 .doc-table td { padding: var(--sp-3) var(--sp-2); border-bottom: 1px solid var(--hair); vertical-align: top; }
+
+/* Wide reference tables scroll inside their own block on narrow screens instead of
+   widening the page. */
+@media (max-width: 640px) {
+  .doc-table,
+  .doc table,
+  .faq table,
+  .status-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+.status-table code { overflow-wrap: anywhere; }

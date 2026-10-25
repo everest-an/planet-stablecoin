@@ -55,7 +55,7 @@
         <a href="/docs">docs</a>
         <a href="/faq">faq</a>
         <a href="/app">mint (EVM)</a>
-<a class="btn" href="https://app.ppppp.space">TON app</a>
+<a class="btn" href="https://ppppp.space/app">open app</a>
       </nav>
     </header>
 
@@ -80,9 +80,10 @@
         It is a measurement, computed on-chain from signed prices.
       </p>
       <p>
-        It is <b>not</b> a claim on any commodity, not redeemable for anything, and not backed by
-        a reserve. There is no peg and no target. PLT is a synthetic token that expresses the
-        index; it is not a stablecoin and this is not a yield product.
+        It is <b>not</b> a claim on any commodity. Minting pulls test USDC and redeeming pays it
+        back from the reserve, but there is no commodity reserve behind it. There is no peg and no
+        target. PLT is a synthetic token that expresses the index; it is not a stablecoin and this is
+        not a yield product.
       </p>
 
       <h2>2. Composition</h2>
@@ -149,29 +150,30 @@
 
       <h2>6. Where prices come from</h2>
       <p>
-        An off-chain relayer fetches each commodity from <b>two independent sources</b> where one
-        exists (for example a Yahoo Finance futures quote and a Sina quote), converts both to the
-        same unit, and takes the <b>median</b>. It signs the resulting payload with an ed25519 key
-        and submits it to the contract, which <b>verifies the signature on-chain</b> before any
-        state changes.
+        An off-chain relayer reads up to <b>four independent channels</b> per commodity: Yahoo
+        Finance is the primary, and Sina, Tencent and Eastmoney are <b>confirmations</b> only when
+        they land within <b>0.5%</b>. It is <b>not a median</b> — a 1% gap is usually a different
+        contract expiry, and averaging two expiries blends two different assets. The live write path
+        is an authorised relayer; the <code>SignedPriceOracle</code> ECDSA M-of-N path is deployed
+        and wired, but its signer set is <b>1-of-1</b> today.
       </p>
 
       <h2>7. Validation gates</h2>
       <table>
         <thead><tr><th>gate</th><th>rule</th><th>effect</th></tr></thead>
         <tbody>
-          <tr><td>source divergence</td><td>two sources differ by &gt; 2%</td><td>commodity marked <b>frozen</b>, excluded from the index</td></tr>
-          <tr><td>single-update jump</td><td>an update moves a price by &gt; 50%</td><td>rejected outright</td></tr>
-          <tr><td>signature set</td><td>M-of-N distinct registered signers (currently 1 on testnet)</td><td>unsigned / under-signed updates rejected</td></tr>
-          <tr><td>domain separation</td><td>signature covers a tag + the contract address</td><td>a payload cannot be replayed on another deployment</td></tr>
+          <tr><td>confirmation</td><td>no channel within 0.5% of the primary</td><td>reading marked <b>caution</b> (still counts); the owner may freeze a dead feed</td></tr>
+          <tr><td>single-update jump</td><td>an update moves a price by &gt; 50%</td><td>rejected outright; <code>forcePrice</code> is the timelocked escape hatch</td></tr>
+          <tr><td>authorisation</td><td><code>updatePrice</code> onlyRelayer; <code>SignedPriceOracle</code> ECDSA M-of-N (1-of-1 today)</td><td>unauthorised / under-signed updates rejected</td></tr>
+          <tr><td>domain separation</td><td>the digest covers the oracle address + chain id + payload</td><td>a signature cannot be replayed on another oracle or chain</td></tr>
           <tr><td>timestamp</td><td>strictly increasing</td><td>replays rejected</td></tr>
-          <tr><td>staleness (mint)</td><td>index older than 6 hours</td><td><b>minting is refused</b> — the protocol never prices off a stale oracle</td></tr>
+          <tr><td>staleness (mint)</td><td>the <b>stalest active asset</b> is older than 6 hours</td><td><b>minting is refused</b> — the protocol never prices off a stale oracle</td></tr>
         </tbody>
       </table>
 
       <h2>8. Update cadence</h2>
       <p>
-        A scheduled run refreshes the feed once a day and pushes a commodity only when its price has moved more than <b>0.1%</b> since the last on-chain value. The divergence trigger keeps the cost low without trading away freshness. The on-chain index is recomputed on every price update, and minting is refused against prices older than the six-hour staleness guard.
+        A scheduled run refreshes the feed <b>hourly</b> and pushes a commodity only when its price has moved more than <b>0.1%</b> since the last on-chain value; a heartbeat forces a refresh before the six-hour mint guard. The on-chain index is recomputed on every price update.
       </p>
 
       <h2>9. How the basket changes</h2>
@@ -195,7 +197,7 @@
 
       <h2>10. What is explicitly not claimed</h2>
       <ul>
-        <li>No reserve, no collateral ratio, no redemption for commodities or dollars.</li>
+        <li>No commodity reserve and no redemption for commodities. Mints are collateralised by test USDC, which has no value; there is no collateral ratio promise.</li>
         <li>No NAV, no yield, no peg and no promise to hold any particular value.</li>
         <li>No third-party audit yet — this is unaudited proof-of-concept code on testnet.</li>
         <li>No claim that the on-chain index equals any real tradable basket's return; it is a

@@ -55,8 +55,8 @@
         <a href="/dashboard">dashboard</a>
         <a href="/methodology">methodology</a>
         <a href="/faq">faq</a>
-        <a href="/app">mint (EVM)</a>
-<a class="btn" href="https://app.ppppp.space">TON app</a>
+        <a href="/app">mint / redeem</a>
+<a class="btn" href="/app">open app</a>
       </nav>
     </header>
 
@@ -65,16 +65,14 @@
         [ developer docs · Arbitrum Sepolia · unaudited ]
       </p>
       <div class="note" style="border-left:3px solid #c2401c;padding:10px 14px;margin:18px 0">
-        <b>Two chains, one protocol.</b> The EVM deployment described in §1–§4 is live on <b>Arbitrum Sepolia</b>
-        (PlanetCore, the PLT token, a timelock and the price oracle). The public API, the dashboard and the
-        landing ticker all read it directly, and <a href="/app">/app</a> mints and redeems by calling the core
-        from your own wallet. The Telegram Mini App still runs its own mint flow on TON, which is why the
-        TON addresses are still listed in §2. PlanetBond, PlanetFund, PlanetGov and PLTG exist in
-        <code>ton/</code> and are <b>not deployed on Arbitrum</b> (§5).
+        <b>One deployment.</b> The EVM implementation is live on <b>Arbitrum Sepolia</b>: PlanetCore, the
+        PLT token, a timelock and the signed-price oracle. The public API, the dashboard, the landing ticker
+        and <a href="/app">/app</a> all read or write this deployment. PlanetBond, PlanetFund, PlanetGov and
+        PLTG are <b>design</b> and are not deployed (§5–§6).
       </div>
 
       <h1>Architecture &amp; interfaces</h1>
-      <p class="sub">v1.8 · October 2026 · §1–§4 describe the Arbitrum Sepolia deployment that this site reads; §5 is explicit about what is NOT deployed there</p>
+      <p class="sub">v2.0 · October 2026 · the Arbitrum Sepolia deployment this site reads; §5–§6 are explicit about what is NOT deployed</p>
 
       <p class="toc">
         <a href="#stack">1. Stack</a> · <a href="#addresses">2. Live contracts</a> ·
@@ -86,14 +84,12 @@
 
       <h2 id="stack">1. Stack</h2>
       <pre>
-  off-chain                        on-chain (Arbitrum Sepolia, Solidity)
-  ─────────                        ────────────────────────────────────
-  Yahoo + Sina ──► GitHub Actions ──► PlanetCore ──► PlanetToken (PLT, ERC-20)
-  (median of sources)   (hourly)     │  basket, on-chain index, fees, limits
-                                     └──► PlanetTimelock (delayed owner actions)
-
-  TON build (still live, powers the Mini App's mint/redeem):
-  ton/ = PlanetCore · PlanetBasket · PlanetBond · PlanetFund · PlanetGov · PLTG</pre>
+  off-chain                            on-chain (Arbitrum Sepolia, Solidity)
+  ─────────                            ────────────────────────────────────
+  Yahoo primary + Sina/Tencent/        PlanetCore ──► PlanetToken (PLT, ERC-20)
+  Eastmoney confirmations ──► GitHub   │  basket, on-chain index, fees, collateral
+  Actions (hourly)                     ├──► PlanetTimelock (delayed owner actions)
+                                       └──► SignedPriceOracle (M-of-N verifier)</pre>
       <p>
         The EVM core is deliberately small: it holds the basket, accepts prices from its authorised relayer, computes the
         index, and accounts fees. Everything that does not need to be atomic with that lives in a
@@ -116,18 +112,6 @@
         Open any address on <b>sepolia.arbiscan.io</b>, or call <code>eth_call</code> yourself with the
         selectors in §9 — no library required.
       </p>
-      <h3>TON testnet — powers the Mini App's mint/redeem</h3>
-      <table>
-        <tbody>
-          <tr><th>PlanetCore</th><td><code>kQBUIDOcKIQZS_AMXjOL3usH69c3HIo0YudLoo_49eE0X2NJ</code></td></tr>
-          <tr><th>PLT minter</th><td><code>kQC6zZ83qploNLCy0MdUNhKkBD9Tx25N-xWF7iDHkd3IJ2k3</code></td></tr>
-          <tr><th>PLTG minter</th><td><code>kQDF0ixGco8WW4fqPB3XNdrNJ8vikFNkkyzKbz8hNJiFZ7OD</code></td></tr>
-          <tr><th>PlanetGov</th><td><code>kQAK5XcQdykCOrA2-uFraTxq9CFD1NNdK5W4QrwCexNcBYJ3</code></td></tr>
-          <tr><th>Core owner timelock (60s)</th><td><code>kQC_j4CrhPvbAX19_4C-PAoGNWBsaxj4GN5v6mIhGb7ctxQ1</code></td></tr>
-          <tr><th>Fund owner timelock (older, separate)</th><td><code>kQBo0345y-RGi49-7WWaWAHyyNtiWe-JrT44iO3G9Cyom6YK</code></td></tr>
-        </tbody>
-      </table>
-
       <h2 id="oracle">3. The oracle flow</h2>
       <p>
         Planet does not depend on a third-party oracle network. On the EVM deployment the core accepts a price
@@ -147,8 +131,9 @@
       </ol>
       <p class="note">
         The push runs hourly from GitHub Actions (<code>.github/workflows/evm-push.yml</code>). That cadence is not cosmetic:
-        <code>MAX_ORACLE_AGE</code> is 6 hours and <code>mint()</code>/<code>redeem()</code> revert <code>StaleOracle</code> past it, so minting would be closed
-        most of the day on a daily schedule.
+        <code>MAX_ORACLE_AGE</code> is 6 hours and <code>mint()</code> reverts <code>StaleOracle</code> past it (measured from
+        <code>oldestActiveUpdate()</code>), so minting would be closed most of the day on a daily schedule. <code>redeem()</code>
+        deliberately has no freshness guard: an exit is not blocked by a stale feed.
       <h3>Which channels, and what happens when they disagree</h3>
       <p>
         Four independent venues are read per asset where they cover it: <b>Yahoo</b> (primary), <b>Sina</b>,
@@ -170,9 +155,11 @@
         off it was.
       </p>
       </p>
-      <p>There is no signer registration on EVM: the oracle is one address set by
-        <code>setRelayer(address)</code> (owner action). The M-of-N verifier
-        is <b>deployed and wired in</b> (<code>updatePriceSigned</code>), but its signer set is <b>1-of-1 with the same operator key</b>, because one operator holds every key today. Raising it is a <code>setSigners()</code> call — no redeploy.</p>
+      <p>The live write path is one relayer address set by <code>setRelayer(address)</code> (owner action).
+        The M-of-N verifier is <b>deployed and wired in</b> (<code>updatePriceSigned</code>), and its signer set
+        is configured with <code>setSigners(address[], uint8)</code> on the oracle. Today it is
+        <b>1-of-1 with the same operator key</b>; raising it to 2-of-3 is a <code>setSigners()</code> call —
+        no redeploy.</p>
 
       <h2 id="token">4. Token, mint &amp; redeem</h2>
       <p>
@@ -182,8 +169,9 @@
       <ul>
         <li><b>Mint:</b> <code>mint(uint64 deposit)</code> pulls <code>deposit</code> of the collateral
           token (Circle test USDC, 6 decimals) from the caller with <code>transferFrom</code>, computes
-          <code>deposit·(1−fee)/index</code> and mints PLT. It reverts <code>NoDepositToken</code> when no
-          collateral is wired, so the core cannot fall back to minting against a number it never received.</li>
+          <code>deposit·(1−fee)/index</code> and mints PLT. It reverts <code>NoToken</code> when no PLT token
+          is wired and <code>NoDepositToken</code> when no collateral is wired, so the core cannot mint against
+          a number it never received, nor take a deposit it cannot tokenise.</li>
         <li><b>Burn/redeem:</b> <code>redeem(uint64 burnAmount)</code> burns the caller's PLT, pays back
           <code>burnAmount·index·(1−fee)</code> of the collateral, and decrements <code>totalReserve</code> by
           exactly that payout — the fee stays in the reserve. Both calls are on <a href="/app">/app</a>,
@@ -195,27 +183,25 @@
         fund</b>.
       </p>
 
-      <h2 id="fund">5. The fund — TON build only, NOT deployed on Arbitrum</h2>
+      <h2 id="fund">5. The fund — design, not deployed</h2>
       <p>
         <code>PlanetFund</code> is the "real product" shape: subscribers deposit, a custodian set
         confirms the purchase at the attested NAV (<b>M-of-N</b>, and shares are minted only on
         that confirmation — never on a deposit alone), and redemption is two-phase. Redemption is
-        <b>trustless about the shares</b>: the subscriber transfers PLT into the <i>fund's own</i>
-        jetton wallet, the transfer notification must come from that wallet
-        (<code>ERR_NOT_FUND_WALLET</code>), the shares are burned, and only then can the custodian
-        confirm the payout (<code>ERR_NOT_FUNDED</code>). Shares that never left the subscriber
-        cannot be paid out.
+        <b>trustless about the shares</b>: the subscriber transfers shares to the <i>fund's own</i>
+        balance, the receipt must come from that balance, the shares are burned, and only then can
+        the custodian confirm the payout. Shares that never left the subscriber cannot be paid out.
+        <b>Status:</b> design; there is no Fund contract in the Arbitrum deployment.
       </p>
 
-      <h2 id="gov">6. Governance — PLTG and PlanetGov are TON-only; on Arbitrum the owner is the timelock</h2>
+      <h2 id="gov">6. Governance — timelock live; PLTG is design</h2>
       <ul>
-        <li><b>PLTG</b> — a fixed-supply (1e9) TEP-74 token. <code>PlanetGov</code> holds stakes and
-          distributes the staking fee bucket pro-rata using a reward-per-share accumulator;
-          voting power is weighted by the staked amount, and a vote is counted once per proposal.</li>
+        <li><b>PLTG / PlanetGov</b> — design. There is no governance token or staking contract in the
+          Arbitrum deployment; the reward-per-share and voting mechanics are documented but not live.</li>
         <li><b>Basket changes</b> are owner actions on the core: append a commodity, re-weight one
           (15% cap), or retire one by setting its weight to 0. Base prices can never be changed.</li>
         <li><b>Delay:</b> on testnet the core owner is a 60-second <code>PlanetTimelock</code>, so
-          every privileged call is <code>Propose → wait → Execute</code>. Production intends a
+          every privileged call is <code>propose → wait → execute</code>. Production intends a
           multisig as the timelock's owner and a longer delay.</li>
       </ul>
 
@@ -238,32 +224,29 @@
       <h2 id="run">8. Run it yourself</h2>
       <pre>repo layout
   monad/          Solidity contracts + tests (Foundry) — the Arbitrum deployment this site reads
-  ton/            Tolk contracts + tests (Acton toolchain; builds in CI) — the Mini App's chain
-    contracts/    planet_core, planet_fund, planet_gov, planet_timelock, jetton/*
-    scripts/      deploy + migration scripts
-  relayer/        the off-chain price relayer (node, no third-party oracle)
-  web/            this site + /dashboard + /faq + /docs + the v1 API
-  app-tg/         the Telegram Mini App (Vite + React + TON Connect)</pre>
+    src/          PlanetCore, PlanetToken, PlanetTimelock, SignedPriceOracle, PlanetBond
+    script/       Deploy.s.sol, ConfigureBasket.s.sol
+    test/         70 Foundry tests
+  relayer/        EVM price relayer (node, no third-party oracle)
+  web/            this site + /dashboard + /faq + /docs + /app + the v1 API</pre>
       <ul>
-        <li><b>Contracts:</b> <code>acton build &amp;&amp; acton wrapper --all &amp;&amp; acton test --coverage</code>
-          (Acton needs Linux/WSL; CI does it on every push).</li>
-        <li><b>EVM push:</b> <code>node push-evm.mjs [--dry-run]</code> (Yahoo+Sina median → <code>updatePrice</code>).</li>
-        <li><b>TON relayer:</b> <code>node relayer.mjs configure|register|push</code> with
-          <code>PLANET_CORE</code>, <code>RELAYER_MNEMONIC</code> and <code>ASSETS_JSON</code>.</li>
-        <li><b>Site/app:</b> static + serverless; the Mini App reads <code>VITE_PLANET_ADDRESS</code>
-          and <code>VITE_PLT_MINTER_ADDRESS</code> at build time.</li>
+        <li><b>Contracts:</b> <code>cd monad &amp;&amp; forge test -vv</code> (70 tests; CI runs on every push).</li>
+        <li><b>EVM push:</b> <code>node push-evm.mjs [--dry-run]</code>
+          (Yahoo primary + confirmations → <code>updatePrice</code>).</li>
+        <li><b>Site/app:</b> static + serverless; <code>/app</code> injects the user's wallet and calls
+          <code>mint</code>/<code>redeem</code> directly.</li>
       </ul>
 
       <h2 id="verify">9. Verification checklist</h2>
       <ol>
-        <li>Call <code>ppi()</code>, <code>assetCount()</code>, <code>assetAt(i)</code>,
-          <code>baseLocked()</code>, <code>lastOracleUpdate()</code> on PlanetCore.</li>
-        <li>Check the weights in <code>assetAt(i)</code> sum to exactly <code>1000000</code> and no
-          weight exceeds <code>150000</code> (call <code>maxAssetWeight()</code>).</li>
-        <li>Recompute the index from <code>assetAt(i)</code> with the formula in
-          <a href="/methodology">methodology</a> §5 and compare to <code>ppi()</code>.</li>
-        <li>Compare <code>lastOracleUpdate()</code> against the wall clock — it should be minutes,
-          never days, old.</li>
+        <li>Call <code>currentPpi()</code>, <code>assetCount()</code>, <code>assets(i)</code>,
+          <code>baseLocked()</code>, <code>oldestActiveUpdate()</code> on PlanetCore.</li>
+        <li>Check <code>weightSum() == 1000000</code> and no weight exceeds <code>150000</code>
+          (<code>MAX_ASSET_WEIGHT</code>).</li>
+        <li>Recompute the index from <code>assets(i)</code> with the formula in
+          <a href="/methodology">methodology</a> §5 and compare to <code>currentPpi()</code>.</li>
+        <li>Compare <code>oldestActiveUpdate()</code> against the wall clock — it should be minutes,
+          never days, old; that is the timestamp minting gates on.</li>
         <li>Confirm <code>owner()</code> is the timelock, not a plain wallet.</li>
         <li>Fetch <code>/api/v1/status</code> and confirm the numbers match your own contract reads.</li>
       </ol>
@@ -274,9 +257,9 @@
           own wallet to sign. Any message asking for a seed phrase is not us.</li>
         <li><b>Unaudited.</b> No third-party audit has been completed; that is the gate before any
           mainnet deployment. Treat the code as research software.</li>
-        <li><b>Known failure modes are tested:</b> bounced-message handling on every contract,
-          signed-payload domain separation, non-positive amount rejection, a coverage gate in CI,
-          and a staleness guard on minting.</li>
+        <li><b>Known failure modes are tested:</b> fee-bucket netting (30/40/20/10), token-required
+          mint/redeem, collateral pulled before state changes, signed-payload domain separation,
+          non-positive amount rejection, and a staleness guard on minting.</li>
         <li><b>Disclosure:</b> see <a href="/.well-known/security.txt"><code>/.well-known/security.txt</code></a>.</li>
       </ul>
     </main>

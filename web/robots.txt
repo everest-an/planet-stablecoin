@@ -1,5 +1,5 @@
 User-agent: *
 Allow: /
 
-# Planet — on-chain commodity purchasing-power index (TON testnet PoC)
+# Planet — on-chain commodity purchasing-power index (Arbitrum Sepolia PoC)
 Sitemap: https://ppppp.space/sitemap.xml

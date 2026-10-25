@@ -16,14 +16,14 @@
     <meta property="og:title" content="Planet — on-chain commodity purchasing-power index (Arbitrum)" />
     <meta
       property="og:description"
-      content="A basket of 14 global commodities priced on-chain, expressed as one index (PPI) and the PLT token. Phase 1 PoC on Arbitrum Sepolia — no reserve, not a stablecoin."
+      content="A basket of 14 global commodities priced on-chain, expressed as one index (PPI) and the PLT token. Phase 1 PoC on Arbitrum Sepolia — test-USDC collateral, no commodity reserve, not a stablecoin."
     />
     <meta property="og:image" content="https://ppppp.space/icon.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Planet — on-chain commodity purchasing-power index (Arbitrum)" />
     <meta
       name="twitter:description"
-      content="14 commodities, one on-chain index. Phase 1 PoC on Arbitrum Sepolia — no reserve, not a stablecoin."
+      content="14 commodities, one on-chain index. Phase 1 PoC on Arbitrum Sepolia — test-USDC collateral, no commodity reserve, not a stablecoin."
     />
     <meta name="twitter:image" content="https://ppppp.space/icon.png" />
     <script type="application/ld+json">
@@ -78,14 +78,14 @@
         <a href="/faq">faq</a>
         <a href="/whitepaper.html">whitepaper</a>
         <a href="/app">mint (EVM)</a>
-<a class="btn" href="https://app.ppppp.space">TON app</a>
+<a class="btn" href="https://ppppp.space/app">open app</a>
       </nav>
     </header>
 
     <main>
       <!-- HERO -->
       <section class="hero">
-        <p class="notice">[ PoC — no reserve, no redemption, no market price · not a stablecoin · not an investment ]</p>
+        <p class="notice">[ PoC — test-USDC collateral · no market price · not a stablecoin · not an investment ]</p>
         <p class="eyebrow">[ on-chain commodity purchasing-power index · Arbitrum Sepolia ]</p>
         <h1>A purchasing-power index for the world's commodities, <em>on-chain</em>.</h1>
         <p class="lede">
@@ -94,7 +94,7 @@
           your wallet.
         </p>
         <div class="hero-cta">
-          <a class="btn solid" href="https://app.ppppp.space">Open the Mini App →</a>
+          <a class="btn solid" href="https://ppppp.space/app">Open the app →</a>
           <a class="btn" href="/whitepaper.html">Read the whitepaper</a>
         </div>
         <div class="ticker">
@@ -112,14 +112,14 @@
           <ul class="marks yes">
             <li>An on-chain <b>commodity purchasing-power index</b> expressed as the PLT token.</li>
             <li>A <b>synthetic index token</b> (ERC-20) on <b>Arbitrum Sepolia</b>, with mint / burn / redemption accounting.</li>
-            <li>Prices sourced by an <b>off-chain relayer</b> from <b>two independent feeds</b>, verified on-chain by ed25519 signatures.</li>
+            <li>Prices sourced by an <b>off-chain relayer</b> from up to <b>four independent channels</b> (Yahoo primary + confirmations), pushed by an authorised relayer; the <b>SignedPriceOracle</b> M-of-N path is deployed (1-of-1 today).</li>
             <li>Governed by an <b>owner + timelock</b> (Propose → delay → Execute), multisig-ready.</li>
           </ul>
         </div>
         <div class="col">
           <div class="sec-head"><span class="num">[ 02 ]</span><span class="lbl">what it is not</span><span class="end">¬</span></div>
           <ul class="marks no">
-            <li><b>Not a fully-collateralised stablecoin.</b> Phase 1 holds no real commodity reserve.</li>
+            <li><b>Not a fully-collateralised stablecoin.</b> Mints are collateralised by test USDC, but there is no real commodity reserve.</li>
             <li><b>Not pegged 1:1</b> to a basket — PLT is an index, its market price may diverge.</li>
             <li><b>Not audited yet.</b> Testnet only; do not use with real value.</li>
             <li><b>Not a DEX.</b> Planet builds no AMM; trading happens on external venues.</li>
@@ -142,14 +142,14 @@
             <span class="step-n">02</span>
             <div>
               <h3>Multi-source oracle</h3>
-              <p>A relayer reads two independent feeds, takes the median, and signs the payload. Divergence beyond 2% freezes the asset out of the index.</p>
+              <p>A relayer reads up to four channels: Yahoo is the primary, Sina/Tencent/Eastmoney are confirmations within 0.5% (not a median). With no confirmation the reading is marked caution.</p>
             </div>
           </li>
           <li>
             <span class="step-n">03</span>
             <div>
               <h3>On-chain PPI</h3>
-              <p>PlanetCore verifies the signature (M-of-N signer set), guards against stale / jumped prices, and recomputes the PPI from the live basket.</p>
+              <p>PlanetCore checks the timestamp, weights and jump guard, then recomputes the PPI from the live basket. The signed M-of-N path is available through <code>SignedPriceOracle</code>; the live path is an authorised relayer.</p>
             </div>
           </li>
           <li>
@@ -271,7 +271,7 @@
         <span class="ver">[ v0.1 · Arbitrum Sepolia ]</span>
       </div>
       <nav class="foot-nav">
-        <a href="https://app.ppppp.space">open app</a>
+        <a href="https://ppppp.space/app">open app</a>
         <a href="/dashboard">dashboard</a>
         <a href="/docs">docs</a>
         <a href="/methodology">methodology</a>

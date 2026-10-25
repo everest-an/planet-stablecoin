@@ -2,18 +2,18 @@
 //
 // GET /api/v1/status -> JSON snapshot of the on-chain basket + PPI + reserve/supply/fees.
 //
-// Chain: Arbitrum Sepolia (421614), PlanetCore 0xcAdE…5080D. Reads are `eth_call` against the
+// Chain: Arbitrum Sepolia (421614), PlanetCore 0x65362e…5080D. Reads are `eth_call` against the
 // contract's auto-generated getters, batched into ONE JSON-RPC round trip (~1-2s) instead of the
-// ~20s of sequential TON get-methods this used to do.
+// ~20s of sequential get-methods this used to do.
 //
-// Conventions (unchanged from the TON edition, so existing clients keep working):
+// Conventions (unchanged from the previous edition, so existing clients keep working):
 //   - URL-path versioning (`/api/v1/...`); additive changes stay in v1.
 //   - One error envelope everywhere: { error: { code, message, request_id, details? } }.
 //     A non-2xx status ALWAYS carries this envelope; a 2xx NEVER does.
 //   - Cache-Control + ETag so clients can revalidate (304 Not Modified).
 //   - 503 + Retry-After when the upstream RPC is unavailable (transient).
 //
-// SCHEMA NOTES FOR EVM CONSUMERS (the port is NOT a rename of the TON contract — read this before
+// SCHEMA NOTES FOR EVM CONSUMERS (the port is NOT a rename of the earlier contract — read this before
 // wiring a client):
 //   * `ppi`       <- currentPpi().  There is no ppi() on the EVM core.
 //   * `supply`    <- totalSupply() on CORE (the accounting source), not the token's own totalSupply.

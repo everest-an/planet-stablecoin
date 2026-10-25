@@ -81,13 +81,13 @@
         <a href="/methodology">methodology</a>
         <a href="/whitepaper.html">whitepaper</a>
         <a href="/app">mint (EVM)</a>
-<a class="btn" href="https://app.ppppp.space">TON app</a>
+<a class="btn" href="https://ppppp.space/app">open app</a>
       </nav>
     </header>
 
     <main class="dash">
       <p class="notice" style="font-family: 'DM Mono', monospace">
-        [ PoC · on-chain basket · no reserve, no redemption · not a stablecoin ]
+        [ PoC · on-chain basket · test-USDC collateral · not a stablecoin ]
       </p>
       <h1>Live basket dashboard</h1>
       <p class="sub">
@@ -219,7 +219,7 @@
         throw new Error("rate-limited");
       }
       // The EVM core returns a single 32-byte word per scalar getter, decoded inside callSel; there
-      // is no TON-style stack here, so the old toBig/num pair is gone.
+        // is no legacy stack here, so the old toBig/num pair is gone.
 
       // Re-verify: read the chain's index + freshness, recompute the index here from the rows
       // we are actually displaying, and compare. If they agree, nothing on screen is a claim

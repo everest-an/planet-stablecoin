@@ -7,15 +7,14 @@
 //
 // Design: the DEFAULT response is deliberately cheap (one batched JSON-RPC round trip) so it can be
 // polled frequently. The per-commodity scan (weights sum, frozen/caution lists) only runs with
-// `?full=1` — and on EVM even that is a single batch, not the 14 sequential calls with 120ms sleeps
-// the TON version needed. It never reports "healthy" when it could not actually read the chain: an
-// unreachable core is a 503 with the standard error envelope.
+// `?full=1` — and on EVM even that is a single batch, not 14 sequential get-method calls. It never
+// reports "healthy" when it could not actually read the chain: an unreachable core is a 503 with the
+// standard error envelope.
 //
 // THE STALENESS NUMBER IS THE CONTRACT'S, NOT A POLICY CHOICE:
-//   PlanetCore.MAX_ORACLE_AGE = 6 hours and mint()/redeem() revert StaleOracle past it. The TON
-//   edition of this file used 26h to match a daily push cron; that made a monitor report "healthy"
-//   while minting was actually blocked for 18h of every day. Here `maxAgeSeconds` is 21600 and the
-//   push runs hourly, so "fresh" now means "minting is actually open".
+//   PlanetCore.MAX_ORACLE_AGE = 6 hours and mint() reverts StaleOracle past it (redeem deliberately
+//   has no freshness guard). `maxAgeSeconds` is 21600 and the push runs hourly, so "fresh" means
+//   "minting is actually open", not "a cron ran recently".
 //
 //   `ageSeconds` is measured from oldestActiveUpdate(), NOT lastOracleUpdate: the core gates minting
 //   on the STALEST active asset, so a health check based on the newest push would report healthy
@@ -148,8 +147,7 @@ async function readOracle(full) {
       frozen,
       caution,
       stale,
-      // computePpi() skips ONLY riskState==2. Caution (1) is flagged for humans but still counts —
-      // relayer/README.md claims otherwise for the TON contract; that claim is wrong on EVM.
+      // computePpi() skips ONLY riskState==2. Caution (1) is flagged for humans but still counts.
       excludedFromPpi: frozen,
     };
     if (!complete) warnings.push(`basket_scan_incomplete:${read}of${assetCount}`);

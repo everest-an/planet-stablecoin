@@ -1,6 +1,6 @@
 // Minimal Ethereum read layer for the Planet public API — deliberately dependency-free.
 //
-// WHY NO VIEM HERE: the deployment used to be TON, where every read was a `runGetMethod` with a
+// WHY NO VIEM HERE: the earlier deployment used method-name reads with a `runGetMethod` with a
 // method NAME, so no encoding was needed. EVM getters are addressed by a 4-byte selector, and the
 // first instinct is "we need keccak at runtime, so we need a library". We do not: the selectors are
 // COMPILE-TIME CONSTANTS. Hardcoding them (each one verified against the live contract) keeps this
@@ -11,8 +11,8 @@
 // so decoding is word slicing. If a future getter returns a string/bytes/dynamic array this helper
 // must grow an offset-following decoder — do not silently extend `words()` and assume it works.
 //
-// ENV: EVM_CORE / EVM_RPC (NOT PLANET_CORE — that variable still holds a TON address in the Vercel
-// project, and inheriting it would point every read at a base64 TON address and fail silently).
+// ENV: EVM_CORE / EVM_RPC (NOT PLANET_CORE — that variable still holds a legacy address in the Vercel
+// project, and inheriting it would point every read at a legacy address and fail silently).
 
 // Arbitrum Sepolia = 421614. The RPC is public and needs no key.
 export const RPC = process.env.EVM_RPC || "https://sepolia-rollup.arbitrum.io/rpc";
@@ -49,7 +49,7 @@ export const SEL = {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // One JSON-RPC batch = one round trip for the whole basket. The public endpoint is rate-limited and
-// a cold function used to spend ~20s on sequential TON get-methods; this is ~1-2s.
+// a cold function used to spend ~20s on sequential get-methods; this is ~1-2s.
 export async function ethCallMany(items, { tries = 4, timeoutMs = 12000 } = {}) {
   if (!items.length) return [];
   const body = items.map((it, i) => ({
@@ -173,7 +173,7 @@ export async function readAssets(n, opts) {
   return results.map((hex, i) => decodeAsset(hex, i));
 }
 
-// FNV-1a — a short ETag, same function the TON version used.
+// FNV-1a — a short ETag, same function the earlier version used.
 export function fnv1a(str) {
   let h = 0x811c9dc5;
   for (let i = 0; i < str.length; i++) {
@@ -187,7 +187,7 @@ export function fnv1a(str) {
 //
 // `volatile` lists top-level keys that MUST NOT feed the ETag. Without this, a body containing a
 // per-request timing field (readMs) or a clock field (checkedAt/ageSeconds) would hash differently on
-// every call, so If-None-Match could never match and 304 would never fire — the TON edition of these
+// every call, so If-None-Match could never match and 304 would never fire — the earlier edition of these
 // endpoints had exactly that defect: it advertised ETag/304 and, in practice, always sent a full body.
 export function sendJson(req, res, requestId, data, { maxAge, volatile = [] }) {
   const basis = volatile.length

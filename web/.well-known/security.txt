@@ -5,5 +5,5 @@ Preferred-Languages: en, zh
 Canonical: https://ppppp.space/.well-known/security.txt
 Policy: https://ppppp.space/docs#security
 Acknowledgments: https://ppppp.space/docs#security
-# Planet is an unaudited TON testnet proof of concept. Please report suspected
+# Planet is an unaudited Arbitrum Sepolia proof of concept. Please report suspected
 # vulnerabilities privately; do not open a public issue for security bugs.

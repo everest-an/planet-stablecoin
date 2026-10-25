@@ -52,21 +52,21 @@
         <a href="/methodology">methodology</a>
         <a href="/whitepaper.html">whitepaper</a>
         <a href="/app">mint (EVM)</a>
-<a class="btn" href="https://app.ppppp.space">TON app</a>
+<a class="btn" href="/app">open app</a>
       </nav>
     </header>
 
     <main class="faq">
       <p class="notice" style="font-family: 'DM Mono', monospace">
-        [ PoC · on-chain basket · no reserve, no redemption, no market price · not a stablecoin ]
+        [ PoC · on-chain basket · test-USDC collateral · no market price · not a stablecoin ]
       </p>
       <h1>Frequently asked questions</h1>
       <p class="sub">last reviewed <time datetime="2026-10">October 2026</time> · plain answers, no marketing</p>
 
       <p class="warn">
         Plain-language notice: Planet is a <b>testnet proof of concept</b>. It is <b>not</b> a
-        stablecoin, has <b>no</b> reserve and <b>no</b> market price, and nothing here is
-        investment advice.
+        stablecoin, has <b>no commodity reserve</b> and <b>no market price</b>, and nothing here is
+        investment advice. Mints are collateralised by test USDC held by the contract.
       </p>
 
       <p class="toc">
@@ -93,10 +93,11 @@
       <article id="stablecoin">
         <h2>Is PLT a stablecoin?</h2>
         <p>
-          <b>No.</b> PLT is a synthetic index token: it tracks the index, it is not redeemable for
-          commodities or dollars, and no reserve backs it. There is no peg and no promise of one.
-          The Phase 1 build is a proof of concept on testnet; anything describing PLT as a
-          stablecoin or a yield product is wrong.
+          <b>No.</b> PLT is a synthetic index token: it tracks the index and is not redeemable for
+          commodities. Mints are collateralised by test USDC held by the contract, and redeeming pays
+          test USDC back from that reserve — but that token has no value, and there is no peg or
+          promise of one. The Phase 1 build is a proof of concept on testnet; anything describing PLT
+          as a stablecoin or a yield product is wrong.
         </p>
       </article>
 
@@ -133,10 +134,11 @@
       <article id="prices">
         <h2>Where do the prices come from?</h2>
         <p>
-          An off-chain relayer fetches each commodity from <b>two independent sources</b> (for
-          example Yahoo Finance and Sina), takes the <b>median</b>, signs the result with an
-          ed25519 key and pushes it to the contract, which verifies the signature on-chain. If the
-          two sources diverge by more than 2%, that commodity is marked <b>frozen</b> and excluded.
+          An off-chain relayer reads up to <b>four independent channels</b> per commodity: Yahoo
+          Finance is the primary, and Sina, Tencent and Eastmoney are <b>confirmations</b> only when
+          they land within 0.5%. It is not a median — a 1% gap is usually a different contract
+          expiry, and averaging two expiries would blend two different assets. With no confirmation
+          the reading is marked <b>caution</b>; a frozen asset is excluded from the index.
         </p>
       </article>
 
@@ -144,20 +146,20 @@
         <h2>How often are prices updated?</h2>
         <p>
           A scheduled run pushes a commodity only when its price has moved more than 0.1% since the
-          last on-chain value, refreshed by a daily scheduled run; the on-chain index is recomputed on every update. On a
-          quiet day that means a handful of transactions instead of fourteen — cheap and still
-          fresh.
+          last on-chain value, and refreshes every asset anyway at least once an hour. The on-chain
+          index is recomputed on every update, so a quiet hour costs a handful of transactions
+          instead of fourteen. Minting is refused when the stalest active asset is older than six
+          hours.
         </p>
       </article>
 
       <article id="mint">
         <h2>How do I mint or redeem PLT?</h2>
         <p>
-          Open the Mini App at <a href="https://app.ppppp.space">app.ppppp.space</a> and connect a
-          wallet. There are two paths: <b><a href="/app">/app</a></b> mints and redeems against the
-          Arbitrum contracts from an EVM wallet (minting pulls test USDC from your wallet via
-          <code>transferFrom</code> at the on-chain index), and the Telegram Mini App does
-          the same on TON. You always sign in your own wallet — Planet never holds keys.
+          Open <a href="/app"><b>/app</b></a> on Arbitrum Sepolia and connect an EVM wallet.
+          Minting pulls test USDC from your wallet via <code>transferFrom</code> at the on-chain
+          index; redeeming burns PLT and pays test USDC back from the reserve. You approve the
+          amount first and always sign in your own wallet — Planet never holds keys.
         </p>
       </article>
 
@@ -174,20 +176,20 @@
       <article id="pltg">
         <h2>Is there a governance token?</h2>
         <p>
-          Yes — <b>PLTG</b>, a fixed-supply (1,000,000,000) TON-side token (not deployed on Arbitrum) with a live staking and
-          voting contract. Stakers receive the staking share of protocol fees pro-rata, and voting
-          power is weighted by the amount staked. It is deployed on testnet and not for sale.
+          Not in this deployment. <b>PLTG</b> and its staking/voting design exist, but no governance
+          token is deployed on Arbitrum; parameter authority is the timelock owner. There is no public
+          sale and nothing is for sale.
         </p>
       </article>
 
       <article id="network">
         <h2>Which network is it on? Is it live on mainnet?</h2>
         <p>
-          Two testnets, no mainnet. The <b>Arbitrum Sepolia</b> deployment holds the basket, the on-chain
-          index and the PLT token, and is what this site reads. The <b>TON testnet</b> build is still live
-          and is what the Mini App's mint/redeem talks to. There is no public sale, no exchange listing,
-          and the published addresses are testnet addresses whose tokens carry no value. Mainnet is
-          gated behind an independent audit.
+          One testnet, no mainnet. The <b>Arbitrum Sepolia</b> deployment holds the basket, the
+          on-chain index, the PLT token and the test-USDC collateral, and is what this site and
+          <a href="/app">/app</a> use. There is no public sale, no exchange listing, and the published
+          addresses are testnet addresses whose tokens carry no value. Mainnet is gated behind an
+          independent audit.
         </p>
       </article>
 
@@ -195,9 +197,8 @@
         <h2>Is the code audited?</h2>
         <p>
           Not by a third party yet — that is the main gate before any mainnet launch. The code is
-          open, written in Solidity (Arbitrum) and Tolk (TON), and backed by a continuous test suite (200+ tests, coverage gate
-          at 90%), plus a self-review of known failure classes. Independent audit is planned, not
-          done; treat this as unaudited software.
+          open Solidity, backed by <b>70 Foundry tests</b> in CI, plus a self-review of known failure
+          classes. Independent audit is planned, not done; treat this as unaudited software.
         </p>
       </article>
 
@@ -245,20 +246,20 @@
         "url": "https://ppppp.space/faq",
         "mainEntity": [
           { "@type": "Question", "name": "What is Planet?", "acceptedAnswer": { "@type": "Answer", "text": "Planet is an on-chain commodity purchasing-power index on Arbitrum Sepolia. It reads the real prices of a basket of 14 global commodities and combines them into one number (the PPI), expressed as an ERC-20 token (PLT)." } },
-          { "@type": "Question", "name": "Is PLT a stablecoin?", "acceptedAnswer": { "@type": "Answer", "text": "No. PLT is a synthetic index token. It is not redeemable for commodities or dollars, no reserve backs it, and there is no peg or promise of one. The Phase 1 build is a testnet proof of concept." } },
+          { "@type": "Question", "name": "Is PLT a stablecoin?", "acceptedAnswer": { "@type": "Answer", "text": "No. PLT is a synthetic index token. Mints are collateralised by test USDC held by the contract and redeeming pays test USDC back from that reserve, but the token has no value, there is no commodity reserve, and there is no peg or promise of one. The Phase 1 build is a testnet proof of concept." } },
           { "@type": "Question", "name": "What is the PPI?", "acceptedAnswer": { "@type": "Answer", "text": "The purchasing-power index is a single number tracking how the price of the whole commodity basket moves, where 1.000000 is the index value at launch. It is computed on-chain with six decimals." } },
           { "@type": "Question", "name": "How is the index calculated?", "acceptedAnswer": { "@type": "Answer", "text": "Each commodity contributes its weight times the ratio of its current price to its base price; the contributions are summed and divided by the sum of active weights. Frozen commodities are excluded and the remaining weights renormalised." } },
           { "@type": "Question", "name": "What is in the basket and who sets the weights?", "acceptedAnswer": { "@type": "Answer", "text": "The live basket holds 14 commodities including WTI and Brent crude, natural gas, gold, silver, copper, wheat, corn, soybean, coffee and lumber, lithium, water and carbon proxies. No commodity may exceed 15% and weights must sum to 100%; governance sets them and base prices are frozen once locked." } },
-          { "@type": "Question", "name": "Where do the prices come from?", "acceptedAnswer": { "@type": "Answer", "text": "An off-chain relayer fetches each commodity from two independent sources, takes the median, signs it with an ed25519 key and pushes it on-chain where the signature is verified. If the sources diverge by more than 2% the commodity is frozen and excluded." } },
-          { "@type": "Question", "name": "How often are prices updated?", "acceptedAnswer": { "@type": "Answer", "text": "A scheduled run pushes a commodity only when its price moved more than 0.1% since the last on-chain value, refreshed by a daily scheduled run; minting is refused against prices older than the six-hour on-chain guard." } },
-          { "@type": "Question", "name": "How do I mint or redeem PLT?", "acceptedAnswer": { "@type": "Answer", "text": "Two paths. The /app page mints and redeems against the Arbitrum contracts from an EVM wallet: minting pulls test USDC from your wallet via transferFrom at the on-chain index, and redeeming pays test USDC back out of the reserve. The Telegram Mini App does the same on TON. You always sign in your own wallet." } },
+          { "@type": "Question", "name": "Where do the prices come from?", "acceptedAnswer": { "@type": "Answer", "text": "An off-chain relayer reads up to four independent channels per commodity: Yahoo Finance is the primary, and Sina, Tencent and Eastmoney are confirmations only when within 0.5%. It is not a median. With no confirmation the reading is marked caution; a frozen asset is excluded from the index." } },
+          { "@type": "Question", "name": "How often are prices updated?", "acceptedAnswer": { "@type": "Answer", "text": "A scheduled run pushes a commodity when its price moved more than 0.1%, and refreshes every asset at least hourly. Minting is refused against a stalest active asset older than the six-hour on-chain guard." } },
+          { "@type": "Question", "name": "How do I mint or redeem PLT?", "acceptedAnswer": { "@type": "Answer", "text": "Open /app on Arbitrum Sepolia and connect an EVM wallet. Minting pulls test USDC from your wallet via transferFrom at the on-chain index; redeeming burns PLT and pays test USDC back from the reserve. You approve the amount first and always sign in your own wallet." } },
           { "@type": "Question", "name": "What fees are there?", "acceptedAnswer": { "@type": "Answer", "text": "A band-based fee of 0.5% near the index, 1% when the index is 3-5% off, and 2% beyond, with an extra penalty for exiting far below. Fees split 30% burn, 40% reserve, 20% staking and 10% risk fund." } },
-          { "@type": "Question", "name": "Is there a governance token?", "acceptedAnswer": { "@type": "Answer", "text": "Yes, PLTG: a fixed-supply 1,000,000,000 TON-side token (not deployed on Arbitrum) with a staking and voting contract. Stakers receive the staking share of fees pro-rata and voting power is weighted by stake. It is testnet-only and not for sale." } },
-          { "@type": "Question", "name": "Which network is it on?", "acceptedAnswer": { "@type": "Answer", "text": "Two testnets: Arbitrum Sepolia holds the basket, the on-chain index and the PLT token (what this site reads), and the TON testnet build serves the Mini App's mint/redeem. There is no mainnet deployment, no public sale and no exchange listing. Published addresses are testnet and their tokens carry no value." } },
-          { "@type": "Question", "name": "Is the code audited?", "acceptedAnswer": { "@type": "Answer", "text": "Not by a third party yet; that is the main gate before mainnet. The contract code is open (Solidity for Arbitrum, Tolk for TON) and backed by 200+ tests with a 90% coverage gate, plus a self-review of known failure classes." } },
+          { "@type": "Question", "name": "Is there a governance token?", "acceptedAnswer": { "@type": "Answer", "text": "Not in this deployment. PLTG and its staking/voting design exist, but no governance token is deployed on Arbitrum; parameter authority is the timelock owner. Nothing is for sale." } },
+          { "@type": "Question", "name": "Which network is it on?", "acceptedAnswer": { "@type": "Answer", "text": "One testnet, no mainnet. Arbitrum Sepolia holds the basket, the on-chain index, the PLT token and the test-USDC collateral, and is what this site and /app use. There is no public sale and no exchange listing. Published addresses are testnet and their tokens carry no value." } },
+          { "@type": "Question", "name": "Is the code audited?", "acceptedAnswer": { "@type": "Answer", "text": "Not by a third party yet; that is the main gate before mainnet. The contract code is open Solidity, backed by 70 Foundry tests in CI, plus a self-review of known failure classes." } },
           { "@type": "Question", "name": "Who controls the basket weights?", "acceptedAnswer": { "@type": "Answer", "text": "Governance, through on-chain actions to add a commodity or re-weight an existing one, including setting a weight to zero to retire it. Base prices can never change. On testnet the owner is a 60-second timelock." } },
           { "@type": "Question", "name": "What are the main risks?", "acceptedAnswer": { "@type": "Answer", "text": "The index is a synthetic construction and can diverge from real-market value; oracle data can be wrong or manipulated; the code is unaudited; and liquidity is thin. It is a research prototype, not a savings product." } },
-          { "@type": "Question", "name": "How do I verify it myself?", "acceptedAnswer": { "@type": "Answer", "text": "Read the contracts directly: the core exposes ppi(), assetCount(), assetAt(i) and lastOracleUpdate(). The live basket is rendered at /dashboard and the same data is available as JSON from /api/v1/status." } }
+          { "@type": "Question", "name": "How do I verify it myself?", "acceptedAnswer": { "@type": "Answer", "text": "Read the contracts directly: the core exposes currentPpi(), assetCount(), assets(i) and oldestActiveUpdate(). The live basket is rendered at /dashboard and the same data is available as JSON from /api/v1/status." } }
         ]
       }
     </script>
