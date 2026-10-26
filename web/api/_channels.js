@@ -38,7 +38,7 @@ const ASSETS = [
   { i: 6,  sym: "ZW=F",   name: "Wheat",        primary: "yahoo", srcs: [["tencent", "hf_W"]] },
   { i: 7,  sym: "ZC=F",   name: "Corn",         primary: "yahoo", srcs: [["tencent", "hf_C"]] },
   { i: 8,  sym: "ZS=F",   name: "Soybean",      primary: "yahoo", srcs: [["tencent", "hf_S"]] },
-  { i: 9,  sym: "KC=F",   name: "Coffee",       primary: "yahoo", srcs: [] },
+  { i: 9,  sym: "KC=F",   name: "Coffee",       primary: "yahoo", srcs: [["sina", "hf_KC"]] },
   { i: 10, sym: "WOOD",   name: "Lumber (ETF)", primary: "yahoo", srcs: [["tencent", "usWOOD"]] },
   { i: 11, sym: "LIT",    name: "Lithium (ETF)", primary: "yahoo", srcs: [["tencent", "usLIT"]] },
   { i: 12, sym: "PHO",    name: "Water (ETF)",  primary: "yahoo", srcs: [["tencent", "usPHO"]] },

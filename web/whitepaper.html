@@ -333,20 +333,20 @@ admin     owner ──propose(dest, body)──▶ PlanetTimelock ──(wait de
         <table class="doc-table">
           <thead><tr><th>#</th><th>Class</th><th>Commodity</th><th>Futures / index</th><th>ETF proxy</th><th>Weight</th><th>Price source</th></tr></thead>
           <tbody>
-            <tr><td>0</td><td>Energy</td><td>WTI Crude</td><td>CL=F (NYMEX)</td><td>USO</td><td>14.0%</td><td>Yahoo + confirmations</td></tr>
-            <tr><td>1</td><td>Energy</td><td>Brent Crude</td><td>BZ=F (ICE)</td><td>BNO</td><td>11.0%</td><td>Yahoo + confirmations</td></tr>
-            <tr><td>2</td><td>Energy</td><td>Natural Gas</td><td>NG=F (NYMEX)</td><td>UNG</td><td>8.0%</td><td>Yahoo + confirmations</td></tr>
-            <tr><td>3</td><td>Metals</td><td>Gold</td><td>GC=F (COMEX)</td><td>GLD</td><td>12.0%</td><td>Yahoo + confirmations</td></tr>
-            <tr><td>4</td><td>Metals</td><td>Silver</td><td>SI=F (COMEX)</td><td>SLV</td><td>7.0%</td><td>Yahoo + confirmations</td></tr>
-            <tr><td>5</td><td>Metals</td><td>Copper</td><td>HG=F (COMEX)</td><td>CPER</td><td>6.0%</td><td>Yahoo + confirmations (unit-scaled)</td></tr>
-            <tr><td>6</td><td>Agriculture</td><td>Wheat</td><td>ZW=F (CBOT)</td><td>WEAT</td><td>9.0%</td><td>Yahoo</td></tr>
-            <tr><td>7</td><td>Agriculture</td><td>Corn</td><td>ZC=F (CBOT)</td><td>CORN</td><td>7.0%</td><td>Yahoo</td></tr>
-            <tr><td>8</td><td>Agriculture</td><td>Soybean</td><td>ZS=F (CBOT)</td><td>SOYB</td><td>6.0%</td><td>Yahoo</td></tr>
-            <tr><td>9</td><td>Softs</td><td>Coffee</td><td>KC=F (ICE)</td><td>JO</td><td>4.0%</td><td>Yahoo</td></tr>
-            <tr><td>10</td><td>Industrial</td><td>Lumber / timber</td><td>—</td><td>WOOD</td><td>4.0%</td><td>Yahoo</td></tr>
-            <tr><td>11</td><td>Industrial</td><td>Lithium</td><td>—</td><td>LIT</td><td>3.0%</td><td>Yahoo</td></tr>
-            <tr><td>12</td><td>Water</td><td>Water rights / utilities</td><td>NQH2O (CME, design)</td><td>PHO</td><td>5.0%</td><td>Yahoo</td></tr>
-            <tr><td>13</td><td>Carbon</td><td>Carbon credits</td><td>GEO (CME, design)</td><td>KRBN</td><td>4.0%</td><td>Yahoo</td></tr>
+            <tr><td>0</td><td>Energy</td><td>WTI Crude</td><td>CL=F (NYMEX)</td><td>USO</td><td>14.0%</td><td>Yahoo + Sina / Tencent / Eastmoney</td></tr>
+            <tr><td>1</td><td>Energy</td><td>Brent Crude</td><td>BZ=F (ICE)</td><td>BNO</td><td>11.0%</td><td>Yahoo + Sina / Tencent</td></tr>
+            <tr><td>2</td><td>Energy</td><td>Natural Gas</td><td>NG=F (NYMEX)</td><td>UNG</td><td>8.0%</td><td>Yahoo only — alternatives quote later expiries</td></tr>
+            <tr><td>3</td><td>Metals</td><td>Gold</td><td>GC=F (COMEX)</td><td>GLD</td><td>12.0%</td><td>Yahoo + Sina / Tencent / Eastmoney</td></tr>
+            <tr><td>4</td><td>Metals</td><td>Silver</td><td>SI=F (COMEX)</td><td>SLV</td><td>7.0%</td><td>Yahoo + Sina / Tencent / Eastmoney</td></tr>
+            <tr><td>5</td><td>Metals</td><td>Copper</td><td>HG=F (COMEX)</td><td>CPER</td><td>6.0%</td><td>Yahoo + Sina / Tencent / Eastmoney</td></tr>
+            <tr><td>6</td><td>Agriculture</td><td>Wheat</td><td>ZW=F (CBOT)</td><td>WEAT</td><td>9.0%</td><td>Yahoo + Tencent</td></tr>
+            <tr><td>7</td><td>Agriculture</td><td>Corn</td><td>ZC=F (CBOT)</td><td>CORN</td><td>7.0%</td><td>Yahoo + Tencent</td></tr>
+            <tr><td>8</td><td>Agriculture</td><td>Soybean</td><td>ZS=F (CBOT)</td><td>SOYB</td><td>6.0%</td><td>Yahoo + Tencent (rejected at ≈1%)</td></tr>
+            <tr><td>9</td><td>Softs</td><td>Coffee</td><td>KC=F (ICE)</td><td>JO</td><td>4.0%</td><td>Yahoo + Sina</td></tr>
+            <tr><td>10</td><td>Industrial</td><td>Lumber / timber</td><td>—</td><td>WOOD</td><td>4.0%</td><td>Yahoo + Tencent</td></tr>
+            <tr><td>11</td><td>Industrial</td><td>Lithium</td><td>—</td><td>LIT</td><td>3.0%</td><td>Yahoo + Tencent</td></tr>
+            <tr><td>12</td><td>Water</td><td>Water rights / utilities</td><td>NQH2O (CME, design)</td><td>PHO</td><td>5.0%</td><td>Yahoo + Tencent</td></tr>
+            <tr><td>13</td><td>Carbon</td><td>Carbon credits</td><td>GEO (CME, design)</td><td>KRBN</td><td>4.0%</td><td>Yahoo + Tencent</td></tr>
           </tbody>
         </table>
         <p class="eq-note">
