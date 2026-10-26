@@ -384,6 +384,10 @@ contract PlanetCore {
         uint64 oldest = oldestActiveUpdate();
         if (oldest == 0 || block.timestamp > uint256(oldest) + MAX_ORACLE_AGE) revert StaleOracle();
 
+        // Validate supply BEFORE any division: the pro-rata branch divides by totalSupply, and an
+        // empty supply panicked there before the underflow check could run.
+        if (totalSupply < burnAmount) revert Underflow();
+
         uint64 feeBps = feeBpsForPpi(ppi);
         uint64 burnFee = feeBps > MAX_BURN_FEE_BPS ? MAX_BURN_FEE_BPS : feeBps; // I9 / payout >= 0
         uint256 gross = uint256(burnAmount) * uint256(ppi) / uint256(SCALE);
@@ -405,7 +409,6 @@ contract PlanetCore {
         if (payout256 > type(uint64).max) revert AmountTooLarge();
         payout = uint64(payout256);
 
-        if (totalSupply < burnAmount) revert Underflow(); // no silent wrap
         totalSupply -= burnAmount;
         token.burn(msg.sender, burnAmount);
 
