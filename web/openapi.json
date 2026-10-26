@@ -100,6 +100,47 @@
           }
         }
       }
+    },
+    "/api/v1/sources": {
+      "get": {
+        "tags": ["status"],
+        "summary": "Every price channel, its reading and whether it confirmed the primary.",
+        "description": "What the oracle is reading right now. The primary channel sets the price; another channel is a confirmation only if it lands within tolerancePct. A dissenting channel is reported as rejected with its distance and is never averaged in. riskState 1 means no channel confirmed the primary.",
+        "operationId": "getSources",
+        "responses": {
+          "200": {
+            "description": "Per-asset channel detail plus a summary.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["tolerancePct", "assets", "summary"],
+                  "properties": {
+                    "tolerancePct": { "type": "number", "description": "Confirmation tolerance in percent (0.5)." },
+                    "rule": { "type": "string" },
+                    "assets": { "type": "array", "items": { "type": "object" } },
+                    "summary": {
+                      "type": "object",
+                      "properties": {
+                        "assets": { "type": "integer" },
+                        "withTwoOrMoreChannels": { "type": "integer" },
+                        "confirmed": { "type": "integer" },
+                        "caution": { "type": "integer" },
+                        "channelReads": { "type": "integer" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No price channel answered. This is an outage, not an empty basket.",
+            "headers": { "Retry-After": { "schema": { "type": "integer" } } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
     }
   },
   "components": {
