@@ -16,7 +16,7 @@
 
 // Arbitrum Sepolia = 421614. The RPC is public and needs no key.
 export const RPC = process.env.EVM_RPC || "https://sepolia-rollup.arbitrum.io/rpc";
-export const CORE = process.env.EVM_CORE || "0xE0b72e108DB58BCbc20da0b1Cd9BEB4824674E30";
+export const CORE = process.env.EVM_CORE || "0x5b7537e800c4190f9Ee22FDBC1355Fbc0142952E";
 export const CHAIN = { name: "arbitrum-sepolia", id: 421614 };
 export const SCALE = 1e6;
 // PlanetCore.MAX_ORACLE_AGE == 6 hours, and mint()/redeem() revert StaleOracle past it. This is a

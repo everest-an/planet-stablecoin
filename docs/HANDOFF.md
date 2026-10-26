@@ -12,16 +12,16 @@
 | 项 | 值 |
 |---|---|
 | 读链 | Arbitrum Sepolia（chainId 421614） |
-| PlanetCore | `0xE0b72e108DB58BCbc20da0b1Cd9BEB4824674E30` |
-| PLT token（ERC-20） | `0x1064953820505275166E8432B12B3aF785FA1a3B` |
-| Timelock | `0x2617Df906B6C42aF912dd4d4485Fcd74903a5feB` |
+| PlanetCore | `0x5b7537e800c4190f9Ee22FDBC1355Fbc0142952E` |
+| PLT token（ERC-20） | `0x24C10b888de5f5A5430e40Fd71563f36F8a22e4e` |
+| Timelock | `0x22B4f2CA13B76AC45295F5ce6C36f6Adf07a8C10` |
 | 篮子 | 14 资产 · `weightSum = 1,000,000` · `baseLocked = true` |
 | PPI | `1.003830`（2026-10-25 推送后，手算与链上一致） |
 | 预言机 | 每小时 GitHub Actions（`.github/workflows/evm-push.yml`）→ `updatePrice` |
 | 预言机信任级 | **1-of-1**；两条路径（`updatePrice` onlyRelayer / `updatePriceSigned`）**都已接线**，`SignedPriceOracle` 已部署，但 signer set 是 1-of-1（一个运营方持有全部密钥）|
 | 站点 | 已切 EVM 只读：`/api/v1/status`、`/api/v1/oracle`、dashboard、landing ticker |
 | 铸赎 UI | **`/app` 已上线**（零依赖、注入式钱包直连 Core）；旧 TON 前端已归档 |
-| PriceOracle | `0xD625bE7317DE6Dbc8F630e1e11900b91c3eB00cB` |
+| PriceOracle | `0x3B4C0B2Eda58403dE26fa9472764aDb5003CdB3c` |
 | 抵押 | Circle 测试 USDC `0x75faf114…AA4d`（6 位）；`mint` 用 `transferFrom` 拉取，`redeem` 付回并减少 `totalReserve` |
 | 价格渠道 | **4 个独立渠道**：Yahoo（主）/ Sina / 腾讯 / 东财；实测 34 次渠道读取、12/14 资产有 2+ 渠道。规则是「主源 + 确认数（0.5% 容差）」，**不取中位数**；无确认 → `riskState=1`。可查：`/api/v1/sources` |
 | 未部署 | PlanetBond / PlanetFund / PlanetGov / PLTG —— 设计/原型，未在 Arbitrum 部署 |

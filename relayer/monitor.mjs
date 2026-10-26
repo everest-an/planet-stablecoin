@@ -13,8 +13,8 @@
 import { createPublicClient, http, parseAbi, formatUnits } from "viem";
 import { arbitrumSepolia } from "viem/chains";
 
-const CORE = process.env.CORE ?? "0xE0b72e108DB58BCbc20da0b1Cd9BEB4824674E30";
-const TIMELOCK = process.env.TIMELOCK ?? "0x2617Df906B6C42aF912dd4d4485Fcd74903a5feB";
+const CORE = process.env.CORE ?? "0x5b7537e800c4190f9Ee22FDBC1355Fbc0142952E";
+const TIMELOCK = process.env.TIMELOCK ?? "0x22B4f2CA13B76AC45295F5ce6C36f6Adf07a8C10";
 const RPC = process.env.RPC ?? "https://sepolia-rollup.arbitrum.io/rpc";
 const MAX_ORACLE_AGE = 21600;
 
