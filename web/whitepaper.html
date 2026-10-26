@@ -486,9 +486,12 @@ admin     owner ──propose(dest, body)──▶ PlanetTimelock ──(wait de
           <span class="row"><span class="lbl">(22)</span><i>payout</i> = <i>burnAmount</i> · <i>reserve</i> / <i>supply</i> &nbsp;<span class="lbl">otherwise — pro-rata, fee waived, <code>RedeemedProRata</code> emitted</span></span>
         </div>
         <p class="eq-note">
-          This is the honest consequence of a synthetic reserve: PLT tracks the index while the reserve can
-          cover it, and becomes a pro-rata claim when it cannot. Stage 2 makes the first branch the only
-          branch, because the reserve then moves with the basket.
+        <p class="eq-note">
+          This applies <b>only while redemption is possible at all</b>. Beyond 15% deviation the fee function
+          reverts <code>BandReject</code> and nothing can be redeemed — a known and stated limitation (security
+          review, F-7). Within the band, PLT tracks the index while the reserve can cover it, and becomes a
+          pro-rata claim when it cannot. Stage 2 collapses this to one branch, because the reserve then moves
+          with the basket.
         </p>
 
         <h2 id="f5">5. Stability mechanisms</h2>

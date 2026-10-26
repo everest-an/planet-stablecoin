@@ -408,8 +408,10 @@ contract PlanetCoreTest is Test {
         uint64 minted = core.mint(1_000 * SCALE);
         uint256 reserveAfterMint = core.totalReserve();
 
-        for (uint256 i; i < 8; ++i) push(i, 120 * SCALE); // index +20%
-        assertEq(core.currentPpi(), 1_200_000);
+        // +14%, deliberately inside the 15% BandReject: beyond it redemption reverts before the
+        // pro-rata branch is ever reached (see the security review, F-7).
+        for (uint256 i; i < 8; ++i) push(i, 114 * SCALE);
+        assertEq(core.currentPpi(), 1_140_000);
 
         uint256 before = usd.balanceOf(stranger);
         vm.prank(stranger);
@@ -418,7 +420,7 @@ contract PlanetCoreTest is Test {
         assertEq(core.totalReserve(), 0, "the reserve is emptied, not reverted");
         assertEq(usd.balanceOf(stranger), before + payout, "the collateral moved");
         assertEq(uint256(payout), reserveAfterMint, "the last holder takes the remaining reserve");
-        assertLt(uint256(payout), (uint256(minted) * 1_200_000) / 1_000_000, "less than the index promised");
+        assertLt(uint256(payout), (uint256(minted) * 1_140_000) / 1_000_000, "less than the index promised");
     }
 
     // ---------------------------------------------------------------- security regressions
