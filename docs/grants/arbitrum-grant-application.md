@@ -85,10 +85,10 @@ dashboard/API, a Telegram Mini App, and the public audit-preparation pack. Prior
 - Repo: https://github.com/everest-an/planet-stablecoin
 - EVM implementation: `monad/` (Solidity 0.8.24, Foundry; CI: `.github/workflows/monad-build.yml`)
 - Deployed on **Arbitrum Sepolia** (chainId 421614):
-  - PlanetCore — `0xfCac7797da852B901580011Dd25B6C51BfD21520`
-  - PLT token (ERC-20) — `0x67570e035608BAe9259e26c7009e92f5E0E4f972`
-  - PlanetTimelock — `0xb0e94Ca4E7c2DF017046482b73F4308251a65fab`
-  - SignedPriceOracle — `0x9Ce053c8a18d4287fF8dc7ff602b90e46ca6B956`
+  - PlanetCore — `0xE0b72e108DB58BCbc20da0b1Cd9BEB4824674E30`
+  - PLT token (ERC-20) — `0x1064953820505275166E8432B12B3aF785FA1a3B`
+  - PlanetTimelock — `0x2617Df906B6C42aF912dd4d4485Fcd74903a5feB`
+  - SignedPriceOracle — `0xD625bE7317DE6Dbc8F630e1e11900b91c3eB00cB`
 - Live read API (returns the on-chain index right now): https://ppppp.space/api/v1/status
 - Oracle health: https://ppppp.space/api/v1/oracle?full=1
 - Contact: e@ppppp.space
