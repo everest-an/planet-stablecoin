@@ -1,0 +1,38 @@
+name: Protocol monitor
+
+# Hourly invariant check. A failed run is the alert — a monitor that only writes to a log nobody
+# reads is not monitoring. Checks: oracle freshness, reserve vs real balance, paused state, ownership
+# still on the timelock (catches configuration drift after a redeploy), and any timelock proposal
+# waiting to execute.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "37 * * * *"
+
+concurrency:
+  group: protocol-monitor
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Invariants
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: relayer
+    env:
+      RPC: ${{ vars.EVM_RPC || 'https://sepolia-rollup.arbitrum.io/rpc' }}
+      CORE: ${{ vars.EVM_CORE || '0xE0b72e108DB58BCbc20da0b1Cd9BEB4824674E30' }}
+      TIMELOCK: ${{ vars.EVM_TIMELOCK || '0x2617Df906B6C42aF912dd4d4485Fcd74903a5feB' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install --no-audit --no-fund
+      - run: node monitor.mjs
