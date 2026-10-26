@@ -12,16 +12,16 @@
 | 项 | 值 |
 |---|---|
 | 读链 | Arbitrum Sepolia（chainId 421614） |
-| PlanetCore | `0x65362ef75028700855E842F903FF6FBD65A97f65` |
-| PLT token（ERC-20） | `0x367e62f6fd68FDe2698A65022713Ef99ca9a4c80` |
-| Timelock | `0x9e8a685090704A3cd41590594BA5cf281c0b020d` |
+| PlanetCore | `0xfCac7797da852B901580011Dd25B6C51BfD21520` |
+| PLT token（ERC-20） | `0x67570e035608BAe9259e26c7009e92f5E0E4f972` |
+| Timelock | `0xb0e94Ca4E7c2DF017046482b73F4308251a65fab` |
 | 篮子 | 14 资产 · `weightSum = 1,000,000` · `baseLocked = true` |
 | PPI | `1.003830`（2026-10-25 推送后，手算与链上一致） |
 | 预言机 | 每小时 GitHub Actions（`.github/workflows/evm-push.yml`）→ `updatePrice` |
 | 预言机信任级 | **1-of-1**；两条路径（`updatePrice` onlyRelayer / `updatePriceSigned`）**都已接线**，`SignedPriceOracle` 已部署，但 signer set 是 1-of-1（一个运营方持有全部密钥）|
 | 站点 | 已切 EVM 只读：`/api/v1/status`、`/api/v1/oracle`、dashboard、landing ticker |
 | 铸赎 UI | **`/app` 已上线**（零依赖、注入式钱包直连 Core）；旧 TON 前端已归档 |
-| PriceOracle | `0xFC560cB20875dB79b8bd8FBA96a1c78B5B69548e` |
+| PriceOracle | `0x9Ce053c8a18d4287fF8dc7ff602b90e46ca6B956` |
 | 抵押 | Circle 测试 USDC `0x75faf114…AA4d`（6 位）；`mint` 用 `transferFrom` 拉取，`redeem` 付回并减少 `totalReserve` |
 | 价格渠道 | **4 个独立渠道**：Yahoo（主）/ Sina / 腾讯 / 东财；实测 34 次渠道读取、12/14 资产有 2+ 渠道。规则是「主源 + 确认数（0.5% 容差）」，**不取中位数**；无确认 → `riskState=1`。可查：`/api/v1/sources` |
 | 未部署 | PlanetBond / PlanetFund / PlanetGov / PLTG —— 设计/原型，未在 Arbitrum 部署 |
@@ -361,7 +361,7 @@ as owner.
 
 ---
 
-## v2.0 close-out (2026-10-25) �� EVM fixes + site rewrite
+## v2.0 close-out (2026-10-25) �� EVM fixes + site rewrite
 
 ### Contract fixes (source; the live deployment predates them, so a redeploy is required)
 
@@ -376,14 +376,14 @@ as owner.
 
 ### Public surfaces
 
-- `web/whitepaper.html` �� **v2.0**: EVM/Arbitrum reference implementation, Solidity appendix C,
+- `web/whitepaper.html` �� **v2.0**: EVM/Arbitrum reference implementation, Solidity appendix C,
   EVM security appendix D, 70-test evidence, Arbitrum deployment appendix F. No TON references.
 - `web/docs.html`, `faq.html`, `index.html`, `dashboard.html`, `methodology.html`, `pitch/`,
-  `reports/`, `security.txt`, `robots.txt`, `api/tg-webhook.js` �� EVM-only copy; every
+  `reports/`, `security.txt`, `robots.txt`, `api/tg-webhook.js` �� EVM-only copy; every
   `app.ppppp.space` link now points at `https://ppppp.space/app`.
-- `README.md` �� EVM-first; `ton/` and `legacy-solana/` are described as archived prototypes.
-- Fixed `web/api/v1/status.js`'s stale `0xcAdE��5080D` comment to the deployed
-  `0x65362e��7f65`; corrected the `mint()/redeem()` staleness claim (only mint gates on freshness).
+- `README.md` �� EVM-first; `ton/` and `legacy-solana/` are described as archived prototypes.
+- Fixed `web/api/v1/status.js`'s stale `0xcAdE��5080D` comment to the deployed
+  `0x65362e��7f65`; corrected the `mint()/redeem()` staleness claim (only mint gates on freshness).
 
 ### Still open
 

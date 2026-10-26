@@ -13,10 +13,10 @@ Planet（PLT）把一篮子全球大宗商品（能源/金属/农产品/工业�
 
 | 合约 | 地址 |
 |---|---|
-| PlanetCore | `0x65362ef75028700855E842F903FF6FBD65A97f65` |
-| PLT token（ERC-20） | `0x367e62f6fd68FDe2698A65022713Ef99ca9a4c80` |
-| PlanetTimelock | `0x9e8a685090704A3cd41590594BA5cf281c0b020d` |
-| SignedPriceOracle | `0xFC560cB20875dB79b8bd8FBA96a1c78B5B69548e` |
+| PlanetCore | `0xfCac7797da852B901580011Dd25B6C51BfD21520` |
+| PLT token（ERC-20） | `0x67570e035608BAe9259e26c7009e92f5E0E4f972` |
+| PlanetTimelock | `0xb0e94Ca4E7c2DF017046482b73F4308251a65fab` |
+| SignedPriceOracle | `0x9Ce053c8a18d4287fF8dc7ff602b90e46ca6B956` |
 | 抵押物（test USDC） | `0x75faf114…AA4d`（Circle，6 位小数） |
 
 - 篮子：14 资产，`weightSum = 1,000,000`，`baseLocked = true`，单资产 ≤15%。
