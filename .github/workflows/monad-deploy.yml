@@ -28,6 +28,12 @@ on:
       owner:
         description: "owner address for the deployed contracts (blank = the deployer)"
         required: false
+      token:
+        description: "handover only: PlanetToken address"
+        required: false
+      timelock:
+        description: "handover only: PlanetTimelock address"
+        required: false
       core:
         description: "configure only: PlanetCore address to configure (blank = the last Arbitrum deployment)"
         required: false
@@ -71,6 +77,20 @@ jobs:
           echo "DEPLOYER=$ADDR" >> "$GITHUB_ENV"
           BAL=$(cast balance "$ADDR" --rpc-url "$RPC" 2>/dev/null || echo "0")
           echo "balance (wei): $BAL"
+
+      - name: Hand ownership to the timelock
+        if: ${{ inputs.action == 'handover' }}
+        env:
+          KEY: 0x${{ secrets.MONAD_DEPLOY_KEY }}
+          RPC: ${{ inputs.rpc }}
+          CHAIN: ${{ inputs.chain }}
+          CORE: ${{ inputs.core }}
+          TOKEN: ${{ inputs.token }}
+          TIMELOCK: ${{ inputs.timelock }}
+        run: |
+          forge script script/Handover.s.sol:Handover \
+            --rpc-url "$RPC" --chain "$CHAIN" --private-key "$KEY" \
+            --broadcast -vv
 
       - name: Configure the 14-asset basket
         if: ${{ inputs.action == 'configure' }}

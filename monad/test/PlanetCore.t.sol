@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {PlanetCore} from "../src/PlanetCore.sol";
 import {PlanetToken} from "../src/PlanetToken.sol";
 import {SignedPriceOracle} from "../src/SignedPriceOracle.sol";
-import {MockERC20} from "./MockERC20.sol";
+import {MockERC20, ReentrantToken} from "./MockERC20.sol";
 
 /// These tests mirror the TON suite's economics cases one-for-one, so the migration can be judged
 /// on behaviour rather than on vibes. Each test name states the invariant it defends.
@@ -396,6 +396,32 @@ contract PlanetCoreTest is Test {
         assertEq(core.totalReserve(), deposit - payout, "the reserve dropped by the payout only");
         assertEq(core.totalSupply(), 0);
         assertLt(uint256(payout), uint256(deposit), "the fee stayed behind");
+    }
+
+    // ---------------------------------------------------------------- security regressions
+    /// Redeeming on a stale index pays out at an index the market has left behind. Minting was
+    /// gated against that and redemption was not, which is an arbitrage against the reserve.
+    function test_redeem_requires_fresh_prices() public {
+        pushAll(100 * SCALE);
+        vm.prank(stranger);
+        uint64 minted = core.mint(1_000 * SCALE);
+        vm.warp(block.timestamp + 7 hours);
+        vm.prank(stranger);
+        vm.expectRevert(PlanetCore.StaleOracle.selector);
+        core.redeem(minted);
+    }
+
+    function test_mint_is_reentrancy_guarded() public {
+        ReentrantToken evil = new ReentrantToken();
+        vm.prank(owner);
+        core.setDepositToken(address(evil));
+        evil.setCore(address(core));
+        evil.mintTo(stranger, 1e18);
+        pushAll(100 * SCALE);
+        evil.arm();
+        vm.prank(stranger);
+        vm.expectRevert(PlanetCore.Reentrancy.selector);
+        core.mint(1_000 * SCALE);
     }
 
     function _priceAndRisk(uint256 i) internal view returns (uint64 currentPrice, uint8 riskState) {

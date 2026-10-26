@@ -109,6 +109,8 @@ contract PlanetCore {
     error NoDepositToken();
     error NoToken();
     error TransferFailed();
+    error AmountTooLarge();
+    error Reentrancy();
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert NotOwner();
@@ -118,6 +120,17 @@ contract PlanetCore {
     modifier onlyRelayer() {
         if (msg.sender != relayer) revert NotRelayer();
         _;
+    }
+
+    /// @dev mint pulls the collateral with an external call before touching state, which is a
+    ///      reentrancy surface for any deposit token that has transfer hooks. USDC does not, but the
+    ///      core accepts whatever token the owner wires, so it must not depend on that.
+    uint256 private _entered;
+    modifier nonReentrant() {
+        if (_entered != 0) revert Reentrancy();
+        _entered = 1;
+        _;
+        _entered = 0;
     }
 
     constructor(address owner_, address relayer_) {
@@ -323,7 +336,7 @@ contract PlanetCore {
 
     // ---------------------------------------------------------------- mint (I5, I6)
     /// @param deposit  units deposited (whatever the caller settles), 1e6 fixed point
-    function mint(uint64 deposit) external returns (uint64 minted) {
+    function mint(uint64 deposit) external nonReentrant returns (uint64 minted) {
         if (paused) revert IsPaused();
         if (deposit == 0) revert ZeroAmount();
         uint64 ppi = currentPpi;
@@ -336,8 +349,12 @@ contract PlanetCore {
         uint64 feeBps = feeBpsForPpi(ppi);
         uint256 fee = uint256(deposit) * feeBps / uint256(BPS_DENOM);
         uint256 net = uint256(deposit) - fee;
-        minted = uint64(net * uint256(SCALE) / uint256(ppi));
-        if (minted == 0) revert ZeroAmount();
+        uint256 minted256 = net * uint256(SCALE) / uint256(ppi);
+        if (minted256 == 0) revert ZeroAmount();
+        // An explicit uint64 downcast TRUNCATES in 0.8 instead of reverting, so a large enough
+        // deposit would silently mint a wrapped amount.
+        if (minted256 > type(uint64).max) revert AmountTooLarge();
+        minted = uint64(minted256);
 
         // Pull the collateral BEFORE any state change. Every check above has already run, so this
         // cannot leave the contract holding a deposit it refused to mint against.
@@ -353,19 +370,26 @@ contract PlanetCore {
     }
 
     // ---------------------------------------------------------------- redeem
-    function redeem(uint64 burnAmount) external returns (uint64 payout) {
+    function redeem(uint64 burnAmount) external nonReentrant returns (uint64 payout) {
         if (paused) revert IsPaused();
         if (burnAmount == 0) revert ZeroAmount();
         uint64 ppi = currentPpi;
         if (ppi == 0) revert NoActiveAsset();
         // Without a token, redeem would pay the reserve out without burning anything.
         if (address(token) == address(0)) revert NoToken();
+        // Redeeming on a stale index is an arbitrage against the reserve: if the real index fell,
+        // the stale (higher) PPI pays out more than the basket is worth. Minting was gated and
+        // redemption was not.
+        uint64 oldest = oldestActiveUpdate();
+        if (oldest == 0 || block.timestamp > uint256(oldest) + MAX_ORACLE_AGE) revert StaleOracle();
 
         uint64 feeBps = feeBpsForPpi(ppi);
         uint64 burnFee = feeBps > MAX_BURN_FEE_BPS ? MAX_BURN_FEE_BPS : feeBps; // I9 / payout >= 0
         uint256 gross = uint256(burnAmount) * uint256(ppi) / uint256(SCALE);
         uint256 fee = gross * burnFee / uint256(BPS_DENOM);
-        payout = uint64(gross - fee);
+        uint256 payout256 = gross - fee;
+        if (payout256 > type(uint64).max) revert AmountTooLarge();
+        payout = uint64(payout256);
 
         if (totalSupply < burnAmount) revert Underflow(); // no silent wrap
         totalSupply -= burnAmount;

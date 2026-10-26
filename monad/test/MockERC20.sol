@@ -39,3 +39,35 @@ contract MockERC20 {
         balanceOf[to] += amount;
     }
 }
+
+interface IPlanetMint {
+    function mint(uint64 deposit) external returns (uint64);
+}
+
+/// Deposit token that tries to re-enter the core from inside transferFrom. The core pulls collateral
+/// with an external call before it touches state, so it must not assume the token is well behaved.
+contract ReentrantToken {
+    IPlanetMint public core;
+    bool public armed;
+    mapping(address => uint256) public balanceOf;
+
+    function setCore(address c) external {
+        core = IPlanetMint(c);
+    }
+
+    function arm() external {
+        armed = true;
+    }
+
+    function mintTo(address to, uint256 a) external {
+        balanceOf[to] += a;
+    }
+
+    function transferFrom(address, address, uint256) external returns (bool) {
+        if (armed) {
+            armed = false;
+            core.mint(1);
+        }
+        return true;
+    }
+}
