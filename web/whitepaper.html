@@ -263,6 +263,51 @@
               (v) every privileged change observable and delayed; (vi) <b>no self-built exchange</b>.</li>
         </ul>
 
+        <h3>1.1 Why the unit is a basket and not a currency</h3>
+        <p class="small">
+          The protocol began from an argument usually attributed to Vitalik Buterin, paraphrased here
+          rather than quoted: a stablecoin denominated in one nation's currency is <b>centralised by
+          construction</b> — whoever controls that currency controls the unit, the monetary policy and
+          the off-switch. A unit that cannot be switched off has to be denominated in something nobody
+          issues: the world's productive assets. Coal, copper, wheat, water.
+        </p>
+        <p class="small">
+          That sentence decides the architecture, and it is worth spelling out what follows from it:
+        </p>
+        <ul class="small">
+          <li>The index is not a price to be pegged — it is a <b>quantity</b>. One PLT is one basket
+              unit, and the basket is defined by weights that never change silently.</li>
+          <li>PLT's price in dollars <b>is supposed to move</b>. What stays stable is purchasing power
+              over goods, not the number of dollars on the screen. A token that never moves against
+              the dollar is a dollar, and a dollar is the thing we are trying to leave.</li>
+          <li>“Stability” therefore means stable against goods. The fee band in §5 rises when the index
+              moves; that is a <b>volatility tax</b>, not a peg defence, and §5 now says so. Calling it a
+              peg defence would be borrowing credibility from a mechanism this design does not have.</li>
+        </ul>
+
+        <h3>1.2 What a basket claim demands of the reserve — and where this build stands</h3>
+        <p class="small">
+          A claim on a basket is only honest if what backs it <b>moves with the basket</b>. This build
+          holds a dollar asset (test USDC). That is not the same thing, and the difference is not
+          cosmetic: if the index rises 20%, the reserve does not, so the last redeemers cannot be paid
+          what the index promised. No fee schedule repairs that; only the right reserve does.
+        </p>
+        <table class="doc-table">
+          <thead><tr><th>Stage</th><th>Reserve</th><th>What PLT is</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>a dollar asset (test USDC)</td><td>a <b>synthetic tracker</b> of the index, settled in dollars; redemption is capped by the reserve at pro-rata (§4.3)</td><td><b>this deployment</b></td></tr>
+            <tr><td>2</td><td>the basket itself: warehouse receipts, tokenised ETFs, or a hedged futures position</td><td>a claim on the basket</td><td>design</td></tr>
+            <tr><td>3</td><td>Stage 2 + custodian, attestation, legal wrapper</td><td>redeemable in kind</td><td>future</td></tr>
+          </tbody>
+        </table>
+        <p class="eq-note">
+          <b>Why we say Stage 1 out loud.</b> Describing a dollar reserve as “backed by earth's assets”
+          would be the single most expensive sentence in this document — it is the sentence that turns a
+          design gap into a misrepresentation. The thesis is the destination; the reserve is the
+          distance still to travel, and §4.3 encodes what the protocol does when it cannot deliver.
+        </p>
+
+        <h2 id="f2">2. Architecture &amp; contracts</h2>
         <h2 id="f2">2. Architecture &amp; contracts</h2>
         <h3>2.1 Layer map</h3>
         <pre class="code">L4  Fund           tokenised ETF shares; subscribe/redeem at NAV             [design]
@@ -426,10 +471,24 @@ admin     owner ──propose(dest, body)──▶ PlanetTimelock ──(wait de
         </p>
         <h3>4.3 The redemption path</h3>
         <p class="small">
-          Redemption is a single synchronous call: <code>redeem(burnAmount)</code> burns PLT,
-          computes the payout from the index and the burn fee, decrements <code>totalReserve</code>,
-          and transfers test USDC back to the caller. There is no mirror: the token and the core
-          accounting move in the same transaction, so they cannot drift.
+          Redemption is a single synchronous call: <code>redeem(burnAmount)</code> burns PLT, prices the
+          payout at the index less the burn fee, decrements <code>totalReserve</code> and transfers the
+          collateral back. Token and core accounting move in the same transaction, so they cannot drift.
+        </p>
+        <p class="small">
+          <b>When the reserve cannot honour the index, everyone shares the shortfall.</b> This build holds a
+          dollar asset (§1.2), so a rising index can outrun the reserve. The obvious implementation — pay the
+          index and revert if the reserve is short — pays whoever redeemed first in full and leaves the rest
+          with a dead transaction: a bank run written into the fee schedule. Instead:
+        </p>
+        <div class="eq">
+          <span class="row"><span class="lbl">(21)</span><i>payout</i> = <i>indexPayout</i> &nbsp;<span class="lbl">if the reserve can cover it</span></span>
+          <span class="row"><span class="lbl">(22)</span><i>payout</i> = <i>burnAmount</i> · <i>reserve</i> / <i>supply</i> &nbsp;<span class="lbl">otherwise — pro-rata, fee waived, <code>RedeemedProRata</code> emitted</span></span>
+        </div>
+        <p class="eq-note">
+          This is the honest consequence of a synthetic reserve: PLT tracks the index while the reserve can
+          cover it, and becomes a pro-rata claim when it cannot. Stage 2 makes the first branch the only
+          branch, because the reserve then moves with the basket.
         </p>
 
         <h2 id="f5">5. Stability mechanisms</h2>

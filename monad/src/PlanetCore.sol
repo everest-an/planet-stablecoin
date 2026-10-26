@@ -85,6 +85,7 @@ contract PlanetCore {
     event DepositTokenChanged(address indexed token);
     event Minted(address indexed to, uint64 deposit, uint64 fee, uint64 minted, uint64 ppi);
     event Redeemed(address indexed from, uint64 burned, uint64 feeBps, uint64 payout, uint64 ppi);
+    event RedeemedProRata(address indexed from, uint64 burned, uint64 payout, uint64 reserve);
     event FeesRouted(uint64 burn, uint64 reserve, uint64 staking, uint64 risk);
 
     // ---------------------------------------------------------------- errors
@@ -388,6 +389,19 @@ contract PlanetCore {
         uint256 gross = uint256(burnAmount) * uint256(ppi) / uint256(SCALE);
         uint256 fee = gross * burnFee / uint256(BPS_DENOM);
         uint256 payout256 = gross - fee;
+
+        // A claim on a basket is only honest if the reserve MOVES WITH the basket. This build holds
+        // a dollar asset, so when the index outruns the reserve the promise cannot be met. Reverting
+        // would pay whoever redeemed first in full and leave the rest with a dead transaction - a
+        // bank run encoded in the fee schedule. Instead everyone shares the shortfall pro-rata, and
+        // no protocol fee is taken on a distressed redemption.
+        bool distressed;
+        if (payout256 > uint256(totalReserve)) {
+            payout256 = uint256(burnAmount) * uint256(totalReserve) / uint256(totalSupply);
+            fee = 0;
+            distressed = true;
+        }
+        if (payout256 == 0) revert ZeroAmount();
         if (payout256 > type(uint64).max) revert AmountTooLarge();
         payout = uint64(payout256);
 
@@ -403,6 +417,7 @@ contract PlanetCore {
         if (!depositToken.transfer(msg.sender, uint256(payout))) revert TransferFailed();
 
         _routeFees(fee);
+        if (distressed) emit RedeemedProRata(msg.sender, burnAmount, payout, totalReserve);
         emit Redeemed(msg.sender, burnAmount, burnFee, payout, ppi);
     }
 

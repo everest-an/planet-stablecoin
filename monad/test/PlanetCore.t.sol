@@ -398,6 +398,29 @@ contract PlanetCoreTest is Test {
         assertLt(uint256(payout), uint256(deposit), "the fee stayed behind");
     }
 
+    // ---------------------------------------------------------------- basket claim vs dollar reserve
+    /// The reserve holds a dollar asset; a claim on a basket needs the reserve to MOVE with it.
+    /// When the index outruns the reserve the promise cannot be met, so everyone shares the
+    /// shortfall instead of the first redeemer taking everything and the rest reverting.
+    function test_redeem_is_pro_rata_when_the_index_outruns_the_reserve() public {
+        pushAll(100 * SCALE);
+        vm.prank(stranger);
+        uint64 minted = core.mint(1_000 * SCALE);
+        uint256 reserveAfterMint = core.totalReserve();
+
+        for (uint256 i; i < 8; ++i) push(i, 120 * SCALE); // index +20%
+        assertEq(core.currentPpi(), 1_200_000);
+
+        uint256 before = usd.balanceOf(stranger);
+        vm.prank(stranger);
+        uint64 payout = core.redeem(minted);
+
+        assertEq(core.totalReserve(), 0, "the reserve is emptied, not reverted");
+        assertEq(usd.balanceOf(stranger), before + payout, "the collateral moved");
+        assertEq(uint256(payout), reserveAfterMint, "the last holder takes the remaining reserve");
+        assertLt(uint256(payout), (uint256(minted) * 1_200_000) / 1_000_000, "less than the index promised");
+    }
+
     // ---------------------------------------------------------------- security regressions
     /// Redeeming on a stale index pays out at an index the market has left behind. Minting was
     /// gated against that and redemption was not, which is an arbitrage against the reserve.
