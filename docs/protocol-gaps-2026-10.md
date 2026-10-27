@@ -24,6 +24,11 @@ L418  feesToStaking += stake;
 There is no burn call, no transfer to a staking contract, no sweep. Only `riskFund` has a sink
 (`coverDeficit`).
 
+**Update — pro-rata redemption makes this worse.** Because the labels have no sink, they can now
+diverge from the reserve permanently: a full distressed redemption pays out the entire reserve (eq. 22)
+while `feesToBurn` and `feesToStaking` stay exactly where they were. After such an event the labels
+describe money that is no longer in the contract. A drafted invariant, "fee labels never exceed the
+reserve", was deleted from the suite for being false on a real code path.
 **Consequence:** the documented 30 / 40 / 20 / 10 split is a bookkeeping entry for 50% of it. Supply
 is not deflationary as §10.2 implies — the "burned" 30% is USDC sitting in the same contract balance
 labelled "burn". A reader who believes the tokenomics is being told something that does not happen.
