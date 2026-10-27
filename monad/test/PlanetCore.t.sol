@@ -147,12 +147,28 @@ contract PlanetCoreTest is Test {
     }
 
     // ---------------------------------------------------------------- fees / I6
-    function test_fee_bands() public {
-        assertEq(core.feeBpsForPpi(1_000_000), 50); // at peg
-        assertEq(core.feeBpsForPpi(1_040_000), 100); // 4% off -> 1%
-        assertEq(core.feeBpsForPpi(1_060_000), 300); // 2% + 1% slope at 6% deviation // 6% off -> 2% (+slope)
+    /// The old schedule jumped 100 -> 201 bps across 5% and reached 1200 bps at 15% before reverting.
+    /// The curve is now continuous, and the band is enforced at the entry point instead.
+    function test_fee_curve_anchors() public {
+        assertEq(core.feeBpsForPpi(1_000_000), 50); // 0%
+        assertEq(core.feeBpsForPpi(1_030_000), 50); // 3% still flat
+        assertEq(core.feeBpsForPpi(1_060_000), 112); // 6%
+        assertEq(core.feeBpsForPpi(1_150_000), 300); // 15% -> ceiling
+        assertEq(core.feeBpsForPpi(1_160_000), 300); // beyond the band the fee still answers
+    }
+
+    function test_fee_curve_has_no_steps() public {
+        // the two places the old curve jumped
+        assertApproxEqAbs(core.feeBpsForPpi(1_049_900), core.feeBpsForPpi(1_050_100), 1);
+        assertApproxEqAbs(core.feeBpsForPpi(1_149_900), core.feeBpsForPpi(1_150_100), 1);
+    }
+
+    function test_band_is_rejected_at_the_entry_point() public {
+        pushAll(100 * SCALE);
+        for (uint256 i; i < 8; ++i) push(i, 116 * SCALE); // 16% deviation
+        vm.prank(stranger);
         vm.expectRevert(PlanetCore.BandReject.selector);
-        core.feeBpsForPpi(1_160_000); // >15% -> refuse
+        core.mint(1_000 * SCALE);
     }
 
     function test_mint_splits_fee_30_40_20_10() public {

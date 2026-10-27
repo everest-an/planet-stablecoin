@@ -18,7 +18,8 @@ contract PlanetCore {
 
     uint64 public constant FEE_BASE_BPS = 50;        // 0.5%
     uint64 public constant FEE_MID_BPS = 100;        // 1%   at 3-5% deviation
-    uint64 public constant FEE_HIGH_BPS = 200;       // 2%   beyond 5%
+    uint64 public constant FEE_HIGH_BPS = 200;       // 2%   (legacy anchor, kept for reference)
+    uint64 public constant FEE_CEIL_BPS = 300;       // 3%   at the edge of the band
     uint64 public constant SLOPE_BPS = 100;          // steepening per 1% beyond 5%
     uint64 public constant BAND_REJECT_BPS = 1500;   // >15% deviation: mint refused
     uint64 public constant BPS_DENOM = 10_000;
@@ -388,14 +389,35 @@ contract PlanetCore {
     }
 
     // ---------------------------------------------------------------- fees (I6)
+    /// @notice Deviation in bps of the index from its base (0..∞).
+    function deviationBps(uint64 ppi) public pure returns (uint64) {
+        uint256 d = ppi > SCALE ? uint256(ppi) - SCALE : uint256(SCALE) - uint256(ppi);
+        return uint64(d * uint256(BPS_DENOM) / uint256(SCALE));
+    }
+
+    /// @notice The band is a property of the entry point, not of the fee curve. Keeping the revert out
+    ///         of this function means a caller can always ASK what the fee would be, and mint/redeem
+    ///         can reject with a reason at the place the user is looking.
+    function checkBand(uint64 ppi) public pure {
+        if (deviationBps(ppi) > BAND_REJECT_BPS) revert BandReject();
+    }
+
+    /// @notice Continuous, bounded fee curve. The old schedule jumped 100 -> 201 bps across the 5%
+    ///         boundary and reached 1200 bps at 15% before reverting outright; both were artefacts of
+    ///         the formula rather than intent. Anchors: 0-3% flat 50 bps, then linear to 300 bps at the
+    ///         15% edge. No step anywhere, so nobody can nudge the index across a boundary to change
+    ///         what everyone else pays.
+    function feeBpsForDeviation(uint64 devBps) public pure returns (uint64) {
+        if (devBps <= 300) return FEE_BASE_BPS;
+        if (devBps >= BAND_REJECT_BPS) return FEE_CEIL_BPS;
+        return uint64(
+            uint256(FEE_BASE_BPS) +
+                (uint256(devBps) - 300) * (uint256(FEE_CEIL_BPS) - uint256(FEE_BASE_BPS)) / (uint256(BAND_REJECT_BPS) - 300)
+        );
+    }
+
     function feeBpsForPpi(uint64 ppi) public pure returns (uint64) {
-        uint256 d = ppi > SCALE ? ppi - SCALE : SCALE - ppi;
-        if (d * uint256(BPS_DENOM) > uint256(SCALE) * uint256(BAND_REJECT_BPS)) revert BandReject();
-        if (d * uint256(BPS_DENOM) <= uint256(SCALE) * 300) return FEE_BASE_BPS;                 // <=3%
-        if (d * uint256(BPS_DENOM) <= uint256(SCALE) * 500) return FEE_MID_BPS;                  // 3-5%
-        // >5%: 2% + slope per point of extra deviation
-        uint256 extraBps = (d * uint256(BPS_DENOM) / uint256(SCALE)) - 500;
-        return uint64(uint256(FEE_HIGH_BPS) + extraBps * uint256(SLOPE_BPS) / 100);
+        return feeBpsForDeviation(deviationBps(ppi));
     }
 
     // ---------------------------------------------------------------- mint (I5, I6)
@@ -411,6 +433,7 @@ contract PlanetCore {
             revert StaleOracle();
         }
 
+        checkBand(ppi);
         uint64 feeBps = feeBpsForPpi(ppi);
         uint256 fee = uint256(deposit) * feeBps / uint256(BPS_DENOM);
         uint256 net = uint256(deposit) - fee;
@@ -453,6 +476,7 @@ contract PlanetCore {
         // empty supply panicked there before the underflow check could run.
         if (totalSupply < burnAmount) revert Underflow();
 
+        checkBand(ppi);
         uint64 feeBps = feeBpsForPpi(ppi);
         uint64 burnFee = feeBps > MAX_BURN_FEE_BPS ? MAX_BURN_FEE_BPS : feeBps; // I9 / payout >= 0
         uint256 gross = uint256(burnAmount) * uint256(ppi) / uint256(SCALE);
