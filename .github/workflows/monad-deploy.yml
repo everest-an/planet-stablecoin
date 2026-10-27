@@ -34,6 +34,9 @@ on:
       timelock:
         description: "handover only: PlanetTimelock address"
         required: false
+      mint_cap:
+        description: "limits only: total PLT supply cap in 1e6 units (blank = 100000e6, i.e. $100k notional)"
+        required: false
       core:
         description: "configure only: PlanetCore address to configure (blank = the last Arbitrum deployment)"
         required: false
@@ -77,6 +80,25 @@ jobs:
           echo "DEPLOYER=$ADDR" >> "$GITHUB_ENV"
           BAL=$(cast balance "$ADDR" --rpc-url "$RPC" 2>/dev/null || echo "0")
           echo "balance (wei): $BAL"
+
+      - name: Set limits through the timelock (propose, wait, execute)
+        if: ${{ inputs.action == 'limits' }}
+        env:
+          KEY: 0x${{ secrets.MONAD_DEPLOY_KEY }}
+          RPC: ${{ inputs.rpc }}
+          CHAIN: ${{ inputs.chain }}
+          CORE: ${{ inputs.core }}
+          TIMELOCK: ${{ inputs.timelock }}
+          MINT_CAP: ${{ inputs.mint_cap || '100000000000' }}
+        run: |
+          forge script script/SetLimits.s.sol:SetLimits \
+            --rpc-url "$RPC" --chain "$CHAIN" --private-key "$KEY" \
+            --broadcast -vv
+          echo "waiting out the 60s timelock delay"
+          sleep 75
+          forge script script/ExecuteTimelock.s.sol:ExecuteTimelock \
+            --rpc-url "$RPC" --chain "$CHAIN" --private-key "$KEY" \
+            --broadcast -vv
 
       - name: Hand ownership to the timelock
         if: ${{ inputs.action == 'handover' }}
