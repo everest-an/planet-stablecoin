@@ -92,9 +92,18 @@
         </div>
         <p class="note" style="margin-top:10px">
           Opens the pair on Uniswap with the amount prefilled — one click, then confirm in your wallet.
-          Buying from another chain goes through <a href="https://app.rango.exchange" target="_blank" rel="noopener">Rango</a>,
-          which routes across chains; that path is a hand-off today, not an in-page quote.
         </p>
+        <div class="row" style="margin-top:14px">
+          <select id="fromChain" style="flex:1;padding:10px;border:1px solid var(--muted,#2a2a2a);background:transparent;color:inherit;font-family:'DM Mono',monospace;font-size:13px">
+            <option value="ARBITRUM">pay from Arbitrum</option>
+            <option value="BASE">pay from Base</option>
+            <option value="OPTIMISM">pay from Optimism</option>
+            <option value="POLYGON">pay from Polygon</option>
+            <option value="ETH">pay from Ethereum</option>
+          </select>
+          <button id="quoteBtn" class="ghost">get cross-chain quote</button>
+        </div>
+        <div class="note" id="quoteOut" style="min-height:18px;margin-top:8px"></div>
       </div>
 
       <div class="warn">
@@ -195,9 +204,32 @@
         window.open("https://app.uniswap.org/swap?" + params.toString(), "_blank", "noopener");
       }
 
+      async function crossChainQuote() {
+        const sym = quotingFor || "PAXG";
+        const amount = String($("amount").value).replace(/[^0-9.]/g, "") || "100";
+        const from = $("fromChain").value;
+        $("quoteOut").textContent = "quoting…";
+        try {
+          const r = await fetch(`/api/quote?symbol=${sym}&from=${from}&amount=${amount}`);
+          const j = await r.json();
+          if (!r.ok) throw new Error(j?.error?.message || "quote failed");
+          const b = j.best;
+          $("quoteOut").innerHTML =
+            `<b>${amount} USDC on ${from} → ${Number(b.outputAmount).toFixed(6)} ${sym}</b>` +
+            (b.timeSeconds ? ` · ~${b.timeSeconds}s` : "") +
+            ` · ${b.route}` +
+            (j.alternatives ? ` · +${j.alternatives} other route(s)` : "") +
+            `<br><span style="opacity:.7">execution opens in Rango — the quote is live, the swap is theirs to sign.</span>`;
+        } catch (e) {
+          $("quoteOut").innerHTML = `<span style="color:#e03131">${e.message}</span>`;
+        }
+      }
+
+      let quotingFor = "PAXG";
+      $("quoteBtn").addEventListener("click", crossChainQuote);
       $("connect").addEventListener("click", connect);
-      $("buyPaxg").addEventListener("click", () => buy(PAXG));
-      $("buyXaut").addEventListener("click", () => buy(XAUT));
+      $("buyPaxg").addEventListener("click", () => { quotingFor = "PAXG"; buy(PAXG); });
+      $("buyXaut").addEventListener("click", () => { quotingFor = "XAUT"; buy(XAUT); });
     </script>
   </body>
 </html>
