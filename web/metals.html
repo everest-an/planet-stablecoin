@@ -219,10 +219,32 @@
             (b.timeSeconds ? ` · ~${b.timeSeconds}s` : "") +
             ` · ${b.route}` +
             (j.alternatives ? ` · +${j.alternatives} other route(s)` : "") +
-            `<br><span style="opacity:.7">execution opens in Rango — the quote is live, the swap is theirs to sign.</span>`;
+            `<br><a href="${rangoLink(sym, from, amount)}" target="_blank" rel="noopener">continue in Rango →</a>` +
+            ` <span style="opacity:.7">— execution stays in their app: the quote is ours, the signature is yours.</span>`;
         } catch (e) {
           $("quoteOut").innerHTML = `<span style="color:#e03131">${e.message}</span>`;
         }
+      }
+
+      // Rango's documented deep-link shape: BLOCKCHAIN.SYMBOL--ADDRESS
+      function rangoLink(symbol, chain, amount) {
+        const addrs = {
+          PAXG: "0x45804880De22913dAFE09f4980848ECE6EcbAf78",
+          XAUT: "0x68749665FF8D2d112Fa859AA293F07A622782F38",
+        };
+        const usdc = {
+          ARBITRUM: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+          BASE: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+          OPTIMISM: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
+          POLYGON: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
+          ETH: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        };
+        const q = new URLSearchParams({
+          from: `${chain}.USDC--${usdc[chain]}`,
+          to: `ETH.${symbol}--${addrs[symbol]}`,
+          amount: String(amount),
+        });
+        return "https://app.rango.exchange/swap?" + q.toString();
       }
 
       let quotingFor = "PAXG";
