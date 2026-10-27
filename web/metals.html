@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Planet — on-chain metals, in one place</title>
+    <meta
+      name="description"
+      content="See all the tokenised gold and silver you hold, across wallets, in ounces. One click to buy more. Read-only: we never hold your tokens."
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <style>
+      .wrap { max-width: 760px; margin: 0 auto; padding: 32px 20px 64px; }
+      .wrap h1 { font-family: "Space Grotesk", sans-serif; font-size: 30px; margin: 20px 0 6px; }
+      .wrap .sub { color: var(--muted, #8a8a8a); font-family: "DM Mono", monospace; font-size: 12px; line-height: 1.7; margin-bottom: 22px; }
+      .panel { border: 1px solid var(--muted, #2a2a2a); padding: 16px; margin: 14px 0; }
+      .total { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; }
+      .total .k { font-family: "DM Mono", monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted, #8a8a8a); }
+      .total .v { font-family: "Space Grotesk", sans-serif; font-size: 24px; margin-top: 4px; }
+      table { width: 100%; border-collapse: collapse; font-family: "DM Mono", monospace; font-size: 13px; }
+      th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--muted, #2a2a2a); }
+      th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted, #8a8a8a); }
+      td.num { text-align: right; }
+      .issuer { color: var(--muted, #8a8a8a); font-size: 11px; }
+      .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 10px 0; }
+      input[type="text"] { flex: 1; min-width: 120px; padding: 10px; border: 1px solid var(--muted, #2a2a2a); background: transparent; color: inherit; font-family: "DM Mono", monospace; font-size: 15px; }
+      button { padding: 10px 16px; border: 1px solid var(--ink, #111); background: var(--ink, #111); color: var(--bg, #fff); font-family: "DM Mono", monospace; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; cursor: pointer; }
+      button.ghost { background: transparent; color: inherit; border-color: var(--muted, #2a2a2a); }
+      button:disabled { opacity: 0.45; cursor: not-allowed; }
+      .note { font-family: "DM Mono", monospace; font-size: 11px; color: var(--muted, #8a8a8a); line-height: 1.7; }
+      .warn { border-left: 3px solid #c2401c; padding: 10px 14px; font-family: "DM Mono", monospace; font-size: 12px; line-height: 1.7; margin: 16px 0; }
+      .addr { font-family: "DM Mono", monospace; font-size: 11px; word-break: break-all; color: var(--muted, #8a8a8a); }
+      #status { font-family: "DM Mono", monospace; font-size: 12px; min-height: 18px; margin-top: 10px; }
+      .buy { display: flex; gap: 8px; margin-top: 6px; }
+      .buy button { flex: 1; }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="wordmark" href="/">Planet</a>
+      <nav class="nav">
+        <a href="/">home</a>
+        <a href="/dashboard">dashboard</a>
+        <a href="/docs">docs</a>
+        <a href="/metals">metals</a>
+      </nav>
+    </header>
+
+    <main class="wrap">
+      <p class="notice" style="font-family: 'DM Mono', monospace">[ read-only · we never hold your tokens · not investment advice ]</p>
+      <h1>On-chain metals, in one place</h1>
+      <p class="sub">
+        Every tokenised ounce you hold, across wallets, counted in ounces rather than tickers.
+        No custody, no signature, no new token — we read the chain and hand you to a venue you already trust.
+      </p>
+
+      <div class="panel">
+        <div class="row">
+          <span class="note">wallet</span>
+          <button id="connect" class="ghost">connect</button>
+          <span class="addr" id="account">not connected</span>
+        </div>
+        <div class="total">
+          <div><div class="k">gold</div><div class="v" id="goldOz">—</div></div>
+          <div><div class="k">silver</div><div class="v" id="silverOz">—</div></div>
+          <div><div class="k">value</div><div class="v" id="usd">—</div></div>
+        </div>
+        <div id="status"></div>
+      </div>
+
+      <div class="panel">
+        <div class="k" style="font-family: 'DM Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted, #8a8a8a)">holdings</div>
+        <table>
+          <thead>
+            <tr><th>token</th><th>issuer</th><th class="num">ounces</th><th class="num">value</th></tr>
+          </thead>
+          <tbody id="rows">
+            <tr><td colspan="4" class="issuer">connect a wallet to read balances</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="panel">
+        <div class="k" style="font-family: 'DM Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted, #8a8a8a)">buy</div>
+        <div class="row">
+          <input id="amount" type="text" inputmode="decimal" value="100" aria-label="amount in USD" />
+          <span class="note">USD</span>
+        </div>
+        <div class="buy">
+          <button id="buyPaxg">buy gold · PAXG</button>
+          <button id="buyXaut" class="ghost">buy gold · XAUT</button>
+        </div>
+        <p class="note" style="margin-top:10px">
+          Opens the pair on Uniswap with the amount prefilled — one click, then confirm in your wallet.
+          Buying from another chain goes through <a href="https://app.rango.exchange" target="_blank" rel="noopener">Rango</a>,
+          which routes across chains; that path is a hand-off today, not an in-page quote.
+        </p>
+      </div>
+
+      <div class="warn">
+        <b>Two tokens, not one, on purpose.</b> PAXG is issued by Paxos (a US national trust bank) and is
+        <b>unavailable to EU residents under MiCA</b>; XAUT is issued in the BVI with Swiss vaults. Holding both
+        spreads issuer and jurisdiction risk — that is the only reason a basket exists. If you just want gold,
+        one token is simpler and cheaper.
+      </div>
+
+      <p class="note">
+        Balances are read from Ethereum mainnet. Only canonical issuer deployments are counted; bridged copies are
+        excluded because they add bridge risk on top of issuer risk. Ounces are exact (1 PAXG = 1 XAUT = 1 fine troy
+        ounce); the USD figure is indicative and is blanked rather than guessed when no price is available.
+      </p>
+    </main>
+
+    <script>
+      const PAXG = "0x45804880De22913dAFE09f4980848ECE6EcbAf78";
+      const XAUT = "0x68749665FF8D2d112Fa859AA293F07A622782F38";
+      const USDC_ETH = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+
+      let account = null;
+      let prices = { PAXG: null, XAUT: null };
+
+      const $ = (id) => document.getElementById(id);
+      const fmt = (n, d = 4) =>
+        n == null || Number.isNaN(Number(n)) ? "—" : Number(n).toLocaleString(undefined, { maximumFractionDigits: d });
+
+      async function readWallet() {
+        if (!account) return;
+        $("status").textContent = "reading balances…";
+        try {
+          const r = await fetch("/api/metals?address=" + encodeURIComponent(account));
+          if (!r.ok) {
+            const j = await r.json().catch(() => ({}));
+            throw new Error(j?.error?.message || "HTTP " + r.status);
+          }
+          const d = await r.json();
+          prices = Object.fromEntries(d.tokens.map((t) => [t.symbol, t.priceUsd]));
+
+          $("goldOz").textContent = fmt(d.totals.goldOz, 4) + " oz";
+          $("silverOz").textContent = fmt(d.totals.silverOz, 4) + " oz";
+          $("usd").textContent = d.totals.usd == null ? "—" : "$" + fmt(d.totals.usd, 2);
+
+          const rows = d.tokens
+            .filter((t) => t.balance != null)
+            .map(
+              (t) => `<tr>
+                <td>${t.symbol}</td>
+                <td class="issuer">${t.issuer}</td>
+                <td class="num">${fmt(t.oz, 6)}</td>
+                <td class="num">${t.usd == null ? "—" : "$" + fmt(t.usd, 2)}</td>
+              </tr>`,
+            )
+            .join("");
+          $("rows").innerHTML = rows || `<tr><td colspan="4" class="issuer">no metal in this wallet</td></tr>`;
+          $("status").textContent = d.priceSource === "unavailable" ? "balances read · price source unavailable" : "";
+        } catch (e) {
+          $("status").innerHTML = `<span style="color:#e03131">${e.message}</span>`;
+        }
+      }
+
+      async function connect() {
+        if (!window.ethereum) {
+          $("status").innerHTML = '<span style="color:#e03131">no injected wallet found — install MetaMask or Rabby</span>';
+          return;
+        }
+        try {
+          const accts = await window.ethereum.request({ method: "eth_requestAccounts" });
+          account = accts[0];
+          $("account").textContent = account;
+          $("connect").textContent = "reconnect";
+          window.ethereum.on?.("accountsChanged", (a) => {
+            account = a[0] ?? null;
+            $("account").textContent = account ?? "not connected";
+            readWallet();
+          });
+          readWallet();
+        } catch (e) {
+          $("status").innerHTML = `<span style="color:#e03131">${e.message}</span>`;
+        }
+      }
+
+      // One click: open the exact pair with the amount already filled in. The user still confirms in
+      // their wallet — that confirmation is the only signature anywhere in this flow.
+      function buy(token) {
+        const usd = Number(String($("amount").value).replace(/[^0-9.]/g, ""));
+        const amt = Number.isFinite(usd) && usd > 0 ? Math.floor(usd) : null;
+        const params = new URLSearchParams({
+          chain: "mainnet",
+          inputCurrency: USDC_ETH,
+          outputCurrency: token,
+        });
+        if (amt) {
+          params.set("exactField", "input");
+          params.set("exactAmount", String(amt));
+        }
+        window.open("https://app.uniswap.org/swap?" + params.toString(), "_blank", "noopener");
+      }
+
+      $("connect").addEventListener("click", connect);
+      $("buyPaxg").addEventListener("click", () => buy(PAXG));
+      $("buyXaut").addEventListener("click", () => buy(XAUT));
+    </script>
+  </body>
+</html>
