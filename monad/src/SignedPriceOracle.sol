@@ -41,10 +41,14 @@ contract SignedPriceOracle {
         0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0;
 
     address public owner;
+    /// @notice The core that will consume these payloads. Bound into the digest, so a signature
+    ///         for one core cannot be replayed onto another that trusts the same oracle.
+    address public consumer;
     address[] public signers;
     uint8 public threshold;
 
     event SignersSet(uint256 count, uint8 threshold);
+    event ConsumerSet(address indexed consumer);
 
     error NotOwner();
     error BadThreshold();
@@ -70,6 +74,11 @@ contract SignedPriceOracle {
         _setSigners(signers_, threshold_);
     }
 
+    function setConsumer(address next) external onlyOwner {
+        consumer = next;
+        emit ConsumerSet(next);
+    }
+
     function _setSigners(address[] memory signers_, uint8 threshold_) internal {
         if (threshold_ == 0 || threshold_ > signers_.length) revert BadThreshold();
         for (uint256 i; i < signers_.length; ++i) {
@@ -93,6 +102,7 @@ contract SignedPriceOracle {
                 DOMAIN,
                 address(this),
                 block.chainid,
+                consumer,
                 p.index,
                 p.price,
                 p.volatility,

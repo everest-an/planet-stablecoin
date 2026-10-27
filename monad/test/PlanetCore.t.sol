@@ -162,11 +162,13 @@ contract PlanetCoreTest is Test {
         uint64 minted = core.mint(deposit);
 
         uint64 fee = uint64(uint256(deposit) * 50 / 10_000); // 0.5%
-        assertEq(core.feesToBurn(), fee * 30 / 100);
-        assertEq(core.feesToReserve(), fee * 40 / 100);
-        assertEq(core.feesToStaking(), fee * 20 / 100);
+        // Nothing burns and nothing stakes: there is no burn function and no staking contract, so
+        // those labels stay at zero instead of accumulating money the contract still holds.
+        assertEq(core.feesToBurn(), 0);
+        assertEq(core.feesToStaking(), 0);
         assertEq(core.riskFund(), fee * 10 / 100);
-        assertEq(core.feesToBurn() + core.feesToReserve() + core.feesToStaking() + core.riskFund(), fee);
+        assertEq(core.feesToReserve(), fee - core.riskFund());
+        assertEq(core.feesToReserve() + core.riskFund(), fee);
         assertEq(minted, uint64((uint256(deposit) - fee) * SCALE / 1_000_000));
         assertEq(core.totalSupply(), minted);
     }
@@ -421,6 +423,76 @@ contract PlanetCoreTest is Test {
         assertEq(usd.balanceOf(stranger), before + payout, "the collateral moved");
         assertEq(uint256(payout), reserveAfterMint, "the last holder takes the remaining reserve");
         assertLt(uint256(payout), (uint256(minted) * 1_140_000) / 1_000_000, "less than the index promised");
+    }
+
+    // ---------------------------------------------------------------- limits, pause, solvency
+    function test_mint_cap_is_enforced_and_settable() public {
+        pushAll(100 * SCALE);
+        vm.prank(owner);
+        core.setLimits(500 * SCALE, 0, 400_000);
+        vm.prank(stranger);
+        vm.expectRevert(PlanetCore.CapExceeded.selector);
+        core.mint(1_000 * SCALE);
+        vm.prank(stranger);
+        core.mint(400 * SCALE); // under the cap
+    }
+
+    function test_per_tx_cap_is_enforced() public {
+        pushAll(100 * SCALE);
+        vm.prank(owner);
+        core.setLimits(0, 100 * SCALE, 400_000);
+        vm.prank(stranger);
+        vm.expectRevert(PlanetCore.CapExceeded.selector);
+        core.mint(1_000 * SCALE);
+    }
+
+    /// One switch for both directions meant an oracle incident also closed the exit.
+    function test_pausing_mints_leaves_redemption_open() public {
+        pushAll(100 * SCALE);
+        vm.prank(stranger);
+        uint64 minted = core.mint(1_000 * SCALE);
+
+        vm.prank(owner);
+        core.setPause(true, false);
+
+        vm.prank(stranger);
+        vm.expectRevert(PlanetCore.IsPaused.selector);
+        core.mint(1_000 * SCALE);
+
+        vm.prank(stranger);
+        core.redeem(minted); // still allowed
+    }
+
+    function test_solvency_predicate_tracks_the_real_balance() public {
+        pushAll(100 * SCALE);
+        vm.prank(stranger);
+        core.mint(1_000 * SCALE);
+        assertTrue(core.isSolvent());
+        // Strand the accounting: move the collateral out of the core and the predicate must notice.
+        vm.prank(address(core));
+        usd.transfer(address(0xDEAD), 1);
+        assertFalse(core.isSolvent());
+    }
+
+    function test_frozen_weight_cap_blocks_renormalising_to_one_asset() public {
+        vm.prank(owner);
+        core.setLimits(0, 0, 400_000);
+        // each asset is 12.5%; freezing five would be 62.5%
+        for (uint256 i; i < 5; ++i) {
+            vm.prank(owner);
+            if (i < 3) core.setRiskState(i, 2);
+            else {
+                vm.expectRevert(PlanetCore.FrozenWeightTooHigh.selector);
+                core.setRiskState(i, 2);
+                break;
+            }
+        }
+    }
+
+    function test_attestation_pointer_is_settable() public {
+        vm.prank(owner);
+        core.setReserveAttestation("ipfs://bafy...");
+        assertEq(core.reserveAttestation(), "ipfs://bafy...");
     }
 
     // ---------------------------------------------------------------- security regressions

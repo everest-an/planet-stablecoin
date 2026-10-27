@@ -55,7 +55,17 @@ contract PlanetCore {
     /// @notice The collateral a mint pulls and a redeem pays out. Unset means mint() reverts — the
     ///         core will not mint against a number it does not actually receive.
     IERC20 public depositToken;
-    bool public paused;
+    bool public mintsPaused;
+    bool public redeemsPaused;
+    /// @notice Max PLT supply. 0 means uncapped — deliberately explicit, not an accident.
+    uint64 public mintCap;
+    /// @notice Max PLT minted in one call. 0 means no per-tx cap.
+    uint64 public maxMintPerTx;
+    /// @notice Max weight (ppm) that may be frozen at once, so the index cannot be renormalised
+    ///         down to a single commodity by the owner.
+    uint64 public frozenWeightCap = 400_000;
+    /// @notice Pointer to the latest third-party reserve attestation (URI or content hash).
+    string public reserveAttestation;
     bool public baseLocked;
 
     uint64 public currentPpi = SCALE;
@@ -83,6 +93,9 @@ contract PlanetCore {
     event RiskStateSet(uint256 indexed index, uint8 state, uint64 ppi);
     event OracleChanged(address indexed oracle);
     event DepositTokenChanged(address indexed token);
+    event PauseSet(bool mintsPaused, bool redeemsPaused);
+    event LimitsSet(uint64 mintCap, uint64 maxMintPerTx, uint64 frozenWeightCap);
+    event ReserveAttestationSet(string uri);
     event Minted(address indexed to, uint64 deposit, uint64 fee, uint64 minted, uint64 ppi);
     event Redeemed(address indexed from, uint64 burned, uint64 feeBps, uint64 payout, uint64 ppi);
     event RedeemedProRata(address indexed from, uint64 burned, uint64 payout, uint64 reserve);
@@ -112,6 +125,8 @@ contract PlanetCore {
     error TransferFailed();
     error AmountTooLarge();
     error Reentrancy();
+    error CapExceeded();
+    error FrozenWeightTooHigh();
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert NotOwner();
@@ -140,6 +155,18 @@ contract PlanetCore {
         relayer = relayer_;
     }
 
+    /// @notice True when either direction is paused. Individual flags are the authoritative ones.
+    function paused() external view returns (bool) {
+        return mintsPaused || redeemsPaused;
+    }
+
+    /// @notice The collateral actually held, compared with the counter. The counter is a claim;
+    ///         this is the fact. A monitor should alert the moment it returns false.
+    function isSolvent() public view returns (bool) {
+        if (address(depositToken) == address(0)) return true;
+        return depositToken.balanceOf(address(this)) >= uint256(totalReserve);
+    }
+
     // ---------------------------------------------------------------- admin (I7)
     function setOwner(address next) external onlyOwner {
         if (next == address(0)) revert NotOwner();
@@ -157,9 +184,33 @@ contract PlanetCore {
         token = PlanetToken(next);
     }
 
+    /// @notice Pause minting and redemption independently. One switch for both meant an oracle
+    ///         incident also closed the exit.
+    function setPause(bool mintPaused, bool redeemPaused) external onlyOwner {
+        mintsPaused = mintPaused;
+        redeemsPaused = redeemPaused;
+        emit PauseSet(mintPaused, redeemPaused);
+    }
+
+    /// @notice Kept so existing callers keep working: pauses both directions.
     function setPaused(bool v) external onlyOwner {
-        paused = v;
-        emit PausedSet(v);
+        mintsPaused = v;
+        redeemsPaused = v;
+        emit PauseSet(v, v);
+    }
+
+    /// @notice Caps are policy, not constants. Changing them should not need a redeploy.
+    function setLimits(uint64 mintCap_, uint64 maxMintPerTx_, uint64 frozenWeightCap_) external onlyOwner {
+        if (frozenWeightCap_ > SCALE) revert BadWeight();
+        mintCap = mintCap_;
+        maxMintPerTx = maxMintPerTx_;
+        frozenWeightCap = frozenWeightCap_;
+        emit LimitsSet(mintCap_, maxMintPerTx_, frozenWeightCap_);
+    }
+
+    function setReserveAttestation(string calldata uri) external onlyOwner {
+        reserveAttestation = uri;
+        emit ReserveAttestationSet(uri);
     }
 
     /// @notice Owner appends or replaces one basket slot. Base price may only be set BEFORE the lock.
@@ -239,6 +290,17 @@ contract PlanetCore {
         if (index >= assets.length) revert BadIndex();
         if (state > RISK_FROZEN) revert BadRiskState();
         assets[index].riskState = state;
+
+        // Freezing lets the index renormalise. Without a ceiling, an owner could freeze thirteen of
+        // fourteen assets and make the "index" equal to one commodity.
+        if (state == RISK_FROZEN) {
+            uint256 frozen;
+            for (uint256 i; i < assets.length; ++i) {
+                if (assets[i].riskState == RISK_FROZEN) frozen += assets[i].weight;
+            }
+            if (frozen > uint256(frozenWeightCap)) revert FrozenWeightTooHigh();
+        }
+
         currentPpi = computePpi();
         emit RiskStateSet(index, state, currentPpi);
     }
@@ -252,7 +314,8 @@ contract PlanetCore {
         uint64 timestamp,
         bool skipJump
     ) internal {
-        if (paused) revert IsPaused();
+        // A one-sided pause stops that user flow only; a full pause also stops price pushes.
+        if (mintsPaused && redeemsPaused) revert IsPaused();
         if (index >= assets.length) revert BadIndex();
         if (riskState > RISK_FROZEN) revert BadRiskState();
         if (timestamp <= lastOracleUpdate) revert BadTimestamp();
@@ -338,7 +401,8 @@ contract PlanetCore {
     // ---------------------------------------------------------------- mint (I5, I6)
     /// @param deposit  units deposited (whatever the caller settles), 1e6 fixed point
     function mint(uint64 deposit) external nonReentrant returns (uint64 minted) {
-        if (paused) revert IsPaused();
+        if (mintsPaused) revert IsPaused();
+        if (maxMintPerTx != 0 && deposit > maxMintPerTx) revert CapExceeded();
         if (deposit == 0) revert ZeroAmount();
         uint64 ppi = currentPpi;
         if (ppi == 0) revert NoActiveAsset(); // C-1: never mint against an undefined index
@@ -363,6 +427,7 @@ contract PlanetCore {
         if (address(depositToken) == address(0)) revert NoDepositToken();
         if (!depositToken.transferFrom(msg.sender, address(this), uint256(deposit))) revert TransferFailed();
 
+        if (mintCap != 0 && uint256(totalSupply) + uint256(minted) > uint256(mintCap)) revert CapExceeded();
         totalSupply += minted;
         token.mint(msg.sender, minted); // EVM: synchronous, no mirror
         totalReserve += deposit;
@@ -372,7 +437,7 @@ contract PlanetCore {
 
     // ---------------------------------------------------------------- redeem
     function redeem(uint64 burnAmount) external nonReentrant returns (uint64 payout) {
-        if (paused) revert IsPaused();
+        if (redeemsPaused) revert IsPaused();
         if (burnAmount == 0) revert ZeroAmount();
         uint64 ppi = currentPpi;
         if (ppi == 0) revert NoActiveAsset();
@@ -425,19 +490,20 @@ contract PlanetCore {
     }
 
     function _routeFees(uint256 fee) internal {
-        uint64 burn = uint64(fee * uint256(BURN_SHARE_BPS) / uint256(BPS_DENOM));
-        uint64 stake = uint64(fee * uint256(STAKE_SHARE_BPS) / uint256(BPS_DENOM));
+        // Nothing burns fees and nothing stakes them: there is no burn function and no staking
+        // contract. Those labels used to accumulate while the money sat in the reserve, and a
+        // pro-rata redemption could leave them describing funds that had already been paid out.
+        // So the split is now what the code can actually honour: the risk fund is carved out and
+        // everything else accrues to the reserve. feesToBurn / feesToStaking stay at zero and are
+        // reserved for a future staking module.
         uint64 risk = uint64(fee * uint256(RISK_SHARE_BPS) / uint256(BPS_DENOM));
-        // The 10% risk carve-out comes out of the reserve bucket: net 30 / 40 / 20 / 10.
-        uint64 reserve = uint64(fee * uint256(RESERVE_SHARE_BPS) / uint256(BPS_DENOM)) - risk;
+        uint64 reserve = uint64(fee) - risk;
 
-        feesToBurn += burn;
         feesToReserve += reserve;
-        feesToStaking += stake;
         riskFund += risk;
         // NOTE: the reserve share is NOT deducted here. The deposit already added the gross amount to
         // totalReserve; the reserve bucket is a label on that same money, not a transfer out of it.
-        emit FeesRouted(burn, reserve, stake, risk);
+        emit FeesRouted(0, reserve, 0, risk);
     }
 
     /// @notice Owner moves risk-fund money into the reserve (the TON CoverDeficit).

@@ -27,6 +27,9 @@ pragma solidity ^0.8.24;
 contract PlanetTimelock {
     address public owner;
     uint64 public delay;
+    /// @notice How long after eta a proposal may still be executed. Without this a proposal
+    ///         could sit for a year and be executed when nobody is watching.
+    uint64 public gracePeriod = 3 days;
 
     bool public hasPending;
     address public dest;
@@ -50,6 +53,7 @@ contract PlanetTimelock {
     error TooEarly();
     error DelayTooSmall();
     error BadDelay();
+    error TooLate();
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert NotOwner();
@@ -77,6 +81,7 @@ contract PlanetTimelock {
     function execute() external onlyOwner returns (bool ok) {
         if (!hasPending) revert NoPending();
         if (block.timestamp < eta) revert TooEarly();
+        if (block.timestamp > uint256(eta) + uint256(gracePeriod)) revert TooLate();
 
         address dest_ = dest;
         bytes memory body_ = body;
@@ -112,6 +117,10 @@ contract PlanetTimelock {
         if (delay > 0 && next == 0) revert BadDelay();
         delay = next;
         emit DelaySet(next);
+    }
+
+    function setGracePeriod(uint64 next) external onlyOwner {
+        gracePeriod = next;
     }
 
     /// @notice TL-1: ownership can only change through the timelock itself.
