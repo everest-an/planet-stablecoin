@@ -16,7 +16,7 @@
 
 // Arbitrum Sepolia = 421614. The RPC is public and needs no key.
 export const RPC = process.env.EVM_RPC || "https://sepolia-rollup.arbitrum.io/rpc";
-export const CORE = process.env.EVM_CORE || "0x5b7537e800c4190f9Ee22FDBC1355Fbc0142952E";
+export const CORE = process.env.EVM_CORE || "0x32E6E7Bd6Adc0D49E761A724916e6B9f6540B810";
 export const CHAIN = { name: "arbitrum-sepolia", id: 421614 };
 export const SCALE = 1e6;
 // PlanetCore.MAX_ORACLE_AGE == 6 hours, and mint()/redeem() revert StaleOracle past it. This is a
@@ -42,6 +42,10 @@ export const SEL = {
   owner: "0x8da5cb5b",
   token: "0xfc0c546a",
   paused: "0x5c975abb",
+  mintsPaused: "0x96291052",
+  redeemsPaused: "0x95d97cbd",
+  isSolvent: "0x5ce23950",
+  mintCap: "0x76c71ca1",
   // assets(uint256) — the auto-generated getter for `Asset[] public assets`
   assets: "0xcf35bdd0",
 };

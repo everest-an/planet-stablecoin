@@ -13,8 +13,8 @@
 import { createPublicClient, http, parseAbi, formatUnits } from "viem";
 import { arbitrumSepolia } from "viem/chains";
 
-const CORE = process.env.CORE ?? "0x5b7537e800c4190f9Ee22FDBC1355Fbc0142952E";
-const TIMELOCK = process.env.TIMELOCK ?? "0x22B4f2CA13B76AC45295F5ce6C36f6Adf07a8C10";
+const CORE = process.env.CORE ?? "0x32E6E7Bd6Adc0D49E761A724916e6B9f6540B810";
+const TIMELOCK = process.env.TIMELOCK ?? "0x15E3708e95FD72f893c8c91F7fcd58Af481067f6";
 const RPC = process.env.RPC ?? "https://sepolia-rollup.arbitrum.io/rpc";
 const MAX_ORACLE_AGE = 21600;
 
@@ -28,6 +28,9 @@ const coreAbi = parseAbi([
   "function totalReserve() view returns (uint64)",
   "function depositToken() view returns (address)",
   "function assetCount() view returns (uint256)",
+  "function isSolvent() view returns (bool)",
+  "function mintsPaused() view returns (bool)",
+  "function redeemsPaused() view returns (bool)",
 ]);
 const tokenAbi = parseAbi(["function balanceOf(address) view returns (uint256)"]);
 const tlAbi = parseAbi(["function hasPending() view returns (bool)", "function eta() view returns (uint64)"]);
@@ -38,7 +41,7 @@ const failures = [];
 const warnings = [];
 
 try {
-  const [owner, paused, ppi, oldest, totalReserve, depositToken, assetCount, hasPending, eta] = await Promise.all([
+  const [owner, paused, ppi, oldest, totalReserve, depositToken, assetCount, hasPending, eta, solvent, mintsPaused, redeemsPaused] = await Promise.all([
     read(coreAbi, CORE, "owner"),
     read(coreAbi, CORE, "paused"),
     read(coreAbi, CORE, "currentPpi"),
@@ -48,6 +51,9 @@ try {
     read(coreAbi, CORE, "assetCount"),
     read(tlAbi, TIMELOCK, "hasPending"),
     read(tlAbi, TIMELOCK, "eta"),
+    read(coreAbi, CORE, "isSolvent"),
+    read(coreAbi, CORE, "mintsPaused"),
+    read(coreAbi, CORE, "redeemsPaused"),
   ]);
 
   const balance = await read(tokenAbi, depositToken, "balanceOf", [CORE]);
@@ -66,7 +72,11 @@ try {
     failures.push(`reserve_undercollateralised: counter ${totalReserve} > balance ${balance}`);
   }
 
-  if (paused) failures.push("core_paused");
+  if (!solvent) failures.push("insolvent: the core holds less than totalReserve claims");
+  if (mintsPaused && redeemsPaused) failures.push("core_paused_in_both_directions");
+  else if (mintsPaused) warnings.push("minting_paused");
+  else if (redeemsPaused) warnings.push("redemption_paused");
+  void paused;
 
   if (owner.toLowerCase() !== TIMELOCK.toLowerCase()) {
     failures.push(`owner_not_timelock: ${owner}`);

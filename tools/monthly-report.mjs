@@ -17,7 +17,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const WEB = join(HERE, "..", "web");
 const REPORTS = join(WEB, "reports");
 
-const CORES = [process.env.EVM_CORE || "0x5b7537e800c4190f9Ee22FDBC1355Fbc0142952E"];
+const CORES = [process.env.EVM_CORE || "0x32E6E7Bd6Adc0D49E761A724916e6B9f6540B810"];
 const NAMES = [
   "WTI Crude", "Brent Crude", "Natural Gas", "Gold", "Silver", "Copper",
   "Wheat", "Corn", "Soybean", "Coffee", "Lumber (ETF)", "Lithium (ETF)",

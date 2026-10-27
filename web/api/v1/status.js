@@ -85,6 +85,10 @@ async function readStatus() {
       "feesToStaking",
       "relayer",
       "paused",
+      "mintsPaused",
+      "redeemsPaused",
+      "isSolvent",
+      "mintCap",
       "oracle",
     ],
     ASSET_SLOTS,
@@ -154,6 +158,14 @@ async function readStatus() {
       maxOracleAge: MAX_ORACLE_AGE,
       riskFund: toNum(g.riskFund) ?? 0,
       paused: g.paused != null && g.paused !== 0n,
+      // Pausing is split: an oracle incident closes minting without closing the exit.
+      pauses: {
+        mint: g.mintsPaused != null && g.mintsPaused !== 0n,
+        redeem: g.redeemsPaused != null && g.redeemsPaused !== 0n,
+      },
+      // The counter is a claim, the balance is a fact. This is the contract answering for itself.
+      solvent: g.isSolvent == null ? null : g.isSolvent !== 0n,
+      mintCap: toNum(g.mintCap),
       // See the schema note above: 1-of-1 by construction, not a multi-signer threshold.
       signerThreshold: relayerSet ? 1 : 0,
       oracle: {
