@@ -126,6 +126,22 @@ The earlier plan (T0–T3) still holds; this pass changes two entries and adds o
 - Multisig, key separation, bug bounty, runbook — plus ★ **a named shortfall counterparty** before any
   real money is involved.
 
+---
+
+## Two findings that soften our own review
+
+**F-7 (redemption reverts beyond a 15% deviation) is not unusual.** FPI's controller calls
+`require(within_range, "Peg band [Redeem]")` before it will redeem, so a live index stablecoin also
+blocks redemptions outside its band. What FPI has that we do not is a **separate `redeems_paused`**,
+so an oracle incident and a policy pause are different switches. The band is standard; the absence
+of a second switch is ours.
+
+**mStable validates at the entry point, not inside the pricing function.** Its audited design routes
+mint and redeem through a `ForgeValidator` that runs every check in one place. Our checks are spread
+across `feeBpsForPpi` (which reverts), `redeem` (staleness, supply, reserve) and `mint` (staleness,
+collateral). The behaviour is roughly equivalent, but "why did this call fail" takes three files to
+answer, and an auditor will say so.
+
 **Not now:** KYC/transfer restrictions and in-kind redemption. Both are Stage 2/3 and both would
 change the token contract's shape; adding them later is a migration, so the *decision* should be made
 before the audit even if the code comes after.
