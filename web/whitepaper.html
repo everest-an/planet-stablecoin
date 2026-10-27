@@ -170,10 +170,10 @@
         </p>
         <h2>5. Stability mechanisms</h2>
         <ul>
-          <li><b>Band circuit-breaker:</b> minting is refused when the index is undefined, and blocked beyond a 15% deviation.</li>
+          <li>Band circuit-breaker: minting and redemption are both refused beyond a 15% deviation from base.</li>
           <li><b>Fee slope:</b> fees rise above a 5% deviation; redemption is asymmetric and capped.</li>
-          <li><b>Arbitrage incentive:</b> a fee rebate when the index is rich, to pull it back.</li>
-          <li><b>Stabilisation bonds &amp; risk fund:</b> absorb selling pressure below peg; part of each fee funds a risk reserve.</li>
+          <li>Arbitrage rebate: <b>design, not implemented</b> — the deployed fee function has no rebate branch.</li>
+          <li>Risk fund: part of each fee funds a reserve the owner can move into backing. Stabilisation bonds are <b>design, not deployed</b>.</li>
         </ul>
         <h2>6. Oracle</h2>
         <p>
@@ -486,7 +486,6 @@ admin     owner ──propose(dest, body)──▶ PlanetTimelock ──(wait de
           <span class="row"><span class="lbl">(22)</span><i>payout</i> = <i>burnAmount</i> · <i>reserve</i> / <i>supply</i> &nbsp;<span class="lbl">otherwise — pro-rata, fee waived, <code>RedeemedProRata</code> emitted</span></span>
         </div>
         <p class="eq-note">
-        <p class="eq-note">
           This applies <b>only while redemption is possible at all</b>. Beyond 15% deviation the fee function
           reverts <code>BandReject</code> and nothing can be redeemed — a known and stated limitation (security
           review, F-7). Within the band, PLT tracks the index while the reserve can cover it, and becomes a
@@ -495,14 +494,26 @@ admin     owner ──propose(dest, body)──▶ PlanetTimelock ──(wait de
         </p>
 
         <h2 id="f5">5. Stability mechanisms</h2>
+        <p class="small">
+          <b>This section mixes live code with design, and the difference matters.</b> The fee band, the
+          circuit-breaker and the risk fund are deployed. The arbitrage rebate (§5.2), the bonds (§5.4) and the
+          dual-track anchoring (§5.5) are <b>design only</b>, and each says so where it is described.
+        </p>
+        <p class="small">
+          One framing correction matters more than any table here. These mechanisms respond to the index's
+          distance from its <b>base</b>, not to a market price. An index of commodity prices is <b>supposed to
+          move</b> (§1.1), so a schedule that charges more as it moves is a <b>volatility tax on trading</b>.
+          It is not a peg defence, and calling it one would borrow credibility from a mechanism this design
+          does not contain.
+        </p>
         <h3>5.1 Tiered fee and circuit-breakers</h3>
         <table class="doc-table">
           <thead><tr><th>|PPI − 1|</th><th>Fee</th><th>Behaviour</th></tr></thead>
           <tbody>
-            <tr><td>≈ 0 (near peg)</td><td>0.5%</td><td>normal</td></tr>
+            <tr><td>≈ 0 (index at base)</td><td>0.5%</td><td>normal</td></tr>
             <tr><td>3% – 5%</td><td>1%</td><td>dampened</td></tr>
             <tr><td>&gt; 5%</td><td>2% + slope</td><td>elastic; the slope steepens with deviation</td></tr>
-            <tr><td>&gt; 15%</td><td>—</td><td><b>mint refused</b></td></tr>
+            <tr><td>&gt; 15%</td><td>—</td><td><b>mint and redeem refused</b></td></tr>
           </tbody>
         </table>
         <div class="eq">
@@ -519,12 +530,17 @@ admin     owner ──propose(dest, body)──▶ PlanetTimelock ──(wait de
           index is rich the protocol pays a rebate so an external arbitrageur is rewarded for
           pushing price back toward PPI.
         </p>
+        <p class="eq-note">
+          <b>Equation (11) is not implemented.</b> The deployed <code>feeBpsForPpi</code> returns the band fee and
+          nothing else — there is no rebate branch. It also presupposes a market price to arbitrage against,
+          which this deployment does not have. Redemption is symmetric with minting, apart from the 5% cap.
+        </p>
         <h3>5.3 Risk fund</h3>
         <div class="eq">
           <span class="row"><span class="lbl">(12)</span><i>F</i><sub>risk</sub> += <i>F</i> · <i>RISK_SHARE</i> &nbsp;&nbsp;<span class="lbl">funded on every fee</span></span>
           <span class="row"><span class="lbl">(13)</span>reserve += <i>a</i> &nbsp;if&nbsp; <i>riskFund</i> ≥ <i>a</i> &nbsp;&nbsp;<span class="lbl">owner <code>CoverDeficit</code></span></span>
         </div>
-        <h3>5.4 Stabilisation bonds</h3>
+        <h3>5.4 Stabilisation bonds — design, not deployed</h3>
         <div class="eq">
           <span class="row"><span class="lbl">(14)</span>face = principal · (1 + <i>premiumBps</i>/10<sup>4</sup>)</span>
         </div>
@@ -536,7 +552,11 @@ admin     owner ──propose(dest, body)──▶ PlanetTimelock ──(wait de
           <b>not deployed</b> in this Arbitrum deployment; the live stability tools are fees and the
           risk fund.
         </p>
-        <h3>5.5 Dual-track anchoring</h3>
+        <h3>5.5 Dual-track anchoring — design, needs a market price the protocol does not observe</h3>
+        <p class="eq-note">
+          Both rows key off a <b>market price for PLT</b> against the index. This deployment has no market and no
+          price oracle for PLT itself, so neither scenario can be evaluated today.
+        </p>
         <table class="doc-table">
           <thead><tr><th>Scenario</th><th>market &lt; PPI</th><th>market &gt; PPI</th></tr></thead>
           <tbody>
