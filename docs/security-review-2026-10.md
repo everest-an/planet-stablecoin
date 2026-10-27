@@ -68,6 +68,28 @@ A deposit large enough to push the value past `2^64-1` would mint a wrapped (tin
 
 ---
 
+## Status update — batch A (deployed 2026-10-27)
+
+Six of the findings below are now closed, deployed, and covered by tests:
+
+| Finding | Was | Now |
+|---|---|---|
+| F-13 | `feesToBurn` / `feesToStaking` accumulated with no sink, and a pro-rata redemption could leave them describing paid-out money | both counters are zero; the fee is 90% reserve / 10% risk fund, which is what the code can honour |
+| F-16 | oracle digest bound the oracle and chain id but not the consuming core | `consumer` is part of the digest |
+| F-17 | a timelock proposal could be executed years later | `gracePeriod` (3 days) after which `execute` reverts `TooLate` |
+| F-18 | no on-chain solvency check | `isSolvent()` compares the counter with the real balance; the monitor now calls it |
+| F-19 | owner could renormalise the index to one commodity | `frozenWeightCap` (40% default) blocks freezing beyond it |
+| F-20 | no mint cap | `mintCap` and `maxMintPerTx`, settable |
+
+Also added in the same batch, not from this review: **`mintsPaused` / `redeemsPaused` are separate**
+(one flag meant an oracle incident also closed the exit) and a **`reserveAttestation`** slot.
+
+Still open below: F-5 (signer set is 1-of-1, blocked on key holders), F-6 is now mitigated by the
+frozen-weight cap rather than eliminated, F-7 (exit freeze beyond 15%) is standard practice per the
+peer review, F-9 (relayer key == timelock owner), F-10..F-12 (info).
+
+---
+
 ## Open — accepted or blocked
 
 ### F-5 — MEDIUM — the oracle signer set is 1-of-1

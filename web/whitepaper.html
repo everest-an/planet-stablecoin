@@ -164,8 +164,9 @@
         <h2>4. Mint / burn and fees</h2>
         <p>
           Minting pulls test USDC and issues PLT at the current PPI, net of a tiered fee. Each fee
-          is routed <b>30% burn · 50% reserve · 20% staking</b>, with a <b>10% risk-fund</b>
-          carve-out taken from the reserve bucket (net <b>30 / 40 / 20 / 10</b>). Redeeming burns PLT
+          is routed <b>90% to the reserve</b> with a <b>10% risk-fund</b> carve-out taken from it. Nothing is burned and
+          nothing is staked: those two labels had no mechanism behind them, so they are gone rather than
+          accumulating money the contract still holds. Redeeming burns PLT
           and pays test USDC from the reserve in the same transaction.
         </p>
         <h2>5. Stability mechanisms</h2>
@@ -461,7 +462,7 @@ admin     owner ──propose(dest, body)──▶ PlanetTimelock ──(wait de
         <h3>4.2 Fee routing</h3>
         <div class="eq">
           <span class="row"><span class="lbl">(8)</span><i>F</i> = <i>F</i><sub>burn</sub> + <i>F</i><sub>reserve</sub> + <i>F</i><sub>stake</sub> + <i>F</i><sub>risk</sub></span>
-          <span class="row"><span class="cond">burn 30% · reserve 50% · staking 20%, then 10% of the fee is carved into the risk fund (net 30 / 40 / 20 / 10)</span></span>
+          <span class="row"><span class="cond">the risk fund takes 10% of the fee; the remaining 90% accrues to the reserve</span></span>
         </div>
         <p class="eq-note">
           <b>Why the reserve bucket is the largest:</b> in the fully-backed future phase the reserve
@@ -751,7 +752,7 @@ admin     owner ──propose(dest, body)──▶ PlanetTimelock ──(wait de
         <h3>10.2 Fee flow, v1 vs now</h3>
         <div class="eq">
           <span class="row"><span class="lbl">v1</span>45% buyback-and-burn · 30% reserve · 25% PLTG staking rewards</span>
-          <span class="row"><span class="lbl">now</span>30% burn · 50% reserve · 20% staking, less a 10% risk-fund carve-out (net 30/40/20/10)</span>
+          <span class="row"><span class="lbl">now</span>10% to the risk fund, 90% to the reserve — no burn, no staking</span>
         </div>
         <h3>10.3 PLTG utility (design — not deployed)</h3>
         <ul>
@@ -977,7 +978,7 @@ admin     owner ──propose(dest, body)──▶ PlanetTimelock ──(wait de
           ownership could bypass the delay; a failed executed action could fail silently; a voter
           could unstake immediately; proposal spam; bond redemption could destroy a claim without
           payment; the bond premium was unbounded; and a supply underflow. The EVM port added its own
-          fixes: the fee buckets now net 30/40/20/10; mint and redeem refuse to run without a wired
+          fixes: the fee buckets total correctly; mint and redeem refuse to run without a wired
           token; <code>setAsset</code> bounds-checks before indexing; and the weight sum is enforced
           on price updates rather than on every basket edit. The remaining design items are
           documented (redemption has no freshness guard; fee buckets are labels; PLTG and executed

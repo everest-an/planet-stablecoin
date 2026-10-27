@@ -179,8 +179,8 @@
       </ul>
       <p>
         Fees are band-based (0.5% near the index, 1% at 3–5% off, 2% beyond, plus a
-        below-peg redemption penalty) and split <b>30% burn / 40% reserve / 20% staking / 10% risk
-        fund</b>.
+        below-peg redemption penalty) and split <b>90% to the reserve / 10% to the risk fund</b>. Nothing is
+        burned and nothing is staked, because no burn function and no staking contract exist.
       </p>
 
       <h2 id="fund">5. The fund — design, not deployed</h2>
@@ -257,7 +257,7 @@
           own wallet to sign. Any message asking for a seed phrase is not us.</li>
         <li><b>Unaudited.</b> No third-party audit has been completed; that is the gate before any
           mainnet deployment. Treat the code as research software.</li>
-        <li><b>Known failure modes are tested:</b> fee-bucket netting (30/40/20/10), token-required
+        <li><b>Known failure modes are tested:</b> fee-bucket totals, token-required
           mint/redeem, collateral pulled before state changes, signed-payload domain separation,
           non-positive amount rejection, and a staleness guard on minting.</li>
         <li><b>Disclosure:</b> see <a href="/.well-known/security.txt"><code>/.well-known/security.txt</code></a>.</li>
