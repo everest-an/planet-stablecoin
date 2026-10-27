@@ -214,13 +214,15 @@
           const j = await r.json();
           if (!r.ok) throw new Error(j?.error?.message || "quote failed");
           const b = j.best;
+          pendingQuote = { requestId: j.requestId, symbol: sym, from, amount };
           $("quoteOut").innerHTML =
             `<b>${amount} USDC on ${from} → ${Number(b.outputAmount).toFixed(6)} ${sym}</b>` +
             (b.timeSeconds ? ` · ~${b.timeSeconds}s` : "") +
             ` · ${b.route}` +
             (j.alternatives ? ` · +${j.alternatives} other route(s)` : "") +
-            `<br><a href="${rangoLink(sym, from, amount)}" target="_blank" rel="noopener">continue in Rango →</a>` +
-            ` <span style="opacity:.7">— execution stays in their app: the quote is ours, the signature is yours.</span>`;
+            `<div class="buy" style="margin-top:8px"><button id="swapNow">swap now</button></div>` +
+            `<span style="opacity:.7"><a href="${rangoLink(sym, from, amount)}" target="_blank" rel="noopener">or continue in Rango →</a></span>`;
+          $("swapNow").addEventListener("click", executeSwap);
         } catch (e) {
           $("quoteOut").innerHTML = `<span style="color:#e03131">${e.message}</span>`;
         }
@@ -245,6 +247,101 @@
           amount: String(amount),
         });
         return "https://app.rango.exchange/swap?" + q.toString();
+      }
+
+      let pendingQuote = null;
+
+      const RANGO_CHAIN_ID = { ETH: 1, ARBITRUM: 42161, BASE: 8453, OPTIMISM: 10, POLYGON: 137 };
+      const RANGO_CHAIN_HEX = { ETH: "0x1", ARBITRUM: "0xa4b1", BASE: "0x2105", OPTIMISM: "0xa", POLYGON: "0x89" };
+
+      async function ensureChain(blockchain) {
+        const want = RANGO_CHAIN_HEX[blockchain];
+        if (!want) throw new Error("unsupported chain " + blockchain);
+        const have = await window.ethereum.request({ method: "eth_chainId" });
+        if (String(have).toLowerCase() === want) return;
+        await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: want }] });
+      }
+
+      async function post(body) {
+        const r = await fetch("/api/execute", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const j = await r.json();
+        if (!r.ok) {
+          const e = j?.error ?? {};
+          const detail = e.message ? ": " + e.message : "";
+          throw new Error((e.code ?? "failed") + detail);
+        }
+        return j;
+      }
+
+      async function signTransaction(tx) {
+        const params = { from: account, to: tx.to, data: tx.data };
+        if (tx.value && tx.value !== "0") params.value = "0x" + BigInt(tx.value).toString(16);
+        if (tx.gasLimit) params.gas = "0x" + BigInt(tx.gasLimit).toString(16);
+        const hash = await window.ethereum.request({ method: "eth_sendTransaction", params: [params] });
+        for (let i = 0; i < 90; i++) {
+          const rc = await fetch("https://ethereum-rpc.publicnode.com", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_getTransactionReceipt", params: [hash] }),
+          }).then((x) => x.json());
+          if (rc.result) return rc.result.status === "0x1" ? hash : null;
+          await new Promise((r) => setTimeout(r, 2000));
+        }
+        return hash; // still pending; treat as sent
+      }
+
+      // One click (per wallet confirmation). confirm -> create -> sign -> repeat while isApprovalTx.
+      async function executeSwap() {
+        if (!pendingQuote) return;
+        if (!account) {
+          $("status").innerHTML = '<span style="color:#e03131">connect a wallet first</span>';
+          return;
+        }
+        const q = pendingQuote;
+        $("quoteOut").textContent = "confirming the route…";
+        try {
+          const wallets = { [q.from]: account, ETH: account };
+          const conf = await post({ action: "confirm", requestId: q.requestId, selectedWallets: wallets, destination: account });
+
+          if (conf.shortfalls?.length) {
+            const s0 = conf.shortfalls[0];
+            $("quoteOut").innerHTML =
+              `<span style="color:#e03131">not enough ${s0.symbol} on ${s0.blockchain}: have ` +
+              `${(Number(s0.current) / 10 ** s0.decimals).toFixed(4)}, need ${(Number(s0.required) / 10 ** s0.decimals).toFixed(4)}</span>`;
+            return;
+          }
+
+          let signed = 0;
+          // Advance a step only after its SWAP has been signed - an approval belongs to the same
+          // step and must not end it. (The first version broke out after the approval, so the swap
+          // was never sent.)
+          for (let step = 1; step <= 5; step++) {
+            let produced = false;
+            for (let guard = 0; guard < 4; guard++) {
+              const res = await post({ action: "create", requestId: q.requestId, step });
+              if (res.done || !res.transaction) break;
+              const tx = res.transaction;
+              produced = true;
+              await ensureChain(tx.chain);
+              $("quoteOut").textContent = tx.isApprovalTx ? "approve in your wallet…" : "confirm the swap in your wallet…";
+              const hash = await signTransaction(tx);
+              if (!hash) throw new Error("transaction failed on-chain");
+              signed++;
+              if (!tx.isApprovalTx) break; // that was this step's swap
+            }
+            if (!produced) break; // no such step: the route is finished
+          }
+
+          if (!signed) throw new Error("Rango produced no transaction for this route");
+          $("quoteOut").innerHTML = `<span style="color:#2f9e44">sent — ${signed} transaction(s) confirmed</span>`;
+          readWallet();
+        } catch (e) {
+          $("quoteOut").innerHTML = `<span style="color:#e03131">${e.message}</span>`;
+        }
       }
 
       let quotingFor = "PAXG";
