@@ -27,8 +27,8 @@ jobs:
         working-directory: relayer
     env:
       RPC: ${{ vars.EVM_RPC || 'https://sepolia-rollup.arbitrum.io/rpc' }}
-      CORE: ${{ vars.EVM_CORE || '0x32E6E7Bd6Adc0D49E761A724916e6B9f6540B810' }}
-      TIMELOCK: ${{ vars.EVM_TIMELOCK || '0x15E3708e95FD72f893c8c91F7fcd58Af481067f6' }}
+      CORE: ${{ vars.EVM_CORE || '0xCEcad784A6cEB1aF12c69639a5027D935651F946' }}
+      TIMELOCK: ${{ vars.EVM_TIMELOCK || '0xd71CD916A237aB294230D0056ef4BD240e232Cb5' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

@@ -39,7 +39,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { arbitrumSepolia } from "viem/chains";
 import { ASSETS as CHANNEL_ASSETS, readAsset } from "./sources.mjs";
 
-const CORE = (process.env.CORE ?? "0x32E6E7Bd6Adc0D49E761A724916e6B9f6540B810");
+const CORE = (process.env.CORE ?? "0xCEcad784A6cEB1aF12c69639a5027D935651F946");
 const RPC = (process.env.RPC ?? "https://sepolia-rollup.arbitrum.io/rpc");
 const ASSETS_JSON = process.env.ASSETS_JSON ?? "assets.example.json";
 const MIN_PUSH_DELTA = Number(process.env.MIN_PUSH_DELTA ?? "0.001");

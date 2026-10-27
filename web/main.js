@@ -6,7 +6,7 @@
 // constant (keccak256("currentPpi()")[0:4]) so no hashing library is needed at runtime — same reason
       // web/api/_evm.js hardcodes them. The previous build called runGetMethod("ppi"); there is no
 // ppi() on the EVM core, and asking for it reverts.
-const CORE = "0x32E6E7Bd6Adc0D49E761A724916e6B9f6540B810";
+const CORE = "0xCEcad784A6cEB1aF12c69639a5027D935651F946";
 const RPC = "https://sepolia-rollup.arbitrum.io/rpc";
 const SEL = {
   assetCount: "0xeafe7a74",
