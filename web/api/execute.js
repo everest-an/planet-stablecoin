@@ -106,10 +106,19 @@ export default async function handler(req, res) {
     const j = await r.json().catch(() => ({}));
 
     if (j?.ok === false || j?.error) {
+      const message = String(j.error || `HTTP ${r.status}`);
+
+      // Rango answers "Request contain invalid step(s)!" when you ask for the step AFTER the last
+      // one. That is COMPLETION, not failure: a single-step route answers exactly this way once its
+      // swap has landed. Treating it as an error made a successful swap report as broken.
+      if (action === "create" && /invalid step/i.test(message)) {
+        return res.status(200).json({ ok: true, done: true, transaction: null, note: "last step reached" });
+      }
+
       return res.status(502).json({
         error: {
           code: action === "confirm" ? "confirm_failed" : "create_failed",
-          message: String(j.error || `HTTP ${r.status}`).slice(0, 200),
+          message: message.slice(0, 200),
           upstreamCode: j.errorCode ?? null,
         },
       });
@@ -162,7 +171,8 @@ export default async function handler(req, res) {
       });
     }
 
-    const tx = j?.result?.transaction ?? j?.transaction ?? null;
+    // The transaction is returned at the top level of the response (result holds other fields).
+    const tx = j?.transaction ?? j?.result?.transaction ?? null;
     if (!tx) {
       // ok:true with no transaction is Rango saying "this step is finished".
       return res.status(200).json({ ok: true, done: true, transaction: null });
