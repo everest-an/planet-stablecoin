@@ -87,3 +87,41 @@ So a user pressing swap sees a success toast and nothing happens on-chain. The p
   that does nothing.
 - The key was shared in plaintext during this session. Rotate it in the Rango dashboard once the
   current round of work is finished; nothing in this repository needs the old value.
+
+## Verification log (2026-10-27)
+
+Three layers, strongest evidence first.
+
+**1. Rango contract — live API, real payloads.**
+`bests` → `confirm` → `tx/create` all return 200 against the production key. Confirm without
+`selectedWallets` returns `errorCode 1201`; with it, 200. Create returns a real EVM approval
+transaction (to = USDC, 138-char calldata) on the source chain.
+
+**2. Executor logic — jsdom with a stubbed wallet.**
+quote → swap now → confirm → create(approve) → sign → create(swap) → sign → "sent, 2 transactions
+confirmed". This is what caught the first loop's bug (it broke out after the approval, so the swap
+was never sent).
+
+**3. On-chain mechanics — real transactions, test tokens, Ethereum Sepolia.**
+Deployed two mock ERC-20s and a toy DEX from the agent test wallet, then ran exactly the sequence the
+executor performs:
+
+    TUSDC  1000 → 995   (approve → transferFrom)
+    TPAXG     0 → 5     (payout)
+    3 transactions, all status success
+
+    TUSDC 0x5f3183f7df18bd359ba5731d4c472e2ff08af4b1
+    TPAXG 0x24e29d2a8a8160594b0a6dd697d536d2d5c5ba6c
+    TDex  0xaa71786f8d1bd978706cb0341483fd9a37aac07a
+
+**What is still not verified:** a real Rango route end to end. That needs ~5 USDC on Arbitrum plus
+~0.00002 ETH on Ethereum for the destination leg (PAXG has no official Arbitrum deployment, so the
+last hop is on mainnet). The test wallet holds gas for neither leg, so the funding has to come from
+outside.
+
+## Outcome
+
+The Protocol Bank fix (branch `fix/rango-swap-execution`) is merged into `main` at `5fc5b692`.
+It is the same logic as `/api/execute` plus the on-chain sender, and TypeScript is clean on the
+merge. The previous behaviour was to show a success toast and do nothing; the new behaviour is to
+either execute or report why not — which is a strict improvement even before a real route is run.
