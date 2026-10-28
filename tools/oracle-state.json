@@ -1,4 +1,4 @@
 {
-  "signature": "{\"healthy\":true,\"fresh\":true,\"reasons\":[],\"warnings\":[]}",
-  "at": "2026-10-20T14:26:10.672Z"
+  "signature": "{\"healthy\":false,\"fresh\":false,\"reasons\":[\"oracle_price_stale:21947s\"],\"warnings\":[\"stale_inputs:2\"]}",
+  "at": "2026-10-28T02:25:05.015Z"
 }
