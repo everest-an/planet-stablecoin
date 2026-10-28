@@ -15,6 +15,13 @@
 const BASE = process.env.RANGO_BASE || "https://api.rango.exchange";
 const KEY = process.env.RANGO_API_KEY || "";
 
+// Revenue, without custody and without a fee contract: Rango pays registered affiliates out of the
+// route fee they already charge. We never touch the user's money and never add a hidden markup.
+// Both values are required for it to do anything - an unregistered ref is silently ignored by Rango,
+// so this must be set up on their side before it earns a cent.
+const AFFILIATE_REF = process.env.RANGO_AFFILIATE_REF || "";
+const AFFILIATE_WALLET = process.env.RANGO_AFFILIATE_WALLET || "";
+
 // Verified canonical addresses only. A same-symbol token at another address is a different asset.
 const ASSETS = {
   PAXG: { blockchain: "ETH", symbol: "PAXG", address: "0x45804880De22913dAFE09f4980848ECE6EcbAf78" },
@@ -74,7 +81,24 @@ export default async function handler(req, res) {
       const r = await fetch(`${BASE}/routing/bests?apiKey=${encodeURIComponent(KEY)}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ from, to, amount, fromAddress: fromAddress || undefined, slippage: "1" }),
+        body: JSON.stringify({
+          from,
+          to,
+          amount,
+          fromAddress: fromAddress || undefined,
+          slippage: "1",
+          // One EVM address works on every EVM chain, so the same wallet is offered for each.
+          ...(AFFILIATE_REF
+            ? { affiliateRef: AFFILIATE_REF }
+            : {}),
+          ...(AFFILIATE_WALLET
+            ? {
+                affiliateWallets: Object.fromEntries(
+                  Object.keys(SOURCES).map((chain) => [chain, AFFILIATE_WALLET]),
+                ),
+              }
+            : {}),
+        }),
       });
       if (r.status === 429 || r.status >= 500) { await sleep(400 * (attempt + 1)); continue; }
       const j = await r.json();
@@ -114,6 +138,7 @@ export default async function handler(req, res) {
             route: swappers.join(" → "),
           },
           alternatives: Math.max(0, routes.length - 1),
+          affiliate: AFFILIATE_REF && AFFILIATE_WALLET ? AFFILIATE_REF : null,
           // Needed to confirm later; not a transaction, and not usable without the wallet.
           requestId: best.requestId ?? null,
           routeId: j.routeId ?? null,

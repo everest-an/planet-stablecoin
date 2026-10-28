@@ -125,3 +125,31 @@ The Protocol Bank fix (branch `fix/rango-swap-execution`) is merged into `main` 
 It is the same logic as `/api/execute` plus the on-chain sender, and TypeScript is clean on the
 merge. The previous behaviour was to show a success toast and do nothing; the new behaviour is to
 either execute or report why not — which is a strict improvement even before a real route is run.
+
+## Revenue: the affiliate route (decided 2026-10-27)
+
+**Decision: charge nothing of our own. Take Rango's affiliate share instead.**
+
+Why not our own fee: a fee we collect means we hold money, which means custody, refunds, accounting
+and a regulated activity. Rango already charges the user a route fee; its affiliate programme pays a
+registered integrator out of that same fee. The user pays exactly what the route quotes, no markup,
+no custody, no additional promise.
+
+Implementation: `/api/quote` attaches `affiliateRef` and `affiliateWallets` to the `bests` request
+when both env vars are set:
+
+    RANGO_AFFILIATE_REF      the ref registered with Rango
+    RANGO_AFFILIATE_WALLET   the treasury address (one EVM address covers every EVM chain)
+
+Both unset = no affiliate, which is the current live behaviour: the code is deployed and inert until
+those two values exist. An unregistered ref is silently ignored by Rango, so registering it is a
+prerequisite, not a formality.
+
+Target rate: whatever Rango's programme pays on the routes we use (typically a fraction of the route
+fee). Do **not** advertise a percentage until the first payout confirms it.
+
+### What this does not solve
+
+The affiliate share is small and volume-dependent. It turns "free tool" into "tool that pays for its
+own gas", not into a business. The business-sized revenue is still the B2B feed conversation and,
+before that, a real backing model.
