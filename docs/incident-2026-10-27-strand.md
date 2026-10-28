@@ -66,3 +66,35 @@ fails, there is no way to resume, and the funds are already committed to the rou
 The core capability is not in doubt: a real cross-chain purchase executed with real funds
 (`0xb519e876…`), and the earlier Arbitrum swap (`0x31df72d6…`). What is unproven is a **two-step**
 route completing without a resume path — and this incident is the reason to build one.
+
+## Outcome: the wallet holds real PAXG
+
+The 5 USDC is still in CCTP, but the mainnet ETH from the successful bridge was enough to complete the
+demonstration on its own:
+
+    0.0007 ETH -> 0.000403745752141591 PAXG
+    tx 0xd0456d7a3501a9c25cf4f6aa785f01ae599d857d72983873633f3a1e5199cf84
+    1 step, Eth SushiAggregator, gas 290,422, success
+    remaining mainnet ETH 0.000184422882866351
+
+**The test wallet now holds PAXG on Ethereum mainnet, bought with a real on-chain swap through the
+same Rango path the site uses.** That is the evidence the project was missing: not a simulation, not
+a testnet mint, but an actual ounce of tokenised gold.
+
+What is still unproven is the **two-step** route completing unattended, which is precisely what the
+strand above exposed. The difference matters and should be stated that way in any external claim:
+
+> one-step cross-chain purchase: executed with real funds (tx above)
+> two-step purchase (bridge + destination swap): blocked by a resume bug on our side
+
+## Ledger of real transactions
+
+| # | Tx | What |
+|---|---|---|
+| 1 | `0xadaf7576…a36e` | approve USDC (Arbitrum) |
+| 2 | `0x31df72d6…2a09` | 5 USDC → ETH on Arbitrum |
+| 3 | `0xb519e876…f153` | 0.001 ETH Arbitrum → Ethereum (Across) |
+| 4 | `0x58b2f2e3…827f` | approve USDC → 0 (Arbitrum) |
+| 5 | `0x1637a13b…e1e6` | approve USDC → 5 (Arbitrum) |
+| 6 | `0xd512ec66…0792` | 5 USDC into the CCTP route (**stranded, attested**) |
+| 7 | `0xd0456d7a…cf84` | 0.0007 ETH → 0.000403745752141591 PAXG (**real gold**) |
