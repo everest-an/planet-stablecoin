@@ -198,6 +198,9 @@
       const $ = (id) => document.getElementById(id);
       const fmt = (n, d = 4) =>
         n == null || Number.isNaN(Number(n)) ? "—" : Number(n).toLocaleString(undefined, { maximumFractionDigits: d });
+      // Everything third-party-derived (Rango errors, provider messages, route strings) goes through
+      // esc() before innerHTML — a crafted error message must never become markup.
+      const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
       // Funnel events: pageview -> connect -> quote -> swap -> signed -> completed/failed. Logged
       // server-side as structured lines (Vercel function logs). No PII: the address is reduced to
@@ -418,7 +421,7 @@
           renderBasket(tokens);
           renderWatches();
         } catch (e) {
-          $("status").innerHTML = `<span style="color:#e03131">${e.message}</span>`;
+          $("status").innerHTML = `<span style="color:#e03131">${esc(e.message)}</span>`;
         }
       }
 
@@ -453,7 +456,7 @@
           });
           readWallet();
         } catch (e) {
-          $("status").innerHTML = `<span style="color:#e03131">${e.message}</span>`;
+          $("status").innerHTML = `<span style="color:#e03131">${esc(e.message)}</span>`;
         }
       }
 
@@ -508,7 +511,7 @@
           });
           pickRow(rows.find((r) => r.steps === 1) || rows[0]);
         } catch (e) {
-          $("quoteOut").innerHTML = `<span style="color:#e03131">${e.message}</span>`;
+          $("quoteOut").innerHTML = `<span style="color:#e03131">${esc(e.message)}</span>`;
         }
       }
 
@@ -611,8 +614,8 @@
       const readPending = () => {
         try { return JSON.parse(localStorage.getItem(PENDING_KEY) || "null"); } catch { return null; }
       };
-      const writePending = (p) => localStorage.setItem(PENDING_KEY, JSON.stringify(p));
-      const clearPending = () => localStorage.removeItem(PENDING_KEY);
+      const writePending = (p) => { try { localStorage.setItem(PENDING_KEY, JSON.stringify(p)); } catch {} };
+      const clearPending = () => { try { localStorage.removeItem(PENDING_KEY); } catch {} };
 
       // "Something went wrong, please try again" is what Rango returns for a transient failure. On a
       // round trip that has already moved money it must not end the attempt. When money HAS moved
@@ -655,7 +658,7 @@
             if (conf.shortfalls?.length) {
               const s0 = conf.shortfalls[0];
               $("quoteOut").innerHTML =
-                `<span style="color:#e03131">${t("shortfall", s0.symbol, s0.blockchain, (Number(s0.current) / 10 ** s0.decimals).toFixed(4), (Number(s0.required) / 10 ** s0.decimals).toFixed(4))}</span>`;
+                `<span style="color:#e03131">${t("shortfall", esc(s0.symbol), esc(s0.blockchain), (Number(s0.current) / 10 ** s0.decimals).toFixed(4), (Number(s0.required) / 10 ** s0.decimals).toFixed(4))}</span>`;
               return;
             }
           }
@@ -704,7 +707,7 @@
           const still = readPending();
           const hashes = (still?.hashes || []).map((h) => h.slice(0, 18)).join(" · ");
           $("quoteOut").innerHTML =
-            `<span style="color:#e03131">${e.message}</span>` +
+            `<span style="color:#e03131">${esc(e.message)}</span>` +
             (still
               ? `<br><span style="color:#f08c00">${t("saved_step", still.step)}</span>` +
                 (hashes
@@ -721,7 +724,7 @@
         if (!p) return;
         const box = $("quoteOut");
         box.innerHTML =
-          `<span style="color:#f08c00">${t("resume_saved", p.step, p.amount, p.from, p.symbol)}</span> `;
+          `<span style="color:#f08c00">${t("resume_saved", p.step, esc(p.amount), esc(p.from), esc(p.symbol))}</span> `;
         const b = document.createElement("button");
         b.textContent = t("resume_btn");
         b.style.cssText =
