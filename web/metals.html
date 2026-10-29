@@ -483,6 +483,7 @@
                 amount,
                 sym,
                 requestId: j.requestId,
+                sig: j.sig,
                 out: Number(b.outputAmount).toFixed(6),
                 steps: Number(b.steps) || 1,
                 secs: b.timeSeconds,
@@ -517,7 +518,7 @@
 
       let quoteRows = [];
       function pickRow(r) {
-        pendingQuote = { requestId: r.requestId, symbol: r.sym, from: r.from, amount: r.amount };
+        pendingQuote = { requestId: r.requestId, sig: r.sig, symbol: r.sym, from: r.from, amount: r.amount };
         $("quoteOut").querySelectorAll(".quote-row").forEach((el) => (el.style.borderColor = "var(--muted,#2a2a2a)"));
         const idx = quoteRows.indexOf(r);
         const el = $("quoteOut").querySelector(`.quote-row[data-i="${idx}"]`);
@@ -621,12 +622,12 @@
       // round trip that has already moved money it must not end the attempt. When money HAS moved
       // (a later step), the wait is long: the bridge attestation alone takes up to ~20 minutes, so
       // the step is retried every 45s for half an hour, and the page says so instead of erroring.
-      async function createStep(requestId, step, { long = false } = {}) {
+      async function createStep(requestId, sig, step, { long = false } = {}) {
         const attempts = long ? 40 : 4;
         let last;
         for (let attempt = 0; attempt < attempts; attempt++) {
           try {
-            return await post({ action: "create", requestId, step });
+            return await post({ action: "create", requestId, sig, step });
           } catch (e) {
             last = e;
             if (!/something went wrong|try again|timeout|network|fetch|invalid step/i.test(e.message)) throw e;
@@ -653,7 +654,7 @@
         try {
           const wallets = { [q.from]: account, ETH: account };
           if (!resume) {
-            const conf = await post({ action: "confirm", requestId: q.requestId, selectedWallets: wallets, destination: account });
+            const conf = await post({ action: "confirm", requestId: q.requestId, sig: q.sig, selectedWallets: wallets, destination: account });
 
             if (conf.shortfalls?.length) {
               const s0 = conf.shortfalls[0];
@@ -678,7 +679,7 @@
             for (let guard = 0; guard < 4; guard++) {
               // Once any transaction has been signed, this route has moved real money and a later
               // step gets the long, automatic retry window instead of giving up.
-              const res = await createStep(q.requestId, step, { long: signed > 0 });
+              const res = await createStep(q.requestId, q.sig, step, { long: signed > 0 });
               if (res.done || !res.transaction) break;
               const tx = res.transaction;
               produced = true;

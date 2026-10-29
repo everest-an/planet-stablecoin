@@ -10,6 +10,9 @@
 // + `lib/rango.ts`). Re-implementing it here without a funded wallet to verify against would be
 // shipping an unverified money path, so this endpoint deliberately stops at the quote.
 //
+// POST /api/quote — a Rango bests call, proxied so the key stays server-side.
+import { createHmac } from "crypto";
+
 // Env: RANGO_API_KEY (required). Optional: RANGO_BASE (default https://api.rango.exchange).
 
 const BASE = process.env.RANGO_BASE || "https://api.rango.exchange";
@@ -150,6 +153,11 @@ export default async function handler(req, res) {
             : null,
           // Needed to confirm later; not a transaction, and not usable without the wallet.
           requestId: best.requestId ?? null,
+          // HMAC of the requestId: /api/execute verifies it so spammers die at our layer instead
+          // of spending our Rango quota. Keyed on the same RANGO_API_KEY - no extra env needed.
+          sig: best.requestId
+            ? createHmac("sha256", KEY).update(String(best.requestId)).digest("hex").slice(0, 32)
+            : null,
           routeId: j.routeId ?? null,
         }),
       );

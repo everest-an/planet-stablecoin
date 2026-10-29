@@ -1,4 +1,5 @@
 // POST /api/execute — the two write-ish steps of a Rango swap, proxied so the key stays server-side.
+import { createHmac, timingSafeEqual } from "crypto";
 //
 //   { "action": "confirm", "requestId": "...", "selectedWallets": { "ARBITRUM": "0x…", "ETH": "0x…" }, "destination": "0x…" }
 //   { "action": "create",  "requestId": "...", "step": 1 }
@@ -41,7 +42,10 @@ function rateLimited(ip) {
 }
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  const origin = req.headers.origin || "";
+  if (origin === "https://ppppp.space" || origin === "http://localhost:3000" || !origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin || "*");
+  }
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "content-type");
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -69,9 +73,20 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: { code: "bad_json", message: "body must be an object." } });
   }
 
-  const { action, requestId } = body;
+  const { action, requestId, sig } = body;
   if (typeof requestId !== "string" || requestId.length < 8 || requestId.length > 80) {
     return res.status(400).json({ error: { code: "bad_request_id", message: "requestId is required." } });
+  }
+
+  // Every requestId forwarded here must be one OUR /api/quote issued. Anything else is rejected
+  // before it can spend a single Rango call — this closes the quota-burn DoS regardless of how
+  // many IPs or instances an attacker spreads across.
+  if (typeof sig !== "string" || sig.length !== 32 || !/^[0-9a-f]{32}$/.test(sig)) {
+    return res.status(401).json({ error: { code: "invalid_signature", message: "sig is required (from /api/quote)." } });
+  }
+  const expected = createHmac("sha256", KEY).update(requestId).digest("hex").slice(0, 32);
+  if (!timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
+    return res.status(401).json({ error: { code: "invalid_signature", message: "sig does not match this requestId." } });
   }
 
   let endpoint;

@@ -15,6 +15,7 @@ let requestId = null, quote = null;
   const r = await fetch(`${U}/api/quote?symbol=PAXG&from=ARBITRUM&amount=5`, { headers: { "cache-control": "no-cache" } });
   const j = await r.json();
   requestId = j.requestId ?? null;
+  globalThis.__sig = j.sig ?? null;
   quote = j.best ?? null;
   step("quote PAXG <- ARBITRUM 5 USDC", { pass: r.ok && quote?.outputAmount > 0 && !!requestId, note: `${quote?.outputAmount ?? "-"} PAXG, ${quote?.timeSeconds ?? "-"}s, req ${requestId ? requestId.slice(0, 8) : "none"}` });
 }
@@ -23,7 +24,7 @@ let requestId = null, quote = null;
 if (requestId) {
   const r = await fetch(`${U}/api/execute`, {
     method: "POST", headers: { "content-type": "application/json" },
-    body: JSON.stringify({ action: "confirm", requestId, selectedWallets: { ARBITRUM: W, ETH: W }, destination: W }),
+    body: JSON.stringify({ action: "confirm", requestId, sig: globalThis.__sig, selectedWallets: { ARBITRUM: W, ETH: W }, destination: W }),
   });
   const j = await r.json();
   step("confirm route", { pass: r.ok && !j.error, note: `chains ${(j.blockchains ?? []).join(",") || "-"} | shortfalls ${j.shortfalls?.length ?? 0}` });
@@ -31,7 +32,7 @@ if (requestId) {
   // 4. create step 1 -> must be an approval we could sign
   const c = await fetch(`${U}/api/execute`, {
     method: "POST", headers: { "content-type": "application/json" },
-    body: JSON.stringify({ action: "create", requestId, step: 1 }),
+    body: JSON.stringify({ action: "create", requestId, sig: globalThis.__sig, step: 1 }),
   });
   const k = await c.json();
   const tx = k.transaction;

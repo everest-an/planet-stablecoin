@@ -2,7 +2,10 @@
 // greppable as '{"ev":'. Accepts {type, detail} only; type is whitelisted to [a-z_], detail is
 // truncated. The client sends a hashed address (8 chars), never the address itself.
 export default function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  const origin = req.headers.origin || "";
+  if (origin === "https://ppppp.space" || origin === "http://localhost:3000" || !origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin || "*");
+  }
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") {
