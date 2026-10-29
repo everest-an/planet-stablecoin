@@ -1,0 +1,27 @@
+name: Verify contracts on Arbiscan
+
+# The sandbox that built this cannot reach api.etherscan.io, so verification runs on a GitHub runner.
+# Requires the ETHERSCAN_API_KEY secret. Safe to re-run: "already verified" counts as success.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install deps
+        working-directory: relayer
+        run: npm install --no-audit --no-fund solc@0.8.24
+      - name: Verify
+        working-directory: relayer
+        env:
+          ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+        run: node ../scripts/verify-arbiscan.mjs
