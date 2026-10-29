@@ -23,6 +23,7 @@ jobs:
         working-directory: relayer
     env:
       PRIVATE_KEY: ${{ secrets.MAINNET_RELAYER_KEY }}
+      PRIVATE_KEY_2: ${{ secrets.MAINNET_RELAYER_KEY_2 }}
       ORACLE: "0x0daf541ef7e41402070bc549f91475ab368d1824"
       RPC: https://arb1.arbitrum.io/rpc
       OUT: price-signed.json

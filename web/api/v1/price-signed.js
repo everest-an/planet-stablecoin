@@ -13,6 +13,7 @@ const ORACLE = process.env.PPI_ORACLE || "0x0daf541ef7e41402070bc549f91475ab368d
 const CORE = process.env.PPI_CORE || "0x61de052af7cb7dc957a07b1e6298152bb851cbbb";
 const RPC = process.env.ETH_RPC || "https://arb1.arbitrum.io/rpc";
 const KEY = process.env.ORACLE_SIGNER_KEY || "";
+const KEY2 = process.env.ORACLE_SIGNER_KEY_2 || "";
 const SCALE = 1_000_000;
 const DOMAIN = keccak256(new TextEncoder().encode("PLANET_PRICE_V1"));
 
@@ -33,12 +34,13 @@ export default async function handler(req, res) {
   if (req.method !== "GET" && req.method !== "HEAD") {
     return res.status(405).json({ error: { code: "method_not_allowed", message: "GET only." } });
   }
-  if (!KEY) {
-    return res.status(503).json({ error: { code: "not_configured", message: "ORACLE_SIGNER_KEY is not set." } });
+  if (!KEY || !KEY2) {
+    return res.status(503).json({ error: { code: "not_configured", message: "ORACLE_SIGNER_KEY and ORACLE_SIGNER_KEY_2 are both required (2-of-3)." } });
   }
 
   try {
     const account = privateKeyToAccount(KEY.startsWith("0x") ? KEY : "0x" + KEY);
+    const account2 = privateKeyToAccount(KEY2.startsWith("0x") ? KEY2 : "0x" + KEY2);
     const chainId = BigInt(await pub.getChainId());
     const last = await pub.readContract({
       address: CORE,
@@ -68,7 +70,10 @@ export default async function handler(req, res) {
           [DOMAIN, ORACLE, chainId, CORE, p.index, p.price, p.volatility, p.liquidity, p.riskState, p.timestamp],
         ),
       );
-      const sig = await account.sign({ hash: digest });
+      const s1 = await account.sign({ hash: digest });
+      const s2 = await account2.sign({ hash: digest });
+      // the oracle reads 65-byte r||s||v blocks back to back
+      const sig = s1.slice(2) + s2.slice(2);
       payloads.push({
         index: Number(p.index),
         symbol: a.sym,

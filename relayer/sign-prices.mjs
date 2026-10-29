@@ -18,7 +18,13 @@ if (!pk) {
   console.error("PRIVATE_KEY required (signer key)");
   process.exit(1);
 }
+const pk2 = process.env.PRIVATE_KEY_2;
+if (!pk2) {
+  console.error("PRIVATE_KEY_2 required: the oracle is 2-of-3, so every payload needs two signatures");
+  process.exit(1);
+}
 const account = privateKeyToAccount(pk.startsWith("0x") ? pk : "0x" + pk);
+const account2 = privateKeyToAccount(pk2.startsWith("0x") ? pk2 : "0x" + pk2);
 const pub = createPublicClient({ chain: arbitrum, transport: http(RPC) });
 
 const DOMAIN = keccak256(new TextEncoder().encode("PLANET_PRICE_V1"));
@@ -46,7 +52,9 @@ for (const asset of ASSETS) {
       DOMAIN, ORACLE, chainId, consumer, p.index, p.price, p.volatility, p.liquidity, p.riskState, p.timestamp,
     ]),
   );
-  const sig = await account.sign({ hash: digest });
+  const s1 = await account.sign({ hash: digest });
+  const s2 = await account2.sign({ hash: digest });
+  const sig = s1.slice(2) + s2.slice(2);
   payloads.push({
     index: Number(p.index),
     symbol: asset.sym,
