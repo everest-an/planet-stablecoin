@@ -222,7 +222,7 @@
             (j.alternatives ? ` · +${j.alternatives} other route(s)` : "") +
             `<div class="buy" style="margin-top:8px"><button id="swapNow">swap now</button></div>` +
             `<span style="opacity:.7"><a href="${rangoLink(sym, from, amount)}" target="_blank" rel="noopener">or continue in Rango →</a></span>`;
-          $("swapNow").addEventListener("click", executeSwap);
+          $("swapNow").addEventListener("click", () => executeSwap(false));
         } catch (e) {
           $("quoteOut").innerHTML = `<span style="color:#e03131">${e.message}</span>`;
         }
@@ -294,35 +294,70 @@
         return hash; // still pending; treat as sent
       }
 
+      // A route with more than one step moves real money in step 1 and can fail in step 2. The
+      // requestId is the only handle on a route in flight, so it is written down BEFORE the first
+      // signature. If the tab dies, the route can still be resumed instead of stranded.
+      const PENDING_KEY = "planet.pendingRoute";
+      const readPending = () => {
+        try { return JSON.parse(localStorage.getItem(PENDING_KEY) || "null"); } catch { return null; }
+      };
+      const writePending = (p) => localStorage.setItem(PENDING_KEY, JSON.stringify(p));
+      const clearPending = () => localStorage.removeItem(PENDING_KEY);
+
+      // "Something went wrong, please try again" is what Rango returns for a transient failure. On a
+      // round trip that has already moved money it must not end the attempt.
+      async function createStep(requestId, step) {
+        let last;
+        for (let attempt = 0; attempt < 4; attempt++) {
+          try {
+            return await post({ action: "create", requestId, step });
+          } catch (e) {
+            last = e;
+            if (!/something went wrong|try again|timeout|network|fetch/i.test(e.message)) throw e;
+            await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+          }
+        }
+        throw last;
+      }
+
       // One click (per wallet confirmation). confirm -> create -> sign -> repeat while isApprovalTx.
-      async function executeSwap() {
-        if (!pendingQuote) return;
+      // resume=true restarts a saved route without re-confirming it.
+      async function executeSwap(resume = false) {
+        const q = resume ? readPending() : pendingQuote;
+        if (!q) return;
         if (!account) {
           $("status").innerHTML = '<span style="color:#e03131">connect a wallet first</span>';
           return;
         }
-        const q = pendingQuote;
-        $("quoteOut").textContent = "confirming the route…";
+        const fromStep = resume ? q.step || 1 : 1;
+        $("quoteOut").textContent = resume ? `resuming from step ${fromStep}…` : "confirming the route…";
         try {
           const wallets = { [q.from]: account, ETH: account };
-          const conf = await post({ action: "confirm", requestId: q.requestId, selectedWallets: wallets, destination: account });
+          if (!resume) {
+            const conf = await post({ action: "confirm", requestId: q.requestId, selectedWallets: wallets, destination: account });
 
-          if (conf.shortfalls?.length) {
-            const s0 = conf.shortfalls[0];
-            $("quoteOut").innerHTML =
-              `<span style="color:#e03131">not enough ${s0.symbol} on ${s0.blockchain}: have ` +
-              `${(Number(s0.current) / 10 ** s0.decimals).toFixed(4)}, need ${(Number(s0.required) / 10 ** s0.decimals).toFixed(4)}</span>`;
-            return;
+            if (conf.shortfalls?.length) {
+              const s0 = conf.shortfalls[0];
+              $("quoteOut").innerHTML =
+                `<span style="color:#e03131">not enough ${s0.symbol} on ${s0.blockchain}: have ` +
+                `${(Number(s0.current) / 10 ** s0.decimals).toFixed(4)}, need ${(Number(s0.required) / 10 ** s0.decimals).toFixed(4)}</span>`;
+              return;
+            }
           }
+
+          // Written before the first signature, so a crash at any later point leaves a resumable
+          // handle rather than money in a route nobody can name.
+          writePending({ ...q, step: fromStep });
 
           let signed = 0;
           // Advance a step only after its SWAP has been signed - an approval belongs to the same
           // step and must not end it. (The first version broke out after the approval, so the swap
           // was never sent.)
-          for (let step = 1; step <= 5; step++) {
+          for (let step = fromStep; step <= 5; step++) {
             let produced = false;
+            writePending({ ...q, step });
             for (let guard = 0; guard < 4; guard++) {
-              const res = await post({ action: "create", requestId: q.requestId, step });
+              const res = await createStep(q.requestId, step);
               if (res.done || !res.transaction) break;
               const tx = res.transaction;
               produced = true;
@@ -337,12 +372,36 @@
           }
 
           if (!signed) throw new Error("Rango produced no transaction for this route");
+          clearPending();
           $("quoteOut").innerHTML = `<span style="color:#2f9e44">sent — ${signed} transaction(s) confirmed</span>`;
           readWallet();
         } catch (e) {
-          $("quoteOut").innerHTML = `<span style="color:#e03131">${e.message}</span>`;
+          // The route may have already moved money. Keep the handle and say so, rather than offering
+          // "try again" for something that would strand another amount.
+          const still = readPending();
+          $("quoteOut").innerHTML =
+            `<span style="color:#e03131">${e.message}</span>` +
+            (still
+              ? `<br><span style="color:#f08c00">this route is saved at step ${still.step} — reload the page to resume it; do not start a new one.</span>`
+              : "");
         }
       }
+
+      // A saved route means a previous attempt stopped mid-flight. Offer it before anything else.
+      (function offerResume() {
+        const p = readPending();
+        if (!p) return;
+        const box = $("quoteOut");
+        box.innerHTML =
+          `<span style="color:#f08c00">an unfinished swap is saved (step ${p.step}): ${p.amount} ` +
+          `${p.from} → ${p.symbol}.</span> `;
+        const b = document.createElement("button");
+        b.textContent = "resume it";
+        b.style.cssText =
+          "margin-left:8px;padding:6px 12px;border-radius:8px;border:1px solid #f08c00;background:transparent;color:#f08c00;cursor:pointer;font:inherit";
+        b.onclick = () => executeSwap(true);
+        box.appendChild(b);
+      })();
 
       let quotingFor = "PAXG";
       $("quoteBtn").addEventListener("click", crossChainQuote);
