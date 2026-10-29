@@ -51,6 +51,8 @@
       <a class="wordmark" href="/">Planet</a>
       <nav class="nav">
         <a href="/">home</a>
+        <a href="/ppi">index</a>
+        <a href="/metals">metals</a>
         <a href="/dashboard">dashboard</a>
         <a href="/docs">docs</a>
         <a href="/faq">faq</a>
@@ -61,10 +63,22 @@
 
     <main class="doc">
       <p class="notice" style="font-family: 'DM Mono', monospace">
-        [ public rulebook · Arbitrum Sepolia · not a stablecoin ]
+        [ public rulebook · Arbitrum One · index-only · not a stablecoin ]
       </p>
       <h1>Basket &amp; index methodology</h1>
       <p class="sub">version 1.0 · reviewed October 2026 · this page is the rulebook, not marketing</p>
+
+      <div class="warn" style="border-left-color:#2f9e44">
+        <b>Deployment.</b> This rulebook governs the index live on <b>Arbitrum One</b>:
+        core <code>0x61de052af7cb7dc957a07b1e6298152bb851cbbb</code>,
+        token <code>0xee270802969f0689e3085331d47679bdc5bf4512</code>,
+        timelock <code>0xa1fdb9f95210af1d968872f6fc86f623a3e3017c</code>,
+        oracle <code>0x0daf541ef7e41402070bc549f91475ab368d1824</code> — all verified on Arbiscan.
+        The oracle is <b>2-of-3</b> and <b>pull</b>: prices are signed for free
+        (<code>/api/v1/price-signed</code>) and whoever consumes one submits it and pays that gas.
+        <b>Minting is disabled</b>: there is no deposit token, so no funds can enter.
+        Live index: <a href="/ppi">/ppi</a>.
+      </div>
 
       <p class="warn">
         Why this page exists: a self-assembled commodity index is only as credible as its

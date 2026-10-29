@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Planet — the PPI commodity index (Arbitrum One)</title>
+    <meta name="description" content="PPI is a 14-asset commodity price index live on Arbitrum One: verified contracts, a 2-of-3 pull oracle, and a public methodology. Read the live index." />
+    <link rel="icon" href="/icon.png" />
+    <link rel="canonical" href="https://ppppp.space/ppi" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+    <style>
+      .wrap { max-width: 900px; margin: 0 auto; padding: 32px 20px 64px; }
+      h1 { font-family: "Space Grotesk", sans-serif; font-size: 32px; margin: 18px 0 8px; }
+      h2 { font-family: "Space Grotesk", sans-serif; font-size: 20px; margin: 34px 0 10px; }
+      p, li { font-family: "DM Mono", monospace; font-size: 13px; line-height: 1.8; }
+      .k { font-family: "DM Mono", monospace; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted,#8a8a8a); }
+      .big { font-family: "Space Grotesk", sans-serif; font-size: 56px; line-height: 1.1; }
+      .hero { border: 1px solid var(--muted,#2a2a2a); padding: 20px; margin: 14px 0; }
+      table { width: 100%; border-collapse: collapse; font-family: "DM Mono", monospace; font-size: 12px; margin-top: 8px; }
+      th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--muted,#2a2a2a); }
+      th { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted,#8a8a8a); }
+      td.num, th.num { text-align: right; }
+      .warn { border-left: 3px solid #c2401c; padding: 10px 14px; margin: 16px 0; }
+      code { font-family: "DM Mono", monospace; font-size: 12px; word-break: break-all; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+      .card { border: 1px solid var(--muted,#2a2a2a); padding: 14px; }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="wordmark" href="/">Planet</a>
+      <nav class="nav">
+        <a href="/">home</a>
+        <a href="/metals">metals</a>
+        <a href="/ppi">index</a>
+        <a href="/methodology">methodology</a>
+        <a href="/operators">operators</a>
+        <a href="/docs">docs</a>
+      </nav>
+    </header>
+
+    <main class="wrap">
+      <p class="k">[ live index · Arbitrum One · verifiable on-chain · minting disabled ]</p>
+      <h1>PPI — the commodity price index</h1>
+      <p>
+        A fixed-weight index of 14 commodity exposures, computed on-chain from prices published by a
+        2-of-3 signed oracle. This page reads Arbitrum One directly. Everything below can be
+        recomputed from public inputs — see the <a href="/methodology">methodology</a>.
+      </p>
+
+      <div class="hero">
+        <div class="k">current PPI</div>
+        <div class="big" id="ppi">—</div>
+        <div class="k" id="ppiNote">reading Arbitrum One…</div>
+      </div>
+
+      <h2>The basket</h2>
+      <table>
+        <thead>
+          <tr><th>#</th><th>asset</th><th class="num">weight</th><th class="num">base</th><th class="num">current</th><th class="num">change</th><th>risk</th></tr>
+        </thead>
+        <tbody id="rows"><tr><td colspan="7" class="k">loading…</td></tr></tbody>
+      </table>
+
+      <h2>Contracts</h2>
+      <div class="grid" id="contracts"></div>
+
+      <h2>Oracle</h2>
+      <div class="grid" id="oracle"></div>
+      <p class="k" style="margin-top:12px">
+        Pull model: prices are signed off-chain for free. A consumer submits them in its own
+        transaction and pays that gas. Feed: <code>/api/v1/price-signed</code>
+      </p>
+
+      <div class="warn">
+        <b>What this is not.</b> Not a claim on physical commodities, not a total-return or
+        futures-roll index, and not audited by a third party. Minting is disabled: there is no
+        deposit token, so no one can put funds into the protocol. The index exists to be read and,
+        eventually, licensed.
+      </div>
+
+      <h2>For venues</h2>
+      <p>
+        Listing or licensing PPI: the methodology is public, the contracts are verified, and the
+        oracle feed is free to read. Start at <a href="/operators">operators</a> or read
+        <a href="/methodology">the rulebook</a>.
+      </p>
+    </main>
+
+    <script>
+      const fmt = (n, d = 4) => (n == null || Number.isNaN(Number(n)) ? "—" : Number(n).toLocaleString(undefined, { maximumFractionDigits: d }));
+      fetch("/api/v1/ppi", { headers: { "cache-control": "no-cache" } })
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.error) throw new Error(d.error.message);
+          document.getElementById("ppi").textContent = fmt(d.ppi, 6);
+          const age = d.oracleAgeSeconds;
+          document.getElementById("ppiNote").textContent =
+            `oracle updated ${age < 90 ? age + "s" : Math.round(age / 60) + "m"} ago · ${d.assetCount} assets · weightSum ${d.weightSum} · base ${d.baseLocked ? "locked" : "open"}`;
+
+          document.getElementById("rows").innerHTML = d.assets
+            .map((a) => {
+              const risk = a.riskState === 0 ? "normal" : a.riskState === 1 ? "caution" : "frozen";
+              const cls = a.riskState === 0 ? "" : ' style="color:#f08c00"';
+              return `<tr><td>${a.index}</td><td>${a.name} <span class="k">${a.symbol}</span></td>
+                <td class="num">${fmt(a.weightPct, 1)}%</td>
+                <td class="num">${fmt(a.basePrice / 1e6, 2)}</td>
+                <td class="num">${fmt(a.currentPrice / 1e6, 2)}</td>
+                <td class="num">${(a.changePct >= 0 ? "+" : "") + fmt(a.changePct, 2)}%</td>
+                <td${cls}>${risk}</td></tr>`;
+            })
+            .join("");
+
+          const link = (label, addr) =>
+            `<div class="card"><div class="k">${label}</div><code><a href="https://arbiscan.io/address/${addr}" target="_blank" rel="noopener">${addr}</a></code><div class="k" style="margin-top:6px">verified on Arbiscan</div></div>`;
+          document.getElementById("contracts").innerHTML =
+            link("PlanetCore", d.core) +
+            link("PLT token", d.token) +
+            link("Timelock (owner)", d.timelock) +
+            link("SignedPriceOracle", d.oracle.address);
+
+          document.getElementById("oracle").innerHTML =
+            `<div class="card"><div class="k">signatures required</div><div>${d.oracle.threshold} of ${d.oracle.signerCount}</div></div>` +
+            `<div class="card"><div class="k">mode</div><div>${d.oracle.mode} (no scheduled push)</div></div>` +
+            `<div class="card"><div class="k">last update</div><div>${age}s ago (limit 6h)</div></div>`;
+        })
+        .catch((e) => {
+          document.getElementById("ppiNote").textContent = "could not read the index: " + e.message;
+        });
+    </script>
+  </body>
+</html>
