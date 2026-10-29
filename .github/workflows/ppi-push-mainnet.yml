@@ -35,6 +35,7 @@ jobs:
         working-directory: relayer
     env:
       PRIVATE_KEY: ${{ secrets.MAINNET_RELAYER_KEY }}
+      CHAIN: mainnet
       RPC: https://arb1.arbitrum.io/rpc
       CORE: "0x61de052af7cb7dc957a07b1e6298152bb851cbbb"
       ASSETS_JSON: assets.example.json

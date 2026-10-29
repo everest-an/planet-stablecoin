@@ -36,7 +36,7 @@
 import { readFileSync } from "node:fs";
 import { createPublicClient, createWalletClient, http, parseAbi, formatEther, formatGwei } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { arbitrumSepolia } from "viem/chains";
+import { arbitrum, arbitrumSepolia } from "viem/chains";
 import { ASSETS as CHANNEL_ASSETS, readAsset } from "./sources.mjs";
 
 const CORE = (process.env.CORE ?? "0xCEcad784A6cEB1aF12c69639a5027D935651F946");
@@ -60,7 +60,10 @@ const ABI = parseAbi([
   "function updatePrice(uint256 index, uint64 price, uint64 volatility, uint64 liquidity, uint8 riskState, uint64 timestamp)",
 ]);
 
-const chain = arbitrumSepolia;
+// The chain object decides the chainId that goes into signatures. Pointing it at the wrong chain
+// while RPC is another is how the first mainnet push failed: eth_call worked (dry-run), every write
+// was rejected with 'Missing or invalid parameters'. CHAIN=mainnet switches it.
+const chain = (process.env.CHAIN ?? "sepolia").toLowerCase() === "mainnet" ? arbitrum : arbitrumSepolia;
 const pub = createPublicClient({ chain, transport: http(RPC) });
 
 // ---------------------------------------------------------------- main
