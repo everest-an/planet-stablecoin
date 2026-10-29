@@ -100,3 +100,44 @@ The three ways this becomes fundable, honestly ordered by odds:
 here" is the one that is true; "war oil speculation" is true demand with no supply we can create;
 the whitepaper's 14-asset holdable basket is physically unfundable. The product that serves the
 true model is already built — what is missing is distribution, not features.
+
+## Addendum 2 — one year later: the hackathon verdict and the zh market (2026-10-29)
+
+### What happened to the ETHShanghai 2025 winners
+
+- Yield Market (1st, "deposits earn while you bet"): **dead** — 3 GitHub followers, site still
+  "coming soon".
+- Ponymarket (3rd): tiny niche site, marginal.
+- Wandfi (2nd): half-dead, Blast campaign archived.
+
+The mechanism that won (yield on idle deposits) was executed instead by **Predict.fun**: $1.8B
+cumulative volume, 130k users, $20M earning yield, backed by YZi Labs ($10B AUM) + Susquehanna,
+grew by **acquiring Probable** for distribution. Same mechanism; the inventor died, the copycat
+with distribution was funded. Distribution > mechanism, confirmed with one year of data.
+
+Category math kills niche entry: Kalshi 70% + Polymarket 25% = 94.7% of volume; the other 100+
+protocols share 1.65%. Sports + short-dated crypto price contracts are 77% of volume; geopolitics/
+macro is 5.5%. A commodity prediction market would starve in the long tail. **The earlier
+"commodity prediction market" suggestion is withdrawn — the data killed it.**
+
+### The zh market already has three operators on this exact track
+
+1. **WEEX TradFi**: zh-facing CEX already selling USDT-margined gold/silver/oil/stocks perps at
+   0 fees and up to 400x. The zh "war speculation" demand is ALREADY captured by leveraged
+   derivatives — confirming the demand goes to perps, never to tokens. Do not compete here.
+2. **叮噹哥 (dingdangbro)**: bilibili content creator running PAXGUSDT/XAUUSD arbitrage with a
+   Telegram community (@dingdangbro). A real, reachable zh gold-token community operator — a
+   distribution target, not a competitor.
+3. **Datawallet zh guides**: affiliate-monetised "buy gold with USDT" content. Proof that
+   affiliate distribution for this exact flow already works in zh content markets.
+
+Market size correction: XAUT ~$2.5B + PAXG ~$1.9B = ~$4.4B tokenised gold (larger than the
+earlier estimate). The buy-and-hold demand is real and growing.
+
+### Revised conclusion
+
+The distribution play is not hypothetical: zh gold-token communities exist and monetise today. The
+executable move is the operator pitch kit (see docs/operator-kit-2026-10.md): offer content
+creators and guide sites our page as their tool, with affiliate revenue share and ready-made
+comparison content. First targets: the dingdangbro community, zh guide sites. WEEX is proof of
+where NOT to go (perps).

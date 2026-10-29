@@ -212,7 +212,9 @@
         if (navigator.sendBeacon) navigator.sendBeacon("/api/events", new Blob([body], { type: "application/json" }));
         else fetch("/api/events", { method: "POST", headers: { "content-type": "application/json" }, body, keepalive: true }).catch(() => {});
       };
-      track("pageview", "metals");
+      const REF = new URLSearchParams(location.search).get("ref") || "";
+      const withRef = (d) => (REF ? d + " ref=" + REF : d);
+      track("pageview", withRef("metals"));
 
       // Two translations live on the page (en/zh). Everything dynamic is ours — Google Translate is
       // invited for the rest, and the zones we rewrite at runtime carry translate="no" so the two
@@ -471,7 +473,7 @@
             })
             .filter(Boolean);
           if (!rows.length) throw new Error(t("no_tx"));
-          track("quote", `${sym} ${amount} ${rows.map((r) => r.from).join(",")}`);
+          track("quote", withRef(`${sym} ${amount} ${rows.map((r) => r.from).join(",")}`));
           quoteRows = rows;
           const label = (steps, secs) =>
             steps === 1 ? t("one_step") : `${t("n_steps", steps)}${secs ? ` · ~${Math.round(secs / 60)}m` : ""}`;
@@ -507,7 +509,7 @@
           `<div class="buy" style="margin-top:8px"><button id="swapNow">${t("swap_now")} — ${r.from}</button></div>` +
           `<span style="opacity:.7"><a href="${rangoLink(r.sym, r.from, r.amount)}" target="_blank" rel="noopener">${t("continue_rango")}</a></span>` +
           warn;
-        $("swapNow").addEventListener("click", () => { track("swap_clicked", `${r.sym} ${r.from}`); executeSwap(false); });
+        $("swapNow").addEventListener("click", () => { track("swap_clicked", withRef(`${r.sym} ${r.from}`)); executeSwap(false); });
       }
 
       // Rango's documented deep-link shape: BLOCKCHAIN.SYMBOL--ADDRESS
@@ -675,7 +677,7 @@
 
           if (!signed) throw new Error(t("no_tx"));
           clearPending();
-          track("completed", String(signed));
+          track("completed", withRef(String(signed)));
           $("quoteOut").innerHTML = `<span style="color:#2f9e44">${t("sent", signed)}</span>`;
           readWallet();
         } catch (e) {
