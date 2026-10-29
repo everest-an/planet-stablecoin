@@ -20,6 +20,7 @@ contract PPIPerp {
     IERC20 public immutable usdc;
     IPerpPrice public priceSource;
     address public owner;
+    address public keeper;
     bool public paused;
 
     // --- risk parameters (bps of notional unless stated) ---
@@ -53,6 +54,9 @@ contract PPIPerp {
     uint256 public totalCollateral;
     int256 public netSize;
 
+    address[] public traders;
+    mapping(address => uint256) private _traderIndex; // 1-based
+
     uint256 private _lock = 1;
 
     event PoolDeposit(address indexed who, uint256 assets, uint256 sharesMinted);
@@ -64,6 +68,10 @@ contract PPIPerp {
     event ParamsSet(uint256 maxLeverageBps, uint256 openFeeBps, uint256 closeFeeBps, uint256 maintenanceBps);
     event FundingRateSet(int256 ratePerSec);
     event PriceSourceSet(address source);
+    event KeeperSet(address indexed keeper);
+
+    /// @dev funding is bounded so a compromised keeper cannot drain the pool through the funding rate
+    int256 public constant MAX_FUNDING_RATE_PER_SEC = 1e12;
 
     error NotOwner();
     error Locked();
@@ -79,6 +87,11 @@ contract PPIPerp {
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert NotOwner();
+        _;
+    }
+
+    modifier onlyKeeperOrOwner() {
+        if (msg.sender != keeper && msg.sender != owner) revert NotOwner();
         _;
     }
 
@@ -149,6 +162,10 @@ contract PPIPerp {
         poolAssets += fee; // the fee belongs to the pool immediately
         uint256 net = collateral - fee;
 
+        if (!positions[msg.sender].open) {
+            traders.push(msg.sender);
+            _traderIndex[msg.sender] = traders.length;
+        }
         positions[msg.sender] = Position({
             size: size,
             collateral: net,
@@ -235,7 +252,8 @@ contract PPIPerp {
         emit ParamsSet(maxLeverageBps_, openFeeBps_, closeFeeBps_, maintenanceBps_);
     }
 
-    function setFundingRate(int256 ratePerSec) external onlyOwner {
+    function setFundingRate(int256 ratePerSec) external onlyKeeperOrOwner {
+        if (ratePerSec > MAX_FUNDING_RATE_PER_SEC || ratePerSec < -MAX_FUNDING_RATE_PER_SEC) revert BadInput();
         _accrueFunding();
         fundingRatePerSec = ratePerSec;
         emit FundingRateSet(ratePerSec);
@@ -249,6 +267,11 @@ contract PPIPerp {
 
     function setPaused(bool v) external onlyOwner {
         paused = v;
+    }
+
+    function setKeeper(address k) external onlyOwner {
+        keeper = k;
+        emit KeeperSet(k);
     }
 
     // ---------------------------------------------------------------- internals
@@ -302,6 +325,18 @@ contract PPIPerp {
         totalCollateral -= p.collateral;
         netSize -= p.size;
         delete positions[who];
+
+        uint256 idx = _traderIndex[who];
+        if (idx != 0) {
+            uint256 last = traders.length;
+            if (idx != last) {
+                address moved = traders[last - 1];
+                traders[idx - 1] = moved;
+                _traderIndex[moved] = idx;
+            }
+            traders.pop();
+            delete _traderIndex[who];
+        }
     }
 
     function _abs(int256 v) internal pure returns (uint256) {
