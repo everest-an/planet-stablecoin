@@ -1,0 +1,30 @@
+name: Execute pending timelock proposal
+
+# Runs the setOracle proposal once its 6h delay has elapsed, then becomes a no-op (eta resets to 0
+# and the script exits cleanly). Daily rather than one-shot because a scheduled workflow cannot
+# delete itself; idempotence is cheaper than a manual step.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "10 21 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PRIVATE_KEY: ${{ secrets.MAINNET_RELAYER_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install deps
+        working-directory: relayer
+        run: npm install --no-audit --no-fund
+      - name: Execute if pending
+        working-directory: relayer
+        run: node ../scripts/execute-timelock.mjs
