@@ -137,3 +137,40 @@ now keeps one.
 | 8 | `0x3e7efdaf…cd1e` | 0.0015 ETH Arbitrum → Ethereum (Across, gas top-up) |
 | 9 | `0x2329e451…518a` | approve USDC (Ethereum) |
 | 10 | `0xeb3e271f…1d29` | 4.9 USDC → 0.00121 PAXG (**the loop closes**) |
+
+## Silver joined the demo — with a market fact worth knowing
+
+On 2026-10-29 the wallet bought silver through the same Rango path:
+
+    0.0015 ETH -> 0.233149211710828786 KAG
+    tx 0x99adbb5ff9a672b009aad1ca62238e547d0f5977e49013a8a24386c0923dcd7d
+    Bitget ETH DEX Aggregator, 1 step
+
+The product read it back correctly: 0.2334 oz silver, priced at the CoinGecko spot price ($54.15/oz),
+$12.64. But the purchase cost ~$5.1 — the ERC-20 KAG trades at a discount to its stated 1:1 silver
+value on-chain (thin liquidity on the wrapper; redemption requires KMS Labs compliance onboarding,
+which is exactly why a discount exists).
+
+That discount is honest information the product must keep surfacing rather than hide: the oz count is
+exact (1 KAG = 1 oz claim), the USD figure uses the spot price, and the gap between "spot value" and
+"what the market will actually pay" is a feature of the token, not a bug in the page. A future
+improvement: show the on-chain market price beside the spot price when they diverge.
+
+## Ledger (final, 11 real transactions)
+
+| # | Tx | What |
+|---|---|---|
+| 1 | `0xadaf7576…a36e` | approve USDC (Arbitrum) |
+| 2 | `0x31df72d6…2a09` | 5 USDC → ETH on Arbitrum |
+| 3 | `0xb519e876…f153` | 0.001 ETH Arbitrum → Ethereum (Across) |
+| 4 | `0x58b2f2e3…827f` | approve USDC → 0 (Arbitrum) |
+| 5 | `0x1637a13b…e1e6` | approve USDC → 5 (Arbitrum) |
+| 6 | `0xd512ec66…0792` | 5 USDC into CCTP (**settled 10-29: 4.9346 USDC arrived**) |
+| 7 | `0xd0456d7a…cf84` | 0.0007 ETH → 0.0004037 PAXG |
+| 8 | `0x3e7efdaf…cd1e` | 0.0015 ETH Arbitrum → Ethereum (Across, gas top-up) |
+| 9 | `0x2329e451…518a` | approve USDC (Ethereum) |
+| 10 | `0xeb3e271f…1d29` | 4.9 USDC → 0.00121 PAXG (**gold loop closed**) |
+| 11 | `0x99adbb5f…cd7d` | 0.0015 ETH → 0.23315 KAG (**silver loop closed**) |
+
+**End state:** 0.00161379 oz gold + 0.23341538 oz silver, read back by /api/metals as $6.52 + $12.64.
+Both metals bought through the product's own path, with real money, on mainnet.
