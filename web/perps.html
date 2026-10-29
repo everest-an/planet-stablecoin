@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Planet — PPI perpetual (Sepolia demo)</title>
+    <meta name="description" content="A perpetual market on the PPI commodity index where the LP pool is the counterparty and margin is driven by oracle confidence. Sepolia demo." />
+    <link rel="icon" href="/icon.png" />
+    <link rel="canonical" href="https://ppppp.space/perps" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+    <style>
+      .wrap { max-width: 980px; margin: 0 auto; padding: 28px 20px 64px; }
+      h1 { font-family: "Space Grotesk", sans-serif; font-size: 30px; margin: 16px 0 6px; }
+      h2 { font-family: "Space Grotesk", sans-serif; font-size: 18px; margin: 28px 0 10px; }
+      p, li, label { font-family: "DM Mono", monospace; font-size: 12px; line-height: 1.7; }
+      .k { font-family: "DM Mono", monospace; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted,#8a8a8a); }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+      .card { border: 1px solid var(--muted,#2a2a2a); padding: 12px; }
+      .v { font-family: "Space Grotesk", sans-serif; font-size: 22px; margin-top: 4px; }
+      .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10px; }
+      .normal { background: #123; color: #4ade80; } .caution { background: #331f00; color: #f08c00; } .frozen { background: #3a0d0d; color: #f87171; }
+      .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
+      input, select { padding: 8px; border: 1px solid var(--muted,#2a2a2a); background: transparent; color: inherit; font-family: "DM Mono", monospace; font-size: 13px; }
+      button { padding: 9px 14px; border: 1px solid var(--ink,#111); background: var(--ink,#111); color: var(--bg,#fff); font-family: "DM Mono", monospace; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; cursor: pointer; }
+      button.ghost { background: transparent; color: inherit; border-color: var(--muted,#2a2a2a); }
+      #log { font-family: "DM Mono", monospace; font-size: 11px; min-height: 20px; margin-top: 8px; white-space: pre-wrap; }
+      .warn { border-left: 3px solid #c2401c; padding: 10px 14px; margin: 16px 0; }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="wordmark" href="/">Planet</a>
+      <nav class="nav">
+        <a href="/">home</a>
+        <a href="/metals">metals</a>
+        <a href="/ppi">index</a>
+        <a href="/perps">perps</a>
+        <a href="/lp">LP</a>
+        <a href="/methodology">methodology</a>
+      </nav>
+    </header>
+
+    <main class="wrap">
+      <p class="k">[ Sepolia demo · collateral is mock USDC with a public mint · nothing here has value ]</p>
+      <h1>PPI perpetual</h1>
+      <p>
+        Trade the commodity index with leverage. The counterparty is the LP pool, not the platform, and
+        margin tightens when the oracle's data quality drops.
+      </p>
+
+      <div class="grid" style="margin-top:16px">
+        <div class="card"><div class="k">index price</div><div class="v" id="price">—</div></div>
+        <div class="card"><div class="k">PPI</div><div class="v" id="ppi">—</div></div>
+        <div class="card"><div class="k">data quality</div><div class="v"><span class="pill" id="risk">—</span></div></div>
+        <div class="card"><div class="k">oracle age</div><div class="v" id="age">—</div></div>
+      </div>
+
+      <h2>Pool (the counterparty)</h2>
+      <div class="grid">
+        <div class="card"><div class="k">pool assets</div><div class="v" id="pool">—</div></div>
+        <div class="card"><div class="k">share price</div><div class="v" id="share">—</div></div>
+        <div class="card"><div class="k">net exposure</div><div class="v" id="net">—</div></div>
+        <div class="card"><div class="k">trader collateral</div><div class="v" id="coll">—</div></div>
+      </div>
+
+      <h2>Parameters</h2>
+      <div class="grid" id="params"></div>
+
+      <h2>Trade</h2>
+      <div class="card">
+        <div class="row">
+          <button id="connect">connect wallet</button>
+          <span class="k" id="acct">not connected</span>
+        </div>
+        <div class="row">
+          <button id="mint" class="ghost">get 10,000 test USDC</button>
+          <span class="k" id="bal">balance —</span>
+        </div>
+        <div class="row">
+          <label class="k">direction</label>
+          <select id="dir"><option value="long">long</option><option value="short">short</option></select>
+          <label class="k">notional</label>
+          <input id="size" value="1000" style="width:110px" />
+          <label class="k">collateral</label>
+          <input id="margin" value="200" style="width:110px" />
+          <button id="open">open</button>
+          <button id="closeBtn" class="ghost">close</button>
+        </div>
+        <div class="row">
+          <button id="deposit" class="ghost">deposit 1,000 to the pool</button>
+          <span class="k" id="position">no position</span>
+        </div>
+        <div id="log"></div>
+      </div>
+
+      <div class="warn">
+        <b>What this demo proves.</b> Prices only move through 2-of-3 signatures (the core's relayer is
+        disabled). Margin is set by the index's confidence level. Liquidations pay a keeper, so the
+        positions that matter get closed. It is <b>not</b> audited and the contracts hold no real value.
+      </div>
+      <p class="k" id="contracts"></p>
+    </main>
+
+    <script type="module">
+      import { createPublicClient, createWalletClient, custom, http, parseUnits, formatUnits, defineChain } from "https://esm.sh/viem@2.21.0";
+      const chain = defineChain({ id: 11155111, name: "sepolia", nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 }, rpcUrls: { default: { http: ["https://ethereum-sepolia-rpc.publicnode.com"] } } });
+      const pub = createPublicClient({ chain, transport: http("https://ethereum-sepolia-rpc.publicnode.com") });
+
+      let S = null, account = null, wallet = null;
+      const $ = (id) => document.getElementById(id);
+      const log = (s) => ($("log").textContent = s);
+      const fmt = (n, d = 2) => (n == null || Number.isNaN(Number(n)) ? "—" : Number(n).toLocaleString(undefined, { maximumFractionDigits: d }));
+
+      const PERP_ABI = [
+        { name: "deposit", type: "function", stateMutability: "nonpayable", inputs: [{ type: "uint256" }], outputs: [{ type: "uint256" }] },
+        { name: "open", type: "function", stateMutability: "nonpayable", inputs: [{ type: "int256" }, { type: "uint256" }], outputs: [] },
+        { name: "close", type: "function", stateMutability: "nonpayable", inputs: [], outputs: [{ type: "uint256" }] },
+        { name: "positions", type: "function", stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "int256" }, { type: "uint256" }, { type: "uint256" }, { type: "int256" }, { type: "bool" }] },
+        { name: "equityOf", type: "function", stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "int256" }] },
+      ];
+      const ERC20_ABI = [
+        { name: "balanceOf", type: "function", stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }] },
+        { name: "approve", type: "function", stateMutability: "nonpayable", inputs: [{ type: "address" }, { type: "uint256" }], outputs: [{ type: "bool" }] },
+        { name: "mint", type: "function", stateMutability: "nonpayable", inputs: [{ type: "address" }, { type: "uint256" }], outputs: [] },
+      ];
+
+      async function refresh() {
+        S = await (await fetch("/api/v1/perp", { headers: { "cache-control": "no-cache" } })).json();
+        if (S.error) { log(S.error.message); return; }
+        $("price").textContent = "$" + fmt(S.market.price, 2);
+        $("ppi").textContent = fmt(S.market.ppi, 6);
+        const r = $("risk");
+        r.textContent = S.market.riskLabel;
+        r.className = "pill " + S.market.riskLabel;
+        $("age").textContent = S.market.oracleAgeSeconds + "s";
+        $("pool").textContent = "$" + fmt(S.pool.assets, 2);
+        $("share").textContent = "$" + fmt(S.pool.sharePrice, 4);
+        $("net").textContent = (S.pool.netExposure >= 0 ? "+" : "") + "$" + fmt(S.pool.netExposure, 2);
+        $("coll").textContent = "$" + fmt(S.pool.traderCollateral, 2);
+        $("params").innerHTML = [
+          ["max leverage", S.market.maxLeverage + "x"],
+          ["maintenance", S.market.maintenancePct + "%"],
+          ["open fee", S.market.openFeePct + "%"],
+          ["protocol share", S.market.protocolSharePct + "%"],
+          ["OI cap", S.market.maxOiToPool + "x pool"],
+          ["paused", String(S.market.paused)],
+        ].map(([k, v]) => `<div class="card"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+        $("contracts").textContent = `perp ${S.contracts.perp} · core ${S.contracts.core}`;
+        if (account) await refreshAccount();
+      }
+
+      async function refreshAccount() {
+        const [b, p, e] = await Promise.all([
+          pub.readContract({ address: S.contracts.collateral, abi: ERC20_ABI, functionName: "balanceOf", args: [account] }),
+          pub.readContract({ address: S.contracts.perp, abi: PERP_ABI, functionName: "positions", args: [account] }),
+          pub.readContract({ address: S.contracts.perp, abi: PERP_ABI, functionName: "equityOf", args: [account] }),
+        ]);
+        $("bal").textContent = "balance " + fmt(Number(formatUnits(b, 6)), 2);
+        $("position").textContent = p[4]
+          ? `position ${formatUnits(p[0], 6)} @ ${fmt(Number(formatUnits(p[2], 18)), 2)} · equity ${fmt(Number(formatUnits(e, 6)), 2)}`
+          : "no position";
+      }
+
+      $("connect").onclick = async () => {
+        if (!window.ethereum) return log("no injected wallet");
+        try {
+          await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0xaa36a7" }] }).catch(async () => {
+            await window.ethereum.request({ method: "wallet_addEthereumChain", params: [{ chainId: "0xaa36a7", chainName: "Sepolia", nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 }, rpcUrls: ["https://ethereum-sepolia-rpc.publicnode.com"] }] });
+          });
+          const [a] = await window.ethereum.request({ method: "eth_requestAccounts" });
+          account = a;
+          wallet = createWalletClient({ account, chain, transport: custom(window.ethereum) });
+          $("acct").textContent = a.slice(0, 10) + "…";
+          log("connected on Sepolia");
+          await refreshAccount();
+        } catch (e) { log(e.message); }
+      };
+
+      const send = async (address, abi, fn, args) => {
+        const h = await wallet.writeContract({ address, abi, functionName: fn, args });
+        log(fn + ": " + h.slice(0, 20) + "… waiting");
+        await pub.waitForTransactionReceipt({ hash: h });
+        log(fn + " confirmed");
+        await refreshAccount();
+      };
+
+      $("mint").onclick = () => send(S.contracts.collateral, ERC20_ABI, "mint", [account, parseUnits("10000", 6)]).catch((e) => log(e.shortMessage || e.message));
+      $("deposit").onclick = async () => {
+        try {
+          await send(S.contracts.collateral, ERC20_ABI, "approve", [S.contracts.perp, 2n ** 255n]);
+          await send(S.contracts.perp, PERP_ABI, "deposit", [parseUnits("1000", 6)]);
+          await refresh();
+        } catch (e) { log(e.shortMessage || e.message); }
+      };
+      $("open").onclick = async () => {
+        try {
+          const size = parseUnits($("size").value, 6);
+          const margin = parseUnits($("margin").value, 6);
+          const signed = $("dir").value === "long" ? size : -size;
+          await send(S.contracts.collateral, ERC20_ABI, "approve", [S.contracts.perp, 2n ** 255n]);
+          await send(S.contracts.perp, PERP_ABI, "open", [signed, margin]);
+          await refresh();
+        } catch (e) { log(e.shortMessage || e.message); }
+      };
+      $("closeBtn").onclick = () => send(S.contracts.perp, PERP_ABI, "close", []).catch((e) => log(e.shortMessage || e.message));
+
+      await refresh();
+      setInterval(refresh, 20000);
+    </script>
+  </body>
+</html>
