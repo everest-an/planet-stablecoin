@@ -87,8 +87,9 @@
           <span class="note">USD</span>
         </div>
         <div class="buy">
-          <button id="buyPaxg">buy gold · PAXG</button>
-          <button id="buyXaut" class="ghost">buy gold · XAUT</button>
+        <button id="buyPaxg">buy gold · PAXG</button>
+        <button id="buyXaut" class="ghost">buy gold · XAUT</button>
+        <button id="buyKag" class="ghost">buy silver · KAG</button>
         </div>
         <p class="note" style="margin-top:10px">
           Opens the pair on Uniswap with the amount prefilled — one click, then confirm in your wallet.
@@ -107,15 +108,16 @@
       </div>
 
       <div class="warn">
-        <b>Two tokens, not one, on purpose.</b> PAXG is issued by Paxos (a US national trust bank) and is
+        <b>Two gold tokens, not one, on purpose.</b> PAXG is issued by Paxos (a US national trust bank) and is
         <b>unavailable to EU residents under MiCA</b>; XAUT is issued in the BVI with Swiss vaults. Holding both
         spreads issuer and jurisdiction risk — that is the only reason a basket exists. If you just want gold,
-        one token is simpler and cheaper.
+        one token is simpler and cheaper. Silver is KAG: one token, 1:1 claim on Kinesis silver, issued by
+        KMS Labs S.A. (Panama).
       </div>
 
       <p class="note">
         Balances are read from Ethereum mainnet. Only canonical issuer deployments are counted; bridged copies are
-        excluded because they add bridge risk on top of issuer risk. Ounces are exact (1 PAXG = 1 XAUT = 1 fine troy
+        excluded because they add bridge risk on top of issuer risk. Ounces are exact (1 PAXG = 1 XAUT = 1 KAG = 1 fine troy
         ounce); the USD figure is indicative and is blanked rather than guessed when no price is available.
       </p>
     </main>
@@ -123,10 +125,11 @@
     <script>
       const PAXG = "0x45804880De22913dAFE09f4980848ECE6EcbAf78";
       const XAUT = "0x68749665FF8D2d112Fa859AA293F07A622782F38";
+      const KAG = "0x56Ba8B58B7d1f6d384A1C4dD553F39ebc8741B8e";
       const USDC_ETH = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
 
       let account = null;
-      let prices = { PAXG: null, XAUT: null };
+      let prices = { PAXG: null, XAUT: null, KAG: null };
 
       const $ = (id) => document.getElementById(id);
       const fmt = (n, d = 4) =>
@@ -233,6 +236,7 @@
         const addrs = {
           PAXG: "0x45804880De22913dAFE09f4980848ECE6EcbAf78",
           XAUT: "0x68749665FF8D2d112Fa859AA293F07A622782F38",
+          KAG: "0x56Ba8B58B7d1f6d384A1C4dD553F39ebc8741B8e",
         };
         const usdc = {
           ARBITRUM: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
@@ -408,6 +412,7 @@
       $("connect").addEventListener("click", connect);
       $("buyPaxg").addEventListener("click", () => { quotingFor = "PAXG"; buy(PAXG); });
       $("buyXaut").addEventListener("click", () => { quotingFor = "XAUT"; buy(XAUT); });
+      $("buyKag").addEventListener("click", () => { quotingFor = "KAG"; buy(KAG); });
     </script>
   </body>
 </html>

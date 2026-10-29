@@ -40,6 +40,15 @@ const TOKENS = [
     issuer: "TG Commodities Limited (BVI), Swiss vaults",
     note: null,
   },
+  {
+    symbol: "KAG",
+    address: "0x56Ba8B58B7d1f6d384A1C4dD553F39ebc8741B8e",
+    ozPerToken: 1,
+    metal: "silver",
+    priceId: "kinesis-silver",
+    issuer: "KMS Labs S.A. (Panama) — 1:1 claim on Kinesis silver (KAG)",
+    note: "Upgradeable proxy (EIP-1967); redemption requires KMS Labs compliance onboarding.",
+  },
 ];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -157,7 +166,7 @@ export default async function handler(req, res) {
       },
       priceSource: priceMap ? "coingecko" : "unavailable",
       notes: [
-        "Ounces are exact: PAXG and XAUT each represent one fine troy ounce.",
+        "Ounces are exact: PAXG, XAUT and KAG each represent one fine troy ounce.",
         "USD is indicative and may be null if the price source is unavailable.",
         "Only canonical issuer deployments are read; bridged copies are excluded on purpose.",
       ],
