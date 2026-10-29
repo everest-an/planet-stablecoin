@@ -54,7 +54,7 @@ for (const asset of ASSETS) {
   );
   const s1 = await account.sign({ hash: digest });
   const s2 = await account2.sign({ hash: digest });
-  const sig = s1.slice(2) + s2.slice(2);
+  const sig = "0x" + s1.slice(2) + s2.slice(2);
   payloads.push({
     index: Number(p.index),
     symbol: asset.sym,

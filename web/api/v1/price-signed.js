@@ -73,7 +73,7 @@ export default async function handler(req, res) {
       const s1 = await account.sign({ hash: digest });
       const s2 = await account2.sign({ hash: digest });
       // the oracle reads 65-byte r||s||v blocks back to back
-      const sig = s1.slice(2) + s2.slice(2);
+      const sig = "0x" + s1.slice(2) + s2.slice(2);
       payloads.push({
         index: Number(p.index),
         symbol: a.sym,
