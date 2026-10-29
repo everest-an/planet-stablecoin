@@ -27,6 +27,7 @@ const ASSETS = {
   PAXG: { blockchain: "ETH", symbol: "PAXG", address: "0x45804880De22913dAFE09f4980848ECE6EcbAf78" },
   XAUT: { blockchain: "ETH", symbol: "XAUT", address: "0x68749665FF8D2d112Fa859AA293F07A622782F38" },
   KAG: { blockchain: "ETH", symbol: "KAG", address: "0x56Ba8B58B7d1f6d384A1C4dD553F39ebc8741B8e" },
+  VNXAU: { blockchain: "ETH", symbol: "VNXAU", address: "0x6d57B2E05F26C26b549231c866bdd39779e4a488" },
 };
 
 // Where the money comes from if the caller does not say. USDC is the default because it is what a

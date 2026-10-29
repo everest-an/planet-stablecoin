@@ -53,14 +53,67 @@ const TOKENS = [
     note: "Upgradeable proxy (EIP-1967); redemption requires KMS Labs compliance onboarding.",
     marketVia: "rango",
   },
+  {
+    symbol: "VNXAU",
+    address: "0x6d57B2E05F26C26b549231c866bdd39779e4a488",
+    ozPerToken: 1 / 31.1034768,
+    metal: "gold",
+    priceId: "vnx-gold",
+    issuer: "VNX Commodities AG (Liechtenstein, FMA-registered)",
+    url: "https://vnx.li/",
+    note: "1 VNXAU = 1 gram of gold; counted in troy ounces here (31.1034768 g/oz).",
+    marketVia: "rango",
+  },
+  {
+    symbol: "KAU",
+    address: "0x14DAB79fD7B7B3f748d434812Fd6a9Aac460EA52",
+    ozPerToken: 1,
+    metal: "gold",
+    priceId: "kinesis-gold",
+    issuer: "KMS Labs S.A. (Panama) — 1:1 claim on Kinesis gold (KAU)",
+    url: "https://kinesis.money/gold/",
+    note: "Very thin on-chain liquidity; no aggregator route found, so it can be read but not bought here.",
+  },
 ];
 
 // The spot price is what the 1:1 claim is worth. The on-chain price is what the market will
 // actually pay — for KAG the two diverge, because redeeming the wrapper requires compliance
 // onboarding and thin liquidity discounts it. Showing only the spot price would overstate the
 // holding; showing only the market price would hide the claim. Both are shown, labelled.
+// All prices are normalised to USD PER TROY OUNCE before they leave this handler — gram tokens
+// included — so the client can multiply oz * price without caring which unit the token uses.
 const RANGO_API_KEY = process.env.RANGO_API_KEY || "";
-let marketCache = { ts: 0, price: null };
+let marketCache = {};
+
+// One quote of 100 USDC -> token, cached 10 minutes, prices the whole holding.
+async function rangoMarketPricePerOz(t) {
+  if (!RANGO_API_KEY) return null;
+  const hit = marketCache[t.symbol];
+  if (hit && Date.now() - hit.ts < 600000) return hit.price;
+  try {
+    const r = await fetch(
+      `https://api.rango.exchange/routing/bests?apiKey=${encodeURIComponent(RANGO_API_KEY)}`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          from: { blockchain: "ETH", symbol: "USDC", address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" },
+          to: { blockchain: "ETH", symbol: t.symbol, address: t.address },
+          amount: "100",
+          slippage: "1",
+        }),
+      },
+    );
+    if (!r.ok) return hit?.price ?? null;
+    const j = await r.json();
+    const out = Number(j.results?.[0]?.outputAmount);
+    const price = out > 0 ? 100 / out / t.ozPerToken : null;
+    marketCache[t.symbol] = { ts: Date.now(), price };
+    return price;
+  } catch {
+    return hit?.price ?? null;
+  }
+}
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -102,36 +155,6 @@ async function prices() {
   }
 }
 
-// One quote of 100 USDC -> KAG, cached 10 minutes, is enough to price the whole holding: the
-// market price per ounce is 100 / outputAmount.
-async function kagMarketPrice() {
-  if (!RANGO_API_KEY) return null;
-  if (Date.now() - marketCache.ts < 600000) return marketCache.price;
-  try {
-    const r = await fetch(
-      `https://api.rango.exchange/routing/bests?apiKey=${encodeURIComponent(RANGO_API_KEY)}`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          from: { blockchain: "ETH", symbol: "USDC", address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" },
-          to: { blockchain: "ETH", symbol: "KAG", address: "0x56Ba8B58B7d1f6d384A1C4dD553F39ebc8741B8e" },
-          amount: "100",
-          slippage: "1",
-        }),
-      },
-    );
-    if (!r.ok) return marketCache.price;
-    const j = await r.json();
-    const out = Number(j.results?.[0]?.outputAmount);
-    const price = out > 0 ? 100 / out : null;
-    marketCache = { ts: Date.now(), price };
-    return price;
-  } catch {
-    return marketCache.price;
-  }
-}
-
 function sendJson(res, data, maxAge) {
   const body = JSON.stringify(data);
   res.setHeader("Cache-Control", `public, s-maxage=${maxAge}, stale-while-revalidate=${maxAge * 2}`);
@@ -156,16 +179,22 @@ export default async function handler(req, res) {
   }
   const address = raw.toLowerCase();
 
-  // one batch: balanceOf for every token
+  // one batch: balanceOf for every token, plus spot prices and market prices for the routable ones
   const calls = TOKENS.map((t) => ({ to: t.address, data: "0x70a08231" + address.slice(2).padStart(64, "0") }));
-  const [results, priceMap, kagMarket] = await Promise.all([rpcBatch(calls), prices(), kagMarketPrice()]);
+  const [results, priceMap, ...markets] = await Promise.all([
+    rpcBatch(calls),
+    prices(),
+    ...TOKENS.filter((t) => t.marketVia === "rango").map((t) => rangoMarketPricePerOz(t)),
+  ]);
 
+  let mi = 0;
   const tokens = TOKENS.map((t, i) => {
     const hex = results[i];
     const balance = hex && hex !== "0x" ? Number(BigInt(hex)) / SCALE : null;
     const oz = balance == null ? null : balance * t.ozPerToken;
-    const priceUsd = priceMap?.[t.priceId]?.usd ?? null;
-    const marketPriceUsd = t.marketVia === "rango" ? kagMarket : null;
+    const cgUsd = priceMap?.[t.priceId]?.usd ?? null;
+    const priceUsd = cgUsd != null ? cgUsd / t.ozPerToken : null;
+    const marketPriceUsd = t.marketVia === "rango" ? markets[mi++] ?? null : null;
     return {
       symbol: t.symbol,
       address: t.address,

@@ -74,6 +74,16 @@
           <div><div class="k" data-i18n="silver">silver</div><div class="v" id="silverOz">—</div></div>
           <div><div class="k" data-i18n="value">value</div><div class="v" id="usd">—</div></div>
         </div>
+        <div id="basketWrap" style="margin-top:12px" translate="no"></div>
+        <div class="row" style="margin-top:8px">
+          <span class="note" data-i18n="target">target basket</span>
+          <select id="targetSelect" style="flex:1;padding:8px;border:1px solid var(--muted,#2a2a2a);background:transparent;color:inherit;font-family:'DM Mono',monospace;font-size:12px">
+            <option value="none" data-i18n="target_none">none</option>
+            <option value="gold" data-i18n="target_gold">gold only</option>
+            <option value="half" data-i18n="target_half">50 / 50 gold-silver</option>
+            <option value="silver" data-i18n="target_silver">silver only</option>
+          </select>
+        </div>
         <div id="status" translate="no"></div>
       </div>
 
@@ -95,10 +105,13 @@
           <input id="amount" type="text" inputmode="decimal" value="100" data-i18n-aria="amount_aria" aria-label="amount in USD" />
           <span class="note">USD</span>
         </div>
-        <div class="buy">
-        <button id="buyPaxg" data-i18n="buy_paxg">buy gold · PAXG</button>
-        <button id="buyXaut" class="ghost" data-i18n="buy_xaut">buy gold · XAUT</button>
-        <button id="buyKag" class="ghost" data-i18n="buy_kag">buy silver · KAG</button>
+        <div class="row" style="margin-top:6px">
+          <select id="buyToken" style="flex:1;padding:10px;border:1px solid var(--muted,#2a2a2a);background:transparent;color:inherit;font-family:'DM Mono',monospace;font-size:13px">
+            <option value="PAXG">PAXG · gold · Paxos</option>
+            <option value="XAUT">XAUT · gold · Tether</option>
+            <option value="KAG">KAG · silver · Kinesis</option>
+            <option value="VNXAU">VNXAU · gold (1g) · VNX</option>
+          </select>
         </div>
         <p class="note" style="margin-top:10px" data-i18n="uniswap_note">
           Pick a metal above, then one quote compares every chain you could pay from — with the step count, so you see what is instant and what bridges.
@@ -115,10 +128,6 @@
     </main>
 
     <script>
-      const PAXG = "0x45804880De22913dAFE09f4980848ECE6EcbAf78";
-      const XAUT = "0x68749665FF8D2d112Fa859AA293F07A622782F38";
-      const KAG = "0x56Ba8B58B7d1f6d384A1C4dD553F39ebc8741B8e";
-
       let account = null;
       // The page's promise is "every ounce you hold, across wallets". That means the connected
       // wallet PLUS any addresses the visitor pastes in — read-only, never signed, so it stays
@@ -128,6 +137,47 @@
         try { return JSON.parse(localStorage.getItem(WATCH_KEY) || "[]"); } catch { return []; }
       };
       let watched = readWatched().filter((a) => /^0x[0-9a-fA-F]{40}$/.test(a));
+
+      let basketTarget = (() => { try { return localStorage.getItem("planet.basket") || "none"; } catch { return "none"; } })();
+
+      function renderBasket(tokens) {
+        const total = tokens.reduce((s, t) => s + (t.usd ?? 0), 0);
+        const anyUsd = tokens.some((t) => t.usd != null);
+        if (!anyUsd || total <= 0) { $("basketWrap").innerHTML = ""; return; }
+        const metalUsd = (m) => tokens.filter((t) => t.metal === m).reduce((s, t) => s + (t.usd ?? 0), 0);
+        const goldUsd = metalUsd("gold");
+        const silverUsd = metalUsd("silver");
+        const goldPct = (goldUsd / total) * 100;
+        const silverPct = (silverUsd / total) * 100;
+        const bar = (pct, color) =>
+          `<div style="height:8px;border-radius:4px;background:${color};width:${Math.min(100, pct).toFixed(1)}%"></div>`;
+        const metalRow = (label, pct, usd) =>
+          `<div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:11px;margin:4px 0 2px"><span>${label}</span><span>${pct.toFixed(1)}% · $${fmt(usd, 2)}</span></div>`;
+        const target = {
+          none: null,
+          gold: { gold: 100, silver: 0 },
+          half: { gold: 50, silver: 50 },
+          silver: { gold: 0, silver: 100 },
+        }[basketTarget];
+        let gap = "";
+        if (target) {
+          const wantGold = (total * target.gold) / 100;
+          const wantSilver = (total * target.silver) / 100;
+          const dGold = wantGold - goldUsd;
+          const dSilver = wantSilver - silverUsd;
+          const targetName = t("target_" + basketTarget);
+          const over =
+            dGold > 0.5 ? t("gap_buy", t("gold"), dGold, targetName) :
+            dSilver > 0.5 ? t("gap_buy", t("silver"), dSilver, targetName) :
+            t("gap_ok", targetName);
+          gap = `<div style="font-family:'DM Mono',monospace;font-size:11px;color:#f08c00;margin-top:6px">${over}</div>`;
+        }
+        $("basketWrap").innerHTML =
+          `<div class="k" style="font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted,#8a8a8a)">${t("basket_label")}</div>` +
+          metalRow(t("gold"), goldPct, goldUsd) + bar(goldPct, "#c9a227") +
+          metalRow(t("silver"), silverPct, silverUsd) + bar(silverPct, "#9aa5b1") +
+          gap;
+      }
 
       function renderWatches() {
         const el = $("watches");
@@ -180,13 +230,20 @@
           holdings: "holdings", th_token: "token", th_issuer: "issuer", th_oz: "ounces", th_value: "value",
           rows_empty: "connect a wallet to read balances",
           buy_label: "buy", amount_aria: "amount in USD",
-          buy_paxg: "buy gold · PAXG", buy_xaut: "buy gold · XAUT", buy_kag: "buy silver · KAG",
           uniswap_note: "Pick a metal above, then one quote compares every chain you could pay from — with the step count, so you see what is instant and what bridges.",
           pay_arb: "pay from Arbitrum", pay_base: "pay from Base", pay_op: "pay from Optimism",
           pay_poly: "pay from Polygon", pay_eth: "pay from Ethereum",
           quote_btn: "get cross-chain quote",
-          warn_copy: "<b>Two gold tokens, not one, on purpose.</b> PAXG is issued by Paxos (a US national trust bank) and is <b>unavailable to EU residents under MiCA</b>; XAUT is issued in the BVI with Swiss vaults. Holding both spreads issuer and jurisdiction risk — that is the only reason a basket exists. If you just want gold, one token is simpler and cheaper. Silver is KAG: one token, 1:1 claim on Kinesis silver, issued by KMS Labs S.A. (Panama).",
-          note_copy: "Balances are read from Ethereum mainnet. Only canonical issuer deployments are counted; bridged copies are excluded because they add bridge risk on top of issuer risk. Ounces are exact (1 PAXG = 1 XAUT = 1 KAG = 1 fine troy ounce); the USD figure is indicative and is blanked rather than guessed when no price is available.",
+          warn_copy: "<b>Four gold tokens and one silver, on purpose.</b> PAXG is issued by Paxos (a US national trust bank) and is <b>unavailable to EU residents under MiCA</b>; XAUT is issued in the BVI with Swiss vaults; VNXAU by VNX Commodities AG (Liechtenstein, FMA-registered); KAU by KMS Labs. Holding several spreads issuer and jurisdiction risk — that is the only reason a basket exists. If you just want gold, one token is simpler and cheaper. Silver is KAG: one token, 1:1 claim on Kinesis silver.",
+          note_copy: "Balances are read from Ethereum mainnet. Only canonical issuer deployments are counted; bridged copies are excluded because they add bridge risk on top of issuer risk. Everything is counted in troy ounces — gram tokens (VNXAU) are converted exactly (31.1034768 g/oz). The USD figure is indicative and is blanked rather than guessed when no price is available.",
+          target: "target basket",
+          target_none: "none",
+          target_gold: "gold only",
+          target_half: "50 / 50 gold-silver",
+          target_silver: "silver only",
+          basket_label: "your basket",
+          gap_buy: "to reach {2}: buy ~${1} more {0}",
+          gap_ok: "matches {0}",
           status_reading: "reading balances…",
           status_unavailable: "balances read · price source unavailable",
           status_read_fail: "could not read balances — retry shortly",
@@ -228,13 +285,20 @@
           holdings: "持仓", th_token: "代币", th_issuer: "发行方", th_oz: "盎司", th_value: "价值",
           rows_empty: "连接钱包以读取余额",
           buy_label: "买入", amount_aria: "美元金额",
-          buy_paxg: "买入黄金 · PAXG", buy_xaut: "买入黄金 · XAUT", buy_kag: "买入白银 · KAG",
           uniswap_note: "先选上方的金属，一次报价即可对比所有可支付的链——含步骤数，一眼看出哪条即时、哪条需要桥接。",
           pay_arb: "从 Arbitrum 支付", pay_base: "从 Base 支付", pay_op: "从 Optimism 支付",
           pay_poly: "从 Polygon 支付", pay_eth: "从 Ethereum 支付",
           quote_btn: "获取跨链报价",
-          warn_copy: "<b>两种黄金代币，是有意为之。</b>PAXG 由 Paxos（美国全国信托银行）发行，<b>因 MiCA 不对欧盟居民开放</b>；XAUT 在英属维尔京群岛发行、瑞士金库保管。同时持有可分散发行方与辖区风险——这是篮子存在的唯一理由。如果你只想要黄金，一种代币更简单也更便宜。白银是 KAG：一种代币，1:1 对应 Kinesis 白银债权，由 KMS Labs S.A.（巴拿马）发行。",
-          note_copy: "余额读取自以太坊主网。只统计发行方的正规部署；桥接副本因叠加桥接风险而被排除。盎司数精确（1 PAXG = 1 XAUT = 1 KAG = 1 金衡盎司）；美元数为参考值，价格源不可用时宁可留空也不猜测。",
+          warn_copy: "<b>四种黄金代币与一种白银，是有意为之。</b>PAXG 由 Paxos（美国全国信托银行）发行，<b>因 MiCA 不对欧盟居民开放</b>；XAUT 在英属维尔京群岛发行、瑞士金库保管；VNXAU 由 VNX Commodities AG（列支敦士登，FMA 注册）发行；KAU 由 KMS Labs 发行。持有多种可分散发行方与辖区风险——这是篮子存在的唯一理由。如果你只想要黄金，一种代币更简单也更便宜。白银是 KAG：一种代币，1:1 对应 Kinesis 白银债权。",
+          note_copy: "余额读取自以太坊主网。只统计发行方的正规部署；桥接副本因叠加桥接风险而被排除。全部按金衡盎司计算——克计价代币（VNXAU）精确换算（31.1034768 克/盎司）。美元数为参考值，价格源不可用时宁可留空也不猜测。",
+          target: "目标篮子",
+          target_none: "无",
+          target_gold: "纯金",
+          target_half: "金/银 50-50",
+          target_silver: "纯银",
+          basket_label: "你的篮子",
+          gap_buy: "要达到 {2}：再买约 ${1} 的 {0}",
+          gap_ok: "符合 {0}",
           status_reading: "读取余额中…",
           status_unavailable: "余额已读取 · 价格源不可用",
           status_read_fail: "无法读取余额——请稍后重试",
@@ -347,6 +411,7 @@
           $("rows").innerHTML = rows || `<tr><td colspan="4" class="issuer">${t("no_metal")}</td></tr>`;
           $("status").textContent =
             ok.some((d) => d.priceSource === "unavailable") ? t("status_unavailable") : "";
+          renderBasket(tokens);
           renderWatches();
         } catch (e) {
           $("status").innerHTML = `<span style="color:#e03131">${e.message}</span>`;
@@ -375,15 +440,8 @@
         }
       }
 
-      // One click: pick the metal, then one quote compares every chain. The user still confirms in
-      // their wallet — that confirmation is the only signature anywhere in this flow.
-      function buy(token) {
-        quotingFor = token === KAG ? "KAG" : token === XAUT ? "XAUT" : "PAXG";
-        crossChainQuote();
-      }
-
       async function crossChainQuote() {
-        const sym = quotingFor || "PAXG";
+        const sym = $("buyToken").value || "PAXG";
         const amount = String($("amount").value).replace(/[^0-9.]/g, "") || "100";
         $("quoteOut").textContent = t("quoting");
         try {
@@ -653,12 +711,8 @@
         box.appendChild(b);
       })();
 
-      let quotingFor = "PAXG";
+      $("buyToken").addEventListener("change", () => track("buy_token", $("buyToken").value));
       $("quoteBtn").addEventListener("click", crossChainQuote);
-      $("connect").addEventListener("click", connect);
-      $("buyPaxg").addEventListener("click", () => { quotingFor = "PAXG"; buy(PAXG); });
-      $("buyXaut").addEventListener("click", () => { quotingFor = "XAUT"; buy(XAUT); });
-      $("buyKag").addEventListener("click", () => { quotingFor = "KAG"; buy(KAG); });
       $("addWatch").addEventListener("click", () => {
         const a = String($("watchAddr").value).trim();
         if (!/^0x[0-9a-fA-F]{40}$/.test(a)) {
@@ -678,6 +732,12 @@
         try { localStorage.setItem("planet.lang", lang); } catch {}
         track("lang", lang);
         applyI18n();
+      });
+      $("targetSelect").addEventListener("change", (e) => {
+        basketTarget = e.target.value;
+        try { localStorage.setItem("planet.basket", basketTarget); } catch {}
+        track("basket_target", basketTarget);
+        readWallet();
       });
       applyI18n();
     </script>
