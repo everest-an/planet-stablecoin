@@ -272,6 +272,7 @@
           resume_btn: "resume it",
           no_metal: "no metal in these wallets",
           no_wallet: "no injected wallet found — install MetaMask or Rabby",
+          waiting_wallet: "waiting for your wallet…",
           unsupported_chain: "unsupported chain {0}",
           market_gap: "trades {0}% {1} spot: ${2}",
           below: "below", above: "above",
@@ -327,6 +328,7 @@
           resume_btn: "恢复它",
           no_metal: "这些钱包里没有贵金属",
           no_wallet: "未检测到注入钱包——请安装 MetaMask 或 Rabby",
+          waiting_wallet: "等待你的钱包确认…",
           unsupported_chain: "不支持的链 {0}",
           market_gap: "比现货{1} {0}%：${2}",
           below: "低", above: "高",
@@ -420,18 +422,31 @@
         }
       }
 
+      // EIP-6963: modern wallets announce themselves via events instead of window.ethereum. Collect
+      // them, then fall back to window.ethereum, then to nothing - with a message that says what to
+      // install, never a silent dead button.
+      const providers = [];
+      window.addEventListener?.("eip6963:announceProvider", (e) => {
+        const p = e.detail?.provider;
+        if (p && !providers.includes(p)) providers.push(p);
+      });
+      window.dispatchEvent?.(new Event("eip6963:requestProvider"));
+      const walletProvider = () => window.ethereum ?? providers[0] ?? null;
+
       async function connect() {
-        if (!window.ethereum) {
+        const eth = walletProvider();
+        if (!eth) {
           $("status").innerHTML = `<span style="color:#e03131">${t("no_wallet")}</span>`;
           return;
         }
+        $("status").textContent = t("waiting_wallet");
         try {
-          const accts = await window.ethereum.request({ method: "eth_requestAccounts" });
+          const accts = await eth.request({ method: "eth_requestAccounts" });
           account = accts[0];
           track("connected", shortHash(account));
           $("account").textContent = account;
           $("connect").textContent = t("reconnect");
-          window.ethereum.on?.("accountsChanged", (a) => {
+          eth.on?.("accountsChanged", (a) => {
             account = a[0] ?? null;
             $("account").textContent = account ?? t("not_connected");
             readWallet();
@@ -549,9 +564,11 @@
       async function ensureChain(blockchain) {
         const want = RANGO_CHAIN_HEX[blockchain];
         if (!want) throw new Error(t("unsupported_chain", blockchain));
-        const have = await window.ethereum.request({ method: "eth_chainId" });
+        const eth = walletProvider();
+        if (!eth) throw new Error(t("no_wallet"));
+        const have = await eth.request({ method: "eth_chainId" });
         if (String(have).toLowerCase() === want) return;
-        await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: want }] });
+        await eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId: want }] });
       }
 
       async function post(body) {
@@ -573,7 +590,7 @@
         const params = { from: account, to: tx.to, data: tx.data };
         if (tx.value && tx.value !== "0") params.value = "0x" + BigInt(tx.value).toString(16);
         if (tx.gasLimit) params.gas = "0x" + BigInt(tx.gasLimit).toString(16);
-        const hash = await window.ethereum.request({ method: "eth_sendTransaction", params: [params] });
+        const hash = await walletProvider().request({ method: "eth_sendTransaction", params: [params] });
         const rpc = RANGO_RPC[tx.chain] || "https://ethereum-rpc.publicnode.com";
         for (let i = 0; i < 90; i++) {
           const rc = await fetch(rpc, {
@@ -732,6 +749,10 @@
       $("langToggle").addEventListener("click", () => {
         lang = lang === "zh" ? "en" : "zh";
         try { localStorage.setItem("planet.lang", lang); } catch {}
+        // Once the visitor has chosen a language, our own en/zh translations are complete - tell
+        // Google Translate to back off, otherwise it instantly re-translates the fresh zh back to
+        // whatever it was rendering and the switch looks broken.
+        document.documentElement.classList.add("notranslate");
         track("lang", lang);
         applyI18n();
       });

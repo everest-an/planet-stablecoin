@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Planet — mint / redeem PLT (Arbitrum Sepolia)</title>
+    <link rel="icon" href="/icon.png" />
+    <link rel="apple-touch-icon" href="/icon.png" />
     <meta
       name="description"
       content="Mint and redeem PLT against the Planet on-chain commodity index on Arbitrum Sepolia. Testnet proof of concept: minting pulls test USDC and redeeming pays it back, but nothing here has value and PLT is not a stablecoin."
@@ -243,12 +245,14 @@
       }
 
       async function connect() {
-        if (!window.ethereum) {
+        const eth = window.ethereum || (window.__eip6963Providers || [])[0] || null;
+        if (!eth) {
           $("status").innerHTML = '<span class="bad">no injected wallet found — install MetaMask or Rabby</span>';
           return;
         }
+        $("status").textContent = "waiting for your wallet…";
         try {
-          const accts = await window.ethereum.request({ method: "eth_requestAccounts" });
+          const accts = await eth.request({ method: "eth_requestAccounts" });
           account = accts[0];
           await ensureChain();
           $("account").textContent = account;
