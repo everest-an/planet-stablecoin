@@ -18,15 +18,24 @@ the door; everything after can be automated.
 
 Message (Telegram / QQ):
 
-> 叮噹哥好，看到你的 PAXGUSDT/XAUUSD 套利视频（BV1GeynBdEbE）。我做了个页面，把你视频里观众
-> 需要自己拼的东西做在了一起：现货价和链上成交价并排（KAG 长期折价 50% 一眼可见）、五条链
-> 一键比价买 PAXG/XAUT/KAG/VNXAU、任意钱包粘贴即看总盎司。只读不托管。想挂你视频简介或
-> 社群置顶，走分成（每笔 0.1% 进你钱包，Rango affiliate 自动结算）。
-> 演示：https://ppppp.space/metals?ref=dingdangbro
-> 合作说明：https://ppppp.space/operators?ref=dingdangbro
+> 叮噹哥，我做了个简单网页，一句话：把你视频里讲的金价差价直接显示出来——现货金价和链上 PAXG
+> 价格放一页，差多少一眼看到。
+>
+> 观众再粘一下自己的钱包地址，就能看到自己手里有多少盎司黄金。
+>
+> 链接放你视频简介，观众通过它买黄金，你拿 0.1% 提成。
+>
+> 链接：https://ppppp.space/metals?ref=dingdangbro
 
 If he asks about the cut: "0.1% 是 Rango 默认返点，第一笔到账后数字说话；不签独占、不碰你
 的粉丝关系。"
+
+## LESSON: the first pitch was too jargon-heavy (dingdangbro said he did not understand it)
+
+The original message named KAG discounts, on-chain vs spot prices and five chains — inside
+baseball. The pitch that works for a general audience leads with ONE plain sentence about what the
+thing IS, then what the reader gets. Screenshots beat words: send the /metals totals panel and the
+buy comparison instead of explaining them.
 
 ## Target 2 — guide/affiliate content sites (Datawallet-style)
 
