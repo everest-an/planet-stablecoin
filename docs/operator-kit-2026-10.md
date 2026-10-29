@@ -65,7 +65,7 @@ Not targets: CEXes (WEEX owns the leveraged speculation demand — we do not com
 
 ## 6. Execution checklist (the next 30 days)
 
-1. [ ] Register the Rango affiliate ref + set treasury (BLOCKED on the two values from the owner).
+1. [x] Revenue enabled: RANGO_AFFILIATE_WALLET = 0x3d0ab5…23B (wallet-only mode, no ref needed; 0.1% user fee, disclosed).
 2. [ ] Send the one-line DM to @dingdangbro and 5 zh guide sites (messages in §3).
 3. [ ] Track: /api/events funnel (pageview → quote → swap) per referrer (add a utm param — pending).
 4. [ ] Success metric: 10 swaps/month from non-owner wallets = the model works; 0 after 30 days =
