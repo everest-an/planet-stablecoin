@@ -15,12 +15,13 @@
 const BASE = process.env.RANGO_BASE || "https://api.rango.exchange";
 const KEY = process.env.RANGO_API_KEY || "";
 
-// Revenue, without custody and without a fee contract: Rango pays registered affiliates out of the
-// route fee they already charge. We never touch the user's money and never add a hidden markup.
-// Both values are required for it to do anything - an unregistered ref is silently ignored by Rango,
-// so this must be set up on their side before it earns a cent.
+// Revenue, without custody and without a fee contract: Rango pays affiliates out of the route fee
+// it already charges. Per Rango's docs, affiliateWallets + affiliatePercent works on its own - no
+// affiliateRef needed; the fee goes straight to the wallet. The 0.1% default is Rango's, charged
+// to the user, and is disclosed on the operators page rather than hidden in the spread.
 const AFFILIATE_REF = process.env.RANGO_AFFILIATE_REF || "";
 const AFFILIATE_WALLET = process.env.RANGO_AFFILIATE_WALLET || "";
+const AFFILIATE_PERCENT = "0.1";
 
 // Verified canonical addresses only. A same-symbol token at another address is a different asset.
 const ASSETS = {
@@ -90,6 +91,8 @@ export default async function handler(req, res) {
           fromAddress: fromAddress || undefined,
           slippage: "1",
           // One EVM address works on every EVM chain, so the same wallet is offered for each.
+          // Rango's docs: affiliateWallets + affiliatePercent is sufficient on its own; the ref is
+          // optional and routes the same fee to the link-creator's wallet.
           ...(AFFILIATE_REF
             ? { affiliateRef: AFFILIATE_REF }
             : {}),
@@ -98,6 +101,7 @@ export default async function handler(req, res) {
                 affiliateWallets: Object.fromEntries(
                   Object.keys(SOURCES).map((chain) => [chain, AFFILIATE_WALLET]),
                 ),
+                affiliatePercent: AFFILIATE_PERCENT,
               }
             : {}),
         }),
@@ -141,7 +145,9 @@ export default async function handler(req, res) {
             steps: Array.isArray(best.swaps) && best.swaps.length ? best.swaps.length : 1,
           },
           alternatives: Math.max(0, routes.length - 1),
-          affiliate: AFFILIATE_REF && AFFILIATE_WALLET ? AFFILIATE_REF : null,
+          affiliate: AFFILIATE_WALLET
+            ? { wallet: AFFILIATE_WALLET.slice(0, 10) + "…", percent: AFFILIATE_PERCENT }
+            : null,
           // Needed to confirm later; not a transaction, and not usable without the wallet.
           requestId: best.requestId ?? null,
           routeId: j.routeId ?? null,
