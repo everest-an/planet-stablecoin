@@ -29,6 +29,7 @@ const TOKENS = [
     metal: "gold",
     priceId: "pax-gold",
     issuer: "Paxos Trust Company, N.A. (US, OCC)",
+    url: "https://paxos.com/pax-gold/",
     note: "Unavailable to EU residents under MiCA as of 2026-10.",
   },
   {
@@ -38,6 +39,7 @@ const TOKENS = [
     metal: "gold",
     priceId: "tether-gold",
     issuer: "TG Commodities Limited (BVI), Swiss vaults",
+    url: "https://gold.tether.to/",
     note: null,
   },
   {
@@ -47,6 +49,7 @@ const TOKENS = [
     metal: "silver",
     priceId: "kinesis-silver",
     issuer: "KMS Labs S.A. (Panama) — 1:1 claim on Kinesis silver (KAG)",
+    url: "https://kinesis.money/silver/",
     note: "Upgradeable proxy (EIP-1967); redemption requires KMS Labs compliance onboarding.",
     marketVia: "rango",
   },
@@ -168,6 +171,7 @@ export default async function handler(req, res) {
       address: t.address,
       metal: t.metal,
       issuer: t.issuer,
+      url: t.url ?? null,
       note: t.note,
       balance,
       oz,

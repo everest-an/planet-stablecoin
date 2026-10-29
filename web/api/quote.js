@@ -137,6 +137,7 @@ export default async function handler(req, res) {
             feeUsd: best.totalFeeUsd ?? null,
             priceImpact: best.priceImpact ?? null,
             route: swappers.join(" → "),
+            steps: Array.isArray(best.swaps) && best.swaps.length ? best.swaps.length : 1,
           },
           alternatives: Math.max(0, routes.length - 1),
           affiliate: AFFILIATE_REF && AFFILIATE_WALLET ? AFFILIATE_REF : null,
