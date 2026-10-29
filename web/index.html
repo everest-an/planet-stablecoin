@@ -6,7 +6,7 @@
     <title>Planet — on-chain commodity purchasing-power index</title>
     <meta
       name="description"
-      content="Planet (PLT) aggregates real commodity prices into an on-chain purchasing-power index on Arbitrum Sepolia. Synthetic index token — Phase 1 PoC, not a fully-collateralised stablecoin."
+      content="See every tokenised ounce you hold — gold (PAXG, XAUT) and silver (KAG) on Ethereum mainnet — in one place, and buy more in one click. Planet also builds an on-chain commodity purchasing-power index (PoC)."
     />
     <link rel="canonical" href="https://ppppp.space/" />
     <meta name="theme-color" content="#0f0f0f" />
@@ -86,46 +86,35 @@
     <main>
       <!-- HERO -->
       <section class="hero">
-        <p class="notice">[ PoC — test-USDC collateral · no market price · not a stablecoin · not an investment ]</p>
-        <p class="eyebrow">[ on-chain commodity purchasing-power index · Arbitrum Sepolia ]</p>
-        <h1>A purchasing-power index for the world's commodities, <em>on-chain</em>.</h1>
+        <p class="notice">[ live on mainnet — real money, real metal · read-only · we never hold your tokens ]</p>
+        <p class="eyebrow">[ tokenised gold &amp; silver · Ethereum mainnet ]</p>
+        <h1>Every ounce you hold, <em>in one place</em>. Buy more in one click.</h1>
         <p class="lede">
-          Planet (PLT) aggregates the real prices of energy, metals and agriculture into one
-          on-chain index — a synthetic index token (ERC-20), verifiable on Arbitrum Sepolia and mintable from
-          your wallet.
+          Planet reads PAXG, XAUT and KAG straight from Ethereum mainnet — your gold and silver in
+          exact ounces, each with its issuer and its warnings attached. No custody, no sign-up;
+          balances are read from the chain, and buying routes through Rango from any chain.
         </p>
         <div class="hero-cta">
-          <a class="btn solid" href="https://ppppp.space/app">Open the app →</a>
+          <a class="btn solid" href="/metals">See your ounces →</a>
           <a class="btn" href="/whitepaper.html">Read the whitepaper</a>
         </div>
+        <p class="note" style="max-width:720px;margin:14px auto 0">
+          Proven with real money: 5 USDC on Arbitrum → bridge → 0.00161 oz of PAXG on Ethereum
+          (tx <a href="https://etherscan.io/tx/0xeb3e271f8d709cfe8a219685bc18a88e58df770a54a78422eafe0efa1c391d29">0xeb3e271f…1d29</a>),
+          read back by the same page. Below: the research we are building on top — the commodity index.
+        </p>
         <div class="ticker">
-          <span class="tk">[ live ]</span>
+          <span class="tk">[ index ]</span>
           <span class="tk-label">PPI</span>
           <span class="tk-val" id="ppi">—</span>
           <span class="tk-note" id="ppi-note">reading PlanetCore…</span>
         </div>
       </section>
 
-      <!-- LIVE ON MAINNET -->
-      <section class="mainnet-strip" style="border:1px solid #2f9e44;border-radius:12px;padding:16px 20px;margin:0 auto 32px;max-width:960px">
-        <p style="margin:0 0 6px;color:#2f9e44;font-weight:600">[ live on mainnet ]</p>
-        <p style="margin:0 0 10px">
-          The metals product is not a PoC: <a href="/metals"><b>see every tokenised ounce you hold</b> —
-          gold (PAXG, XAUT) and silver (KAG) — across wallets, in ounces</a>, and buy more in one click from
-          any chain, through Rango. Read-only until you choose to buy; we never hold your tokens.
-        </p>
-        <p style="margin:0;font-size:.85em;opacity:.75">
-          Proven with real money: 5 USDC on Arbitrum → bridge → 0.00161 oz of PAXG on Ethereum mainnet
-          (tx <a href="https://etherscan.io/tx/0xeb3e271f8d709cfe8a219685bc18a88e58df770a54a78422eafe0efa1c391d29">0xeb3e271f…1d29</a>),
-          read back by the same page at <a href="/metals">/metals</a>.
-        </p>
-        <p style="margin:10px 0 0"><a class="btn solid" href="/metals">See your ounces →</a></p>
-      </section>
-
-      <!-- WHAT IT IS / IS NOT -->
-      <section class="split" id="what">
-        <div class="col">
-          <div class="sec-head"><span class="num">[ 01 ]</span><span class="lbl">what it is</span><span class="end">¬</span></div>
+      <!-- THE INDEX, SECOND -->
+      <section class="split" id="what" style="margin-top:48px">
+        <div class="sec-head" style="width:100%"><span class="num">[ research ]</span><span class="lbl">what Planet is building on top: a commodity purchasing-power index</span><span class="end">¬</span></div>
+        <div class="col" style="margin-top:12px">
           <ul class="marks yes">
             <li>An on-chain <b>commodity purchasing-power index</b> expressed as the PLT token.</li>
             <li>A <b>synthetic index token</b> (ERC-20) on <b>Arbitrum Sepolia</b>, with mint / burn / redemption accounting.</li>
@@ -133,8 +122,7 @@
             <li>Governed by an <b>owner + timelock</b> (Propose → delay → Execute), multisig-ready.</li>
           </ul>
         </div>
-        <div class="col">
-          <div class="sec-head"><span class="num">[ 02 ]</span><span class="lbl">what it is not</span><span class="end">¬</span></div>
+        <div class="col" style="margin-top:12px">
           <ul class="marks no">
             <li><b>Not a fully-collateralised stablecoin.</b> Mints are collateralised by test USDC, but there is no real commodity reserve.</li>
             <li><b>Not pegged 1:1</b> to a basket — PLT is an index, its market price may diverge.</li>
