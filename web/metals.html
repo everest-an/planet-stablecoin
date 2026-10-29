@@ -39,93 +39,84 @@
     <header class="topbar">
       <a class="wordmark" href="/">Planet</a>
       <nav class="nav">
-        <a href="/">home</a>
-        <a href="/dashboard">dashboard</a>
-        <a href="/docs">docs</a>
-        <a href="/metals">metals</a>
+        <a href="/" data-i18n="nav_home">home</a>
+        <a href="/dashboard" data-i18n="nav_dashboard">dashboard</a>
+        <a href="/docs" data-i18n="nav_docs">docs</a>
+        <a href="/metals" data-i18n="nav_metals">metals</a>
+        <button id="langToggle" class="ghost" style="margin-left:8px;padding:6px 10px" title="language / 语言">中文</button>
       </nav>
     </header>
 
     <main class="wrap">
-      <p class="notice" style="font-family: 'DM Mono', monospace">[ read-only · we never hold your tokens · not investment advice ]</p>
-      <h1>On-chain metals, in one place</h1>
-      <p class="sub">
+      <p class="notice" style="font-family: 'DM Mono', monospace" data-i18n="notice">[ read-only · we never hold your tokens · not investment advice ]</p>
+      <h1 data-i18n="h1">On-chain metals, in one place</h1>
+      <p class="sub" data-i18n="sub">
         Every tokenised ounce you hold, across wallets, counted in ounces rather than tickers.
         No custody, no signature, no new token — we read the chain and hand you to a venue you already trust.
       </p>
 
       <div class="panel">
         <div class="row">
-          <span class="note">wallet</span>
-          <button id="connect" class="ghost">connect</button>
-          <span class="addr" id="account">not connected</span>
+          <span class="note" data-i18n="wallet">wallet</span>
+          <button id="connect" class="ghost" data-i18n="connect">connect</button>
+          <span class="addr" id="account" translate="no">not connected</span>
         </div>
         <div class="row" style="margin-top:6px">
-          <input id="watchAddr" type="text" placeholder="watch another address — read-only, never signed" aria-label="watch address"
+          <input id="watchAddr" type="text" data-i18n-ph="watch_ph" placeholder="watch another address — read-only, never signed" aria-label="watch address"
             style="flex:1;padding:10px;border:1px solid var(--muted,#2a2a2a);background:transparent;color:inherit;font-family:'DM Mono',monospace;font-size:13px" />
-          <button id="addWatch" class="ghost">add</button>
+          <button id="addWatch" class="ghost" data-i18n="watch_add">add</button>
         </div>
-        <div id="watches" style="margin-top:6px;min-height:6px"></div>
+        <div id="watches" style="margin-top:6px;min-height:6px" translate="no"></div>
         <div class="total">
-          <div><div class="k">gold</div><div class="v" id="goldOz">—</div></div>
-          <div><div class="k">silver</div><div class="v" id="silverOz">—</div></div>
-          <div><div class="k">value</div><div class="v" id="usd">—</div></div>
+          <div><div class="k" data-i18n="gold">gold</div><div class="v" id="goldOz">—</div></div>
+          <div><div class="k" data-i18n="silver">silver</div><div class="v" id="silverOz">—</div></div>
+          <div><div class="k" data-i18n="value">value</div><div class="v" id="usd">—</div></div>
         </div>
-        <div id="status"></div>
+        <div id="status" translate="no"></div>
       </div>
 
       <div class="panel">
-        <div class="k" style="font-family: 'DM Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted, #8a8a8a)">holdings</div>
+        <div class="k" style="font-family: 'DM Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted, #8a8a8a)" data-i18n="holdings">holdings</div>
         <table>
           <thead>
-            <tr><th>token</th><th>issuer</th><th class="num">ounces</th><th class="num">value</th></tr>
+            <tr><th data-i18n="th_token">token</th><th data-i18n="th_issuer">issuer</th><th class="num" data-i18n="th_oz">ounces</th><th class="num" data-i18n="th_value">value</th></tr>
           </thead>
-          <tbody id="rows">
-            <tr><td colspan="4" class="issuer">connect a wallet to read balances</td></tr>
+          <tbody id="rows" translate="no">
+            <tr><td colspan="4" class="issuer" data-i18n="rows_empty">connect a wallet to read balances</td></tr>
           </tbody>
         </table>
       </div>
 
       <div class="panel">
-        <div class="k" style="font-family: 'DM Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted, #8a8a8a)">buy</div>
+        <div class="k" style="font-family: 'DM Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted, #8a8a8a)" data-i18n="buy_label">buy</div>
         <div class="row">
-          <input id="amount" type="text" inputmode="decimal" value="100" aria-label="amount in USD" />
+          <input id="amount" type="text" inputmode="decimal" value="100" data-i18n-aria="amount_aria" aria-label="amount in USD" />
           <span class="note">USD</span>
         </div>
         <div class="buy">
-        <button id="buyPaxg">buy gold · PAXG</button>
-        <button id="buyXaut" class="ghost">buy gold · XAUT</button>
-        <button id="buyKag" class="ghost">buy silver · KAG</button>
+        <button id="buyPaxg" data-i18n="buy_paxg">buy gold · PAXG</button>
+        <button id="buyXaut" class="ghost" data-i18n="buy_xaut">buy gold · XAUT</button>
+        <button id="buyKag" class="ghost" data-i18n="buy_kag">buy silver · KAG</button>
         </div>
-        <p class="note" style="margin-top:10px">
+        <p class="note" style="margin-top:10px" data-i18n="uniswap_note">
           Opens the pair on Uniswap with the amount prefilled — one click, then confirm in your wallet.
         </p>
         <div class="row" style="margin-top:14px">
           <select id="fromChain" style="flex:1;padding:10px;border:1px solid var(--muted,#2a2a2a);background:transparent;color:inherit;font-family:'DM Mono',monospace;font-size:13px">
-            <option value="ARBITRUM">pay from Arbitrum</option>
-            <option value="BASE">pay from Base</option>
-            <option value="OPTIMISM">pay from Optimism</option>
-            <option value="POLYGON">pay from Polygon</option>
-            <option value="ETH">pay from Ethereum</option>
+            <option value="ARBITRUM" data-i18n="pay_arb">pay from Arbitrum</option>
+            <option value="BASE" data-i18n="pay_base">pay from Base</option>
+            <option value="OPTIMISM" data-i18n="pay_op">pay from Optimism</option>
+            <option value="POLYGON" data-i18n="pay_poly">pay from Polygon</option>
+            <option value="ETH" data-i18n="pay_eth">pay from Ethereum</option>
           </select>
-          <button id="quoteBtn" class="ghost">get cross-chain quote</button>
+          <button id="quoteBtn" class="ghost" data-i18n="quote_btn">get cross-chain quote</button>
         </div>
-        <div class="note" id="quoteOut" style="min-height:18px;margin-top:8px"></div>
+        <div class="note" id="quoteOut" style="min-height:18px;margin-top:8px" translate="no"></div>
       </div>
 
-      <div class="warn">
-        <b>Two gold tokens, not one, on purpose.</b> PAXG is issued by Paxos (a US national trust bank) and is
-        <b>unavailable to EU residents under MiCA</b>; XAUT is issued in the BVI with Swiss vaults. Holding both
-        spreads issuer and jurisdiction risk — that is the only reason a basket exists. If you just want gold,
-        one token is simpler and cheaper. Silver is KAG: one token, 1:1 claim on Kinesis silver, issued by
-        KMS Labs S.A. (Panama).
-      </div>
+      <div class="warn" id="warnCopy" translate="no"></div>
 
-      <p class="note">
-        Balances are read from Ethereum mainnet. Only canonical issuer deployments are counted; bridged copies are
-        excluded because they add bridge risk on top of issuer risk. Ounces are exact (1 PAXG = 1 XAUT = 1 KAG = 1 fine troy
-        ounce); the USD figure is indicative and is blanked rather than guessed when no price is available.
-      </p>
+      <p class="note" id="noteCopy" translate="no"></p>
     </main>
 
     <script>
@@ -179,10 +170,133 @@
       };
       track("pageview", "metals");
 
+      // Two translations live on the page (en/zh). Everything dynamic is ours — Google Translate is
+      // invited for the rest, and the zones we rewrite at runtime carry translate="no" so the two
+      // never fight over the same text node. The language is chosen once: ?lang=, then saved pref,
+      // then the browser.
+      const I18N = {
+        en: {
+          nav_home: "home", nav_dashboard: "dashboard", nav_docs: "docs", nav_metals: "metals",
+          notice: "[ read-only · we never hold your tokens · not investment advice ]",
+          h1: "On-chain metals, in one place",
+          sub: "Every tokenised ounce you hold, across wallets, counted in ounces rather than tickers. No custody, no signature, no new token — we read the chain and hand you to a venue you already trust.",
+          wallet: "wallet", connect: "connect", not_connected: "not connected", reconnect: "reconnect",
+          watch_ph: "watch another address — read-only, never signed", watch_add: "add",
+          gold: "gold", silver: "silver", value: "value",
+          holdings: "holdings", th_token: "token", th_issuer: "issuer", th_oz: "ounces", th_value: "value",
+          rows_empty: "connect a wallet to read balances",
+          buy_label: "buy", amount_aria: "amount in USD",
+          buy_paxg: "buy gold · PAXG", buy_xaut: "buy gold · XAUT", buy_kag: "buy silver · KAG",
+          uniswap_note: "Opens the pair on Uniswap with the amount prefilled — one click, then confirm in your wallet.",
+          pay_arb: "pay from Arbitrum", pay_base: "pay from Base", pay_op: "pay from Optimism",
+          pay_poly: "pay from Polygon", pay_eth: "pay from Ethereum",
+          quote_btn: "get cross-chain quote",
+          warn_copy: "<b>Two gold tokens, not one, on purpose.</b> PAXG is issued by Paxos (a US national trust bank) and is <b>unavailable to EU residents under MiCA</b>; XAUT is issued in the BVI with Swiss vaults. Holding both spreads issuer and jurisdiction risk — that is the only reason a basket exists. If you just want gold, one token is simpler and cheaper. Silver is KAG: one token, 1:1 claim on Kinesis silver, issued by KMS Labs S.A. (Panama).",
+          note_copy: "Balances are read from Ethereum mainnet. Only canonical issuer deployments are counted; bridged copies are excluded because they add bridge risk on top of issuer risk. Ounces are exact (1 PAXG = 1 XAUT = 1 KAG = 1 fine troy ounce); the USD figure is indicative and is blanked rather than guessed when no price is available.",
+          status_reading: "reading balances…",
+          status_unavailable: "balances read · price source unavailable",
+          status_read_fail: "could not read balances — retry shortly",
+          quoting: "quoting…",
+          quote_line: "{0} USDC on {1} → {2} {3}",
+          quote_two_step: "two-step route: it bridges first, which can take minutes to hours. Once you sign, it continues on its own — keep this tab open.",
+          swap_now: "swap now", continue_rango: "or continue in Rango →",
+          confirming: "confirming the route…", resuming: "resuming from step {0}…",
+          connect_first: "connect a wallet first",
+          shortfall: "not enough {0} on {1}: have {2}, need {3}",
+          approve_wallet: "approve in your wallet…", confirm_wallet: "confirm the swap in your wallet…",
+          sent: "sent — {0} transaction(s) confirmed",
+          bridging: "money has moved — the bridge is settling (up to ~20 min). It will continue on its own; keep this tab open.",
+          saved_step: "this route is saved at step {0} — reload the page to resume it; do not start a new one.",
+          signed_so_far: "signed so far: {0}",
+          support_line: "if it does not finish, send Rango support: requestId {0}… — the money is on the route, not lost.",
+          no_tx: "Rango produced no transaction for this route",
+          tx_failed: "transaction failed on-chain",
+          bad_addr: "paste a full 0x… address",
+          resume_saved: "an unfinished swap is saved (step {0}): {1} {2} → {3}.",
+          resume_btn: "resume it",
+          no_metal: "no metal in these wallets",
+          no_wallet: "no injected wallet found — install MetaMask or Rabby",
+          unsupported_chain: "unsupported chain {0}",
+          market_gap: "trades {0}% {1} spot: ${2}",
+          below: "below", above: "above",
+        },
+        zh: {
+          nav_home: "首页", nav_dashboard: "看板", nav_docs: "文档", nav_metals: "贵金属",
+          notice: "[ 只读 · 我们从不持有你的代币 · 不构成投资建议 ]",
+          h1: "链上贵金属，一个地方看全",
+          sub: "你持有的每一盎司代币化贵金属，跨钱包汇总，以盎司而非代码计价。没有托管、没有签名、没有新代币——我们只读链上数据，然后把你交给一个你已信任的交易场所。",
+          wallet: "钱包", connect: "连接", not_connected: "未连接", reconnect: "重新连接",
+          watch_ph: "观察另一个地址——只读，永不签名", watch_add: "添加",
+          gold: "黄金", silver: "白银", value: "价值",
+          holdings: "持仓", th_token: "代币", th_issuer: "发行方", th_oz: "盎司", th_value: "价值",
+          rows_empty: "连接钱包以读取余额",
+          buy_label: "买入", amount_aria: "美元金额",
+          buy_paxg: "买入黄金 · PAXG", buy_xaut: "买入黄金 · XAUT", buy_kag: "买入白银 · KAG",
+          uniswap_note: "在 Uniswap 打开该交易对并预填金额——点一下，然后在钱包里确认。",
+          pay_arb: "从 Arbitrum 支付", pay_base: "从 Base 支付", pay_op: "从 Optimism 支付",
+          pay_poly: "从 Polygon 支付", pay_eth: "从 Ethereum 支付",
+          quote_btn: "获取跨链报价",
+          warn_copy: "<b>两种黄金代币，是有意为之。</b>PAXG 由 Paxos（美国全国信托银行）发行，<b>因 MiCA 不对欧盟居民开放</b>；XAUT 在英属维尔京群岛发行、瑞士金库保管。同时持有可分散发行方与辖区风险——这是篮子存在的唯一理由。如果你只想要黄金，一种代币更简单也更便宜。白银是 KAG：一种代币，1:1 对应 Kinesis 白银债权，由 KMS Labs S.A.（巴拿马）发行。",
+          note_copy: "余额读取自以太坊主网。只统计发行方的正规部署；桥接副本因叠加桥接风险而被排除。盎司数精确（1 PAXG = 1 XAUT = 1 KAG = 1 金衡盎司）；美元数为参考值，价格源不可用时宁可留空也不猜测。",
+          status_reading: "读取余额中…",
+          status_unavailable: "余额已读取 · 价格源不可用",
+          status_read_fail: "无法读取余额——请稍后重试",
+          quoting: "报价中…",
+          quote_line: "{1} 上的 {0} USDC → {2} {3}",
+          quote_two_step: "两步路线：先跨链桥接，可能需要几分钟到几小时。签名后它会自动继续——保持本页打开。",
+          swap_now: "立即兑换", continue_rango: "或在 Rango 继续 →",
+          confirming: "确认路线中…", resuming: "从第 {0} 步恢复…",
+          connect_first: "请先连接钱包",
+          shortfall: "{1} 上的 {0} 不足：有 {2}，需要 {3}",
+          approve_wallet: "在钱包里批准…", confirm_wallet: "在钱包里确认兑换…",
+          sent: "已发送——{0} 笔交易已确认",
+          bridging: "资金已划出——桥接结算中（最多约 20 分钟）。会自动继续；请保持本页打开。",
+          saved_step: "该路线已保存在第 {0} 步——刷新页面即可恢复；不要开始新的一笔。",
+          signed_so_far: "目前已签名：{0}",
+          support_line: "如果一直未完成，请把 requestId {0}… 发给 Rango 客服——钱在路线上，没有丢。",
+          no_tx: "Rango 没有为这条路线生成交易",
+          tx_failed: "链上交易失败",
+          bad_addr: "请粘贴完整的 0x… 地址",
+          resume_saved: "有一笔未完成的兑换已保存（第 {0} 步）：{1} {2} → {3}。",
+          resume_btn: "恢复它",
+          no_metal: "这些钱包里没有贵金属",
+          no_wallet: "未检测到注入钱包——请安装 MetaMask 或 Rabby",
+          unsupported_chain: "不支持的链 {0}",
+          market_gap: "比现货{1} {0}%：${2}",
+          below: "低", above: "高",
+        },
+      };
+      const LANGS = ["en", "zh"];
+      let lang = (() => {
+        const q = new URLSearchParams(location.search).get("lang");
+        if (LANGS.includes(q)) return q;
+        const saved = (() => { try { return localStorage.getItem("planet.lang"); } catch { return null; } })();
+        if (LANGS.includes(saved)) return saved;
+        return (navigator.language || "en").toLowerCase().startsWith("zh") ? "zh" : "en";
+      })();
+      const t = (k, ...args) => {
+        let s = (I18N[lang] && I18N[lang][k]) ?? I18N.en[k] ?? k;
+        for (let i = 0; i < args.length; i++) s = s.replaceAll("{" + i + "}", String(args[i]));
+        return s;
+      };
+      function applyI18n() {
+        document.documentElement.lang = lang;
+        document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
+        document.querySelectorAll("[data-i18n-ph]").forEach((el) => el.setAttribute("placeholder", t(el.dataset.i18nPh)));
+        document.querySelectorAll("[data-i18n-aria]").forEach((el) => el.setAttribute("aria-label", t(el.dataset.i18nAria)));
+        $("warnCopy").innerHTML = t("warn_copy");
+        $("noteCopy").innerHTML = t("note_copy");
+        $("langToggle").textContent = lang === "zh" ? "EN" : "中文";
+        if (!account) $("account").textContent = t("not_connected");
+        else $("connect").textContent = t("reconnect");
+        renderWatches();
+        if (account || watched.length) readWallet();
+      }
+
       async function readWallet() {
         const addrs = [...new Set([account, ...watched].filter(Boolean))];
         if (!addrs.length) return;
-        $("status").textContent = "reading balances…";
+        $("status").textContent = t("status_reading");
         try {
           const ds = await Promise.all(
             addrs.map((a) =>
@@ -190,7 +304,7 @@
             ),
           );
           const ok = ds.filter(Boolean);
-          if (!ok.length) throw new Error("could not read balances — retry shortly");
+          if (!ok.length) throw new Error(t("status_read_fail"));
 
           const tokens = [];
           for (const t of ok[0].tokens) {
@@ -219,9 +333,8 @@
           const rows = tokens
             .filter((t) => t.balance != null)
             .map((t) => {
-              const gap = t.priceUsd && t.marketPriceUsd ? (t.marketPriceUsd / t.priceUsd) * 100 : null;
               const market = t.marketUsd != null && t.priceUsd != null && t.marketPriceUsd != null && Math.abs(t.marketPriceUsd / t.priceUsd - 1) > 0.05
-                ? ` <span class="issuer">(trades ${fmt((t.marketPriceUsd / t.priceUsd - 1) * 100, 0)}% ${t.marketPriceUsd < t.priceUsd ? "below" : "above"} spot: $${fmt(t.marketUsd, 2)})</span>`
+                ? ` <span class="issuer">(${t("market_gap", fmt((t.marketPriceUsd / t.priceUsd - 1) * 100, 0), t.marketPriceUsd < t.priceUsd ? t("below") : t("above"), fmt(t.marketUsd, 2))})</span>`
                 : "";
               return `<tr>
                 <td>${t.symbol}</td>
@@ -231,9 +344,9 @@
               </tr>`;
             })
             .join("");
-          $("rows").innerHTML = rows || `<tr><td colspan="4" class="issuer">no metal in these wallets</td></tr>`;
+          $("rows").innerHTML = rows || `<tr><td colspan="4" class="issuer">${t("no_metal")}</td></tr>`;
           $("status").textContent =
-            ok.some((d) => d.priceSource === "unavailable") ? "balances read · price source unavailable" : "";
+            ok.some((d) => d.priceSource === "unavailable") ? t("status_unavailable") : "";
           renderWatches();
         } catch (e) {
           $("status").innerHTML = `<span style="color:#e03131">${e.message}</span>`;
@@ -242,7 +355,7 @@
 
       async function connect() {
         if (!window.ethereum) {
-          $("status").innerHTML = '<span style="color:#e03131">no injected wallet found — install MetaMask or Rabby</span>';
+          $("status").innerHTML = `<span style="color:#e03131">${t("no_wallet")}</span>`;
           return;
         }
         try {
@@ -250,10 +363,10 @@
           account = accts[0];
           track("connected", shortHash(account));
           $("account").textContent = account;
-          $("connect").textContent = "reconnect";
+          $("connect").textContent = t("reconnect");
           window.ethereum.on?.("accountsChanged", (a) => {
             account = a[0] ?? null;
-            $("account").textContent = account ?? "not connected";
+            $("account").textContent = account ?? t("not_connected");
             readWallet();
           });
           readWallet();
@@ -283,26 +396,23 @@
         const sym = quotingFor || "PAXG";
         const amount = String($("amount").value).replace(/[^0-9.]/g, "") || "100";
         const from = $("fromChain").value;
-        $("quoteOut").textContent = "quoting…";
+        $("quoteOut").textContent = t("quoting");
         try {
           const r = await fetch(`/api/quote?symbol=${sym}&from=${from}&amount=${amount}`);
           const j = await r.json();
-          if (!r.ok) throw new Error(j?.error?.message || "quote failed");
+          if (!r.ok) throw new Error(j?.error?.message || t("no_tx"));
           const b = j.best;
           pendingQuote = { requestId: j.requestId, symbol: sym, from, amount };
           track("quote", `${sym} ${from} ${amount}`);
           const steps = Number(b.steps) || 1;
           $("quoteOut").innerHTML =
-            `<b>${amount} USDC on ${from} → ${Number(b.outputAmount).toFixed(6)} ${sym}</b>` +
+            `<b>${t("quote_line", amount, from, Number(b.outputAmount).toFixed(6), sym)}</b>` +
             (b.timeSeconds ? ` · ~${b.timeSeconds}s` : "") +
             ` · ${b.route}` +
             (j.alternatives ? ` · +${j.alternatives} other route(s)` : "") +
-            (steps > 1
-              ? `<br><span style="color:#f08c00">two-step route: it bridges first, which can take minutes to hours. ` +
-                `Once you sign, it continues on its own — keep this tab open.</span>`
-              : "") +
-            `<div class="buy" style="margin-top:8px"><button id="swapNow">swap now</button></div>` +
-            `<span style="opacity:.7"><a href="${rangoLink(sym, from, amount)}" target="_blank" rel="noopener">or continue in Rango →</a></span>`;
+            (steps > 1 ? `<br><span style="color:#f08c00">${t("quote_two_step")}</span>` : "") +
+            `<div class="buy" style="margin-top:8px"><button id="swapNow">${t("swap_now")}</button></div>` +
+            `<span style="opacity:.7"><a href="${rangoLink(sym, from, amount)}" target="_blank" rel="noopener">${t("continue_rango")}</a></span>`;
           $("swapNow").addEventListener("click", () => { track("swap_clicked", sym); executeSwap(false); });
         } catch (e) {
           $("quoteOut").innerHTML = `<span style="color:#e03131">${e.message}</span>`;
@@ -345,7 +455,7 @@
 
       async function ensureChain(blockchain) {
         const want = RANGO_CHAIN_HEX[blockchain];
-        if (!want) throw new Error("unsupported chain " + blockchain);
+        if (!want) throw new Error(t("unsupported_chain", blockchain));
         const have = await window.ethereum.request({ method: "eth_chainId" });
         if (String(have).toLowerCase() === want) return;
         await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: want }] });
@@ -408,9 +518,7 @@
             last = e;
             if (!/something went wrong|try again|timeout|network|fetch|invalid step/i.test(e.message)) throw e;
             if (long) {
-              $("quoteOut").innerHTML =
-                `<span style="color:#f08c00">money has moved — the bridge is settling (up to ~20 min). ` +
-                `It will continue on its own; keep this tab open.</span>`;
+              $("quoteOut").innerHTML = `<span style="color:#f08c00">${t("bridging")}</span>`;
             }
             await new Promise((r) => setTimeout(r, long ? 45000 : 2000 * (attempt + 1)));
           }
@@ -424,11 +532,11 @@
         const q = resume ? readPending() : pendingQuote;
         if (!q) return;
         if (!account) {
-          $("status").innerHTML = '<span style="color:#e03131">connect a wallet first</span>';
+          $("status").innerHTML = `<span style="color:#e03131">${t("connect_first")}</span>`;
           return;
         }
         const fromStep = resume ? q.step || 1 : 1;
-        $("quoteOut").textContent = resume ? `resuming from step ${fromStep}…` : "confirming the route…";
+        $("quoteOut").textContent = resume ? t("resuming", fromStep) : t("confirming");
         try {
           const wallets = { [q.from]: account, ETH: account };
           if (!resume) {
@@ -437,8 +545,7 @@
             if (conf.shortfalls?.length) {
               const s0 = conf.shortfalls[0];
               $("quoteOut").innerHTML =
-                `<span style="color:#e03131">not enough ${s0.symbol} on ${s0.blockchain}: have ` +
-                `${(Number(s0.current) / 10 ** s0.decimals).toFixed(4)}, need ${(Number(s0.required) / 10 ** s0.decimals).toFixed(4)}</span>`;
+                `<span style="color:#e03131">${t("shortfall", s0.symbol, s0.blockchain, (Number(s0.current) / 10 ** s0.decimals).toFixed(4), (Number(s0.required) / 10 ** s0.decimals).toFixed(4))}</span>`;
               return;
             }
           }
@@ -463,9 +570,9 @@
               const tx = res.transaction;
               produced = true;
               await ensureChain(tx.chain);
-              $("quoteOut").textContent = tx.isApprovalTx ? "approve in your wallet…" : "confirm the swap in your wallet…";
+              $("quoteOut").textContent = tx.isApprovalTx ? t("approve_wallet") : t("confirm_wallet");
               const hash = await signTransaction(tx);
-              if (!hash) throw new Error("transaction failed on-chain");
+              if (!hash) throw new Error(t("tx_failed"));
               hashes.push(hash);
               writePending({ ...q, step, hashes });
               track("signed", `${tx.chain}:${hash.slice(0, 18)}`);
@@ -475,10 +582,10 @@
             if (!produced) break; // no such step: the route is finished
           }
 
-          if (!signed) throw new Error("Rango produced no transaction for this route");
+          if (!signed) throw new Error(t("no_tx"));
           clearPending();
           track("completed", String(signed));
-          $("quoteOut").innerHTML = `<span style="color:#2f9e44">sent — ${signed} transaction(s) confirmed</span>`;
+          $("quoteOut").innerHTML = `<span style="color:#2f9e44">${t("sent", signed)}</span>`;
           readWallet();
         } catch (e) {
           // The route may have already moved money. Keep the handle and say so, rather than offering
@@ -489,11 +596,11 @@
           $("quoteOut").innerHTML =
             `<span style="color:#e03131">${e.message}</span>` +
             (still
-              ? `<br><span style="color:#f08c00">this route is saved at step ${still.step} — reload the page to resume it; do not start a new one.</span>` +
+              ? `<br><span style="color:#f08c00">${t("saved_step", still.step)}</span>` +
                 (hashes
-                  ? `<br><span style="opacity:.8">signed so far: ${hashes}</span>`
+                  ? `<br><span style="opacity:.8">${t("signed_so_far", hashes)}</span>`
                   : "") +
-                `<br><span style="opacity:.8">if it does not finish, send Rango support: requestId ${String(still.requestId).slice(0, 18)}… — the money is on the route, not lost.</span>`
+                `<br><span style="opacity:.8">${t("support_line", String(still.requestId).slice(0, 18))}</span>`
               : "");
         }
       }
@@ -504,10 +611,9 @@
         if (!p) return;
         const box = $("quoteOut");
         box.innerHTML =
-          `<span style="color:#f08c00">an unfinished swap is saved (step ${p.step}): ${p.amount} ` +
-          `${p.from} → ${p.symbol}.</span> `;
+          `<span style="color:#f08c00">${t("resume_saved", p.step, p.amount, p.from, p.symbol)}</span> `;
         const b = document.createElement("button");
-        b.textContent = "resume it";
+        b.textContent = t("resume_btn");
         b.style.cssText =
           "margin-left:8px;padding:6px 12px;border-radius:8px;border:1px solid #f08c00;background:transparent;color:#f08c00;cursor:pointer;font:inherit";
         b.onclick = () => executeSwap(true);
@@ -523,7 +629,7 @@
       $("addWatch").addEventListener("click", () => {
         const a = String($("watchAddr").value).trim();
         if (!/^0x[0-9a-fA-F]{40}$/.test(a)) {
-          $("status").innerHTML = '<span style="color:#e03131">paste a full 0x… address</span>';
+          $("status").innerHTML = `<span style="color:#e03131">${t("bad_addr")}</span>`;
           return;
         }
         if (!watched.includes(a) && a.toLowerCase() !== String(account || "").toLowerCase()) {
@@ -534,7 +640,13 @@
         $("watchAddr").value = "";
         readWallet();
       });
-      renderWatches();
+      $("langToggle").addEventListener("click", () => {
+        lang = lang === "zh" ? "en" : "zh";
+        try { localStorage.setItem("planet.lang", lang); } catch {}
+        track("lang", lang);
+        applyI18n();
+      });
+      applyI18n();
     </script>
   </body>
 </html>
