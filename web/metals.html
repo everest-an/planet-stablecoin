@@ -399,16 +399,16 @@
           $("usd").textContent = anyUsd ? "$" + fmt(sum((t) => t.usd), 2) : "—";
 
           const rows = tokens
-            .filter((t) => t.balance != null)
-            .map((t) => {
-              const market = t.marketUsd != null && t.priceUsd != null && t.marketPriceUsd != null && Math.abs(t.marketPriceUsd / t.priceUsd - 1) > 0.05
-                ? ` <span class="issuer">(${t("market_gap", fmt((t.marketPriceUsd / t.priceUsd - 1) * 100, 0), t.marketPriceUsd < t.priceUsd ? t("below") : t("above"), fmt(t.marketUsd, 2))})</span>`
+            .filter((tok) => tok.balance != null)
+            .map((tok) => {
+              const market = tok.marketUsd != null && tok.priceUsd != null && tok.marketPriceUsd != null && Math.abs(tok.marketPriceUsd / tok.priceUsd - 1) > 0.05
+                ? ` <span class="issuer">(${t("market_gap", fmt((tok.marketPriceUsd / tok.priceUsd - 1) * 100, 0), tok.marketPriceUsd < tok.priceUsd ? t("below") : t("above"), fmt(tok.marketUsd, 2))})</span>`
                 : "";
               return `<tr>
-                <td>${t.symbol}</td>
-                <td class="issuer">${t.url ? `<a href="${t.url}" target="_blank" rel="noopener">${t.issuer}</a>` : t.issuer}</td>
-                <td class="num">${fmt(t.oz, 6)}</td>
-                <td class="num">${t.usd == null ? "—" : "$" + fmt(t.usd, 2)}${market}</td>
+                <td>${tok.symbol}</td>
+                <td class="issuer">${tok.url ? `<a href="${tok.url}" target="_blank" rel="noopener">${tok.issuer}</a>` : tok.issuer}</td>
+                <td class="num">${fmt(tok.oz, 6)}</td>
+                <td class="num">${tok.usd == null ? "—" : "$" + fmt(tok.usd, 2)}${market}</td>
               </tr>`;
             })
             .join("");
