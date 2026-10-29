@@ -257,6 +257,13 @@
 
       const RANGO_CHAIN_ID = { ETH: 1, ARBITRUM: 42161, BASE: 8453, OPTIMISM: 10, POLYGON: 137 };
       const RANGO_CHAIN_HEX = { ETH: "0x1", ARBITRUM: "0xa4b1", BASE: "0x2105", OPTIMISM: "0xa", POLYGON: "0x89" };
+      const RANGO_RPC = {
+        ETH: "https://ethereum-rpc.publicnode.com",
+        ARBITRUM: "https://arb1.arbitrum.io/rpc",
+        BASE: "https://mainnet.base.org",
+        OPTIMISM: "https://mainnet.optimism.io",
+        POLYGON: "https://polygon-bor-rpc.publicnode.com",
+      };
 
       async function ensureChain(blockchain) {
         const want = RANGO_CHAIN_HEX[blockchain];
@@ -286,8 +293,9 @@
         if (tx.value && tx.value !== "0") params.value = "0x" + BigInt(tx.value).toString(16);
         if (tx.gasLimit) params.gas = "0x" + BigInt(tx.gasLimit).toString(16);
         const hash = await window.ethereum.request({ method: "eth_sendTransaction", params: [params] });
+        const rpc = RANGO_RPC[tx.chain] || "https://ethereum-rpc.publicnode.com";
         for (let i = 0; i < 90; i++) {
-          const rc = await fetch("https://ethereum-rpc.publicnode.com", {
+          const rc = await fetch(rpc, {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_getTransactionReceipt", params: [hash] }),
@@ -309,16 +317,24 @@
       const clearPending = () => localStorage.removeItem(PENDING_KEY);
 
       // "Something went wrong, please try again" is what Rango returns for a transient failure. On a
-      // round trip that has already moved money it must not end the attempt.
-      async function createStep(requestId, step) {
+      // round trip that has already moved money it must not end the attempt. When money HAS moved
+      // (a later step), the wait is long: the bridge attestation alone takes up to ~20 minutes, so
+      // the step is retried every 45s for half an hour, and the page says so instead of erroring.
+      async function createStep(requestId, step, { long = false } = {}) {
+        const attempts = long ? 40 : 4;
         let last;
-        for (let attempt = 0; attempt < 4; attempt++) {
+        for (let attempt = 0; attempt < attempts; attempt++) {
           try {
             return await post({ action: "create", requestId, step });
           } catch (e) {
             last = e;
-            if (!/something went wrong|try again|timeout|network|fetch/i.test(e.message)) throw e;
-            await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+            if (!/something went wrong|try again|timeout|network|fetch|invalid step/i.test(e.message)) throw e;
+            if (long) {
+              $("quoteOut").innerHTML =
+                `<span style="color:#f08c00">money has moved — the bridge is settling (up to ~20 min). ` +
+                `It will continue on its own; keep this tab open.</span>`;
+            }
+            await new Promise((r) => setTimeout(r, long ? 45000 : 2000 * (attempt + 1)));
           }
         }
         throw last;
@@ -361,7 +377,9 @@
             let produced = false;
             writePending({ ...q, step });
             for (let guard = 0; guard < 4; guard++) {
-              const res = await createStep(q.requestId, step);
+              // Once any transaction has been signed, this route has moved real money and a later
+              // step gets the long, automatic retry window instead of giving up.
+              const res = await createStep(q.requestId, step, { long: signed > 0 });
               if (res.done || !res.transaction) break;
               const tx = res.transaction;
               produced = true;
