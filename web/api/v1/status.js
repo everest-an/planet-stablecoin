@@ -145,6 +145,18 @@ async function readStatus() {
       chain: CHAIN,
       core: CORE,
       isCurrentDeployment: true,
+      // This endpoint reports the Sepolia proof of concept. The canonical, verified index lives on
+      // Arbitrum One and is served by /api/v1/ppi; answering without saying so is how a stale testnet
+      // number gets mistaken for the live one.
+      mainnetIndex: {
+        chain: "arbitrum-one",
+        chainId: 42161,
+        core: process.env.PPI_CORE || "0x61de052af7cb7dc957a07b1e6298152bb851cbbb",
+        oracle: process.env.PPI_ORACLE || "0x0daf541ef7e41402070bc549f91475ab368d1824",
+        api: "/api/v1/ppi",
+        page: "/ppi",
+        mintingEnabled: false,
+      },
       readMs: Date.now() - started,
       partial,
       ppi: toNum(g.currentPpi) / SCALE,

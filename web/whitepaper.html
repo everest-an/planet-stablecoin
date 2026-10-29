@@ -82,6 +82,12 @@
     </style>
   </head>
   <body>
+    <div id="deployment-banner" style="background:#0f0f0f;color:#f08c00;font-family:'DM Mono',monospace;font-size:11px;line-height:1.5;padding:8px 14px;text-align:center;border-bottom:1px solid #2f9e44">
+This page documents the <b>Sepolia proof of concept</b>. The live index is on <b>Arbitrum One</b> →
+<a href="/ppi" style="color:#2f9e44">/ppi</a> ·
+<a href="/methodology" style="color:#2f9e44">methodology</a> ·
+<a href="/lp" style="color:#2f9e44">for LPs</a>
+</div>
     <header class="topbar">
       <a class="wordmark" href="/">Planet</a>
       <nav class="nav">
@@ -94,6 +100,27 @@
     </header>
 
     <main>
+      <section style="max-width:900px;margin:0 auto;padding:24px 20px 0">
+        <div style="border:1px solid #f08c00;padding:16px;font-family:'DM Mono',monospace;font-size:12px;line-height:1.8">
+          <div style="color:#f08c00;text-transform:uppercase;letter-spacing:.08em;font-size:10px">status of the claims in this paper &mdash; 2026-10-29</div>
+          <table style="width:100%;border-collapse:collapse;margin-top:10px">
+            <tbody>
+              <tr><td style="padding:6px 0;border-bottom:1px solid #2a2a2a">14-asset basket, weights, PPI formula</td>
+                  <td style="padding:6px 0;border-bottom:1px solid #2a2a2a;color:#2f9e44">live on Arbitrum One &mdash; <a href="/ppi">/ppi</a></td></tr>
+              <tr><td style="padding:6px 0;border-bottom:1px solid #2a2a2a">Four-channel oracle with a confirmation rule</td>
+                  <td style="padding:6px 0;border-bottom:1px solid #2a2a2a;color:#2f9e44">live; now a 2-of-3 signed pull feed</td></tr>
+              <tr><td style="padding:6px 0;border-bottom:1px solid #2a2a2a">Fees that fund the reserve so it tracks the index</td>
+                  <td style="padding:6px 0;border-bottom:1px solid #2a2a2a;color:#c2401c">disproven &mdash; &sect;1.2 below shows why no fee schedule closes the gap</td></tr>
+              <tr><td style="padding:6px 0;border-bottom:1px solid #2a2a2a">PLT as a redeemable claim on the reserve</td>
+                  <td style="padding:6px 0;border-bottom:1px solid #2a2a2a;color:#f08c00">not offered &mdash; mainnet minting is disabled (no deposit token)</td></tr>
+              <tr><td style="padding:6px 0;border-bottom:1px solid #2a2a2a">Algorithmic stability</td>
+                  <td style="padding:6px 0;border-bottom:1px solid #2a2a2a;color:#c2401c">not pursued in this form; only a collateralised, hedged unit is sound</td></tr>
+              <tr><td style="padding:6px 0">RWA reserve, fund layer, governance token</td>
+                  <td style="padding:6px 0;color:#8a8a8a">not built</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
       <section class="hero">
         <p class="eyebrow">[ whitepaper · v2.0 · complete edition · reference implementation: Arbitrum Sepolia ]</p>
         <h1>Planet — an on-chain commodity purchasing-power index.</h1>
