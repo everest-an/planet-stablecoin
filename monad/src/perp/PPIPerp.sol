@@ -30,6 +30,9 @@ contract PPIPerp {
     uint256 public closeFeeBps = 10;
     uint256 public liqFeeBps = 100; // 1% of notional on liquidation
     uint256 public maintenanceBps = 500; // 5% maintenance margin
+    uint256 public maxOiToPoolBps = 20_000; // open interest may not exceed 2x poolAssets
+    address public treasury;
+    uint256 public protocolShareBps = 3_000; // 30% of fees goes to the platform
     uint256 public constant BPS = 10_000;
 
     // --- funding: signed rate per second, 1e18 per unit of notional ---
@@ -69,6 +72,9 @@ contract PPIPerp {
     event FundingRateSet(int256 ratePerSec);
     event PriceSourceSet(address source);
     event KeeperSet(address indexed keeper);
+    event TreasurySet(address indexed treasury);
+    event ProtocolShareSet(uint256 bps);
+    event ProtocolFee(address indexed treasury, uint256 amount);
 
     /// @dev funding is bounded so a compromised keeper cannot drain the pool through the funding rate
     int256 public constant MAX_FUNDING_RATE_PER_SEC = 1e12;
@@ -131,6 +137,10 @@ contract PPIPerp {
         shares[msg.sender] -= shareAmount;
         totalShares -= shareAmount;
         poolAssets -= amount;
+        // Keep capital behind the open interest: an LP that withdraws everything while positions
+        // are open leaves the pool unable to pay winners, and the payout cap would hand that loss to
+        // the traders. Blocked rather than silently capped.
+        if (_abs(netSize) > (poolAssets * maxOiToPoolBps) / BPS) revert PoolInsolvent();
         require(usdc.transfer(msg.sender, amount), "usdc push");
         emit PoolWithdraw(msg.sender, amount, shareAmount);
     }
@@ -149,6 +159,8 @@ contract PPIPerp {
         if (notional > maxOpenInterest) revert BadInput();
         uint256 oi = _abs(netSize) + notional;
         if (oi > maxOpenInterest) revert OpenInterestCap();
+        uint256 poolCap = (poolAssets * maxOiToPoolBps) / BPS;
+        if (oi > poolCap) revert OpenInterestCap();
 
         // caution halves the allowed leverage
         uint256 levBps = risk == 1 ? maxLeverageBps / 2 : maxLeverageBps;
@@ -159,7 +171,8 @@ contract PPIPerp {
         if (fee >= collateral) revert BadInput();
 
         require(usdc.transferFrom(msg.sender, address(this), collateral), "usdc pull");
-        poolAssets += fee; // the fee belongs to the pool immediately
+        uint256 cut = _takeProtocolFee(fee);
+        poolAssets += fee - cut;
         uint256 net = collateral - fee;
 
         if (!positions[msg.sender].open) {
@@ -203,6 +216,10 @@ contract PPIPerp {
         uint256 maint = (notional * maintenanceBps) / BPS;
         int256 equity = int256(p.collateral) + pnl - funding;
         if (equity >= int256(maint)) revert NotLiquidatable();
+        // A frozen feed means the price is the last known one. Liquidating a merely borderline
+        // position on it is the bad-print cascade this market exists to avoid; only positions
+        // underwater by half the maintenance buffer may be closed while frozen.
+        if (priceSource.riskLevel() >= 2 && equity >= int256(maint / 2)) revert Frozen();
 
         uint256 remaining = equity > 0 ? uint256(equity) : 0;
         keeperReward = remaining / 2;
@@ -274,7 +291,33 @@ contract PPIPerp {
         emit KeeperSet(k);
     }
 
+    function setTreasury(address t) external onlyOwner {
+        treasury = t;
+        emit TreasurySet(t);
+    }
+
+    function setProtocolShare(uint256 bps) external onlyOwner {
+        if (bps > 5_000) revert BadInput();
+        protocolShareBps = bps;
+        emit ProtocolShareSet(bps);
+    }
+
+    function setMaxOiToPool(uint256 bps) external onlyOwner {
+        if (bps < 2_000 || bps > 100_000) revert BadInput();
+        maxOiToPoolBps = bps;
+    }
+
     // ---------------------------------------------------------------- internals
+
+    function _takeProtocolFee(uint256 fee) internal returns (uint256 cut) {
+        cut = (fee * protocolShareBps) / BPS;
+        if (cut > 0 && treasury != address(0)) {
+            require(usdc.transfer(treasury, cut), "treasury pay");
+            emit ProtocolFee(treasury, cut);
+        } else {
+            cut = 0;
+        }
+    }
 
     function _accrueFunding() internal {
         uint256 dt = block.timestamp - lastFundingTime;

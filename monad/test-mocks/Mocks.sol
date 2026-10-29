@@ -55,3 +55,29 @@ contract MockUSDC {
         return true;
     }
 }
+
+/// @dev TEST ONLY. Minimal PlanetCore surface so PPIPriceSource can be exercised, including the
+///      future-timestamp case the real signer produces (now + 120).
+contract MockCore {
+    uint64 public currentPpi = 1_000_000;
+    uint64 public lastOracleUpdate;
+    uint8 public st;
+
+    function set(uint64 ppi_, uint64 ts_, uint8 st_) external {
+        currentPpi = ppi_;
+        lastOracleUpdate = ts_;
+        st = st_;
+    }
+
+    function assetCount() external pure returns (uint256) {
+        return 1;
+    }
+
+    function assets(uint256)
+        external
+        view
+        returns (uint64 weight, uint64 basePrice, uint64 currentPrice, uint64 volatility, uint64 liquidity, uint8 riskState, uint64 lastUpdate)
+    {
+        return (1_000_000, 1_000_000, 1_000_000, 0, 1_000_000, st, lastOracleUpdate);
+    }
+}

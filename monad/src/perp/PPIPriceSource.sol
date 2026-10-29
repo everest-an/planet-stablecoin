@@ -48,6 +48,10 @@ contract PPIPriceSource is IPerpPrice {
     function riskLevel() public view returns (uint8) {
         uint64 last = core.lastOracleUpdate();
         if (last == 0) return 2;
+        // The signer publishes timestamps slightly ahead of the chain clock (now + 120). A plain
+        // subtraction would underflow and revert for those two minutes, bricking open() and
+        // liquidate() right after every push. Treat a future timestamp as age zero.
+        if (last >= block.timestamp) return 0;
         uint64 age = uint64(block.timestamp) - last;
         if (age > MAX_ORACLE_AGE) return 2;
 
