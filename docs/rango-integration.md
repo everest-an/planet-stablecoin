@@ -135,15 +135,16 @@ and a regulated activity. Rango already charges the user a route fee; its affili
 registered integrator out of that same fee. The user pays exactly what the route quotes, no markup,
 no custody, no additional promise.
 
-Implementation: `/api/quote` attaches `affiliateRef` and `affiliateWallets` to the `bests` request
-when both env vars are set:
+Implementation: `/api/quote` attaches `affiliateRef` and/or `affiliateWallets` to the `bests`
+request, plus `affiliatePercent`:
 
-    RANGO_AFFILIATE_REF      the ref registered with Rango
+    RANGO_AFFILIATE_REF      optional — routes the fee to the link-creator's wallet
     RANGO_AFFILIATE_WALLET   the treasury address (one EVM address covers every EVM chain)
+    affiliatePercent         fixed at 0.1% (Rango's default), charged to the user, disclosed
 
-Both unset = no affiliate, which is the current live behaviour: the code is deployed and inert until
-those two values exist. An unregistered ref is silently ignored by Rango, so registering it is a
-prerequisite, not a formality.
+As of 2026-10-29 `RANGO_AFFILIATE_WALLET` is set (0x3d0ab5…23B), so the affiliate is **live** in
+wallet-only mode: `affiliateWallets` + `affiliatePercent` with no ref code — sufficient per Rango's
+docs. The 0.1% user-side fee is disclosed on /operators, not hidden in the spread.
 
 Target rate: whatever Rango's programme pays on the routes we use (typically a fraction of the route
 fee). Do **not** advertise a percentage until the first payout confirms it.
