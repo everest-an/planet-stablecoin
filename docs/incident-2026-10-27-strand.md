@@ -174,3 +174,17 @@ improvement: show the on-chain market price beside the spot price when they dive
 
 **End state:** 0.00161379 oz gold + 0.23341538 oz silver, read back by /api/metals as $6.52 + $12.64.
 Both metals bought through the product's own path, with real money, on mainnet.
+
+## Browser-test money closed
+
+The 1 USDC the browser test moved (approve + deposit signed by the page itself) arrived on Ethereum
+on 2026-10-29 as 1.0178 USDC and was swapped to gold the same day:
+
+| Tx | What |
+|---|---|
+| `0xecca7f9c…e801` | 0.0008 ETH Arbitrum → Ethereum (Across, gas top-up) |
+| `0xc5fa66fb…48fb` | approve USDC (Ethereum) |
+| `0xd118ee02…4e8d` | 1.0 USDC → 0.0002475 PAXG |
+
+**End state:** 0.001861293425263929 oz PAXG ($7.52 at spot) — every dollar that ever went through
+the product is now metal the product reads back. 14 real transactions total.
