@@ -21,6 +21,25 @@ const MAX_STEPS = 10;
 
 const isAddress = (v) => typeof v === "string" && /^0x[0-9a-fA-F]{40}$/.test(v);
 
+// This endpoint is uncacheable (POST) and every call spends our Rango quota, so it is the one
+// place a free DoS can hurt. Sliding-window per-IP cap: warm serverless instances share nothing,
+// so this blunts blunt spam rather than replacing a real WAF, which is the correct long-term fix.
+const LIMIT_WINDOW_MS = 60 * 1000;
+const LIMIT_MAX_CALLS = 30;
+const hits = new Map();
+
+function rateLimited(ip) {
+  const now = Date.now();
+  const arr = (hits.get(ip) || []).filter((t) => now - t < LIMIT_WINDOW_MS);
+  arr.push(now);
+  hits.set(ip, arr);
+  if (hits.size > 5000) {
+    const cutoff = now - LIMIT_WINDOW_MS;
+    for (const [k, v] of hits) if (v.every((t) => t < cutoff)) hits.delete(k);
+  }
+  return arr.length > LIMIT_MAX_CALLS;
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -32,6 +51,11 @@ export default async function handler(req, res) {
   if (!KEY) {
     return res.status(503).json({
       error: { code: "not_configured", message: "RANGO_API_KEY is not set on this deployment." },
+    });
+  }
+  if (rateLimited(req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "unknown")) {
+    return res.status(429).json({
+      error: { code: "rate_limited", message: "too many requests — slow down." },
     });
   }
 
