@@ -98,3 +98,42 @@ strand above exposed. The difference matters and should be stated that way in an
 | 5 | `0x1637a13b…e1e6` | approve USDC → 5 (Arbitrum) |
 | 6 | `0xd512ec66…0792` | 5 USDC into the CCTP route (**stranded, attested**) |
 | 7 | `0xd0456d7a…cf84` | 0.0007 ETH → 0.000403745752141591 PAXG (**real gold**) |
+
+## Resolution — the strand was a delay, not a loss
+
+On 2026-10-29 the CCTP mint completed on its own (Rango's relayer, ~2 days later): the wallet received
+**4.934632 USDC on Ethereum**, i.e. the 5 USDC minus bridge fees. Money had never been at risk of
+disappearing — only of being stuck, which is still a real product bug, but not a loss.
+
+The missing last step was then completed directly on Ethereum:
+
+    4.9 USDC -> 0.001210043778937096 PAXG
+    approve 0x2329e451628b595254cf5aeeccc4214253c2520c6c41679a559ef8473ec1518a
+    swap    0xeb3e271f8d709cfe8a219685bc18a88e58df770a54a78422eafe0efa1c391d29
+    Eth SushiAggregator, 1 step
+
+**End state of the wallet (all bought through Rango, all real):**
+
+    Ethereum  PAXG 0.001613789531078687 oz  (~$6.52)   <- /api/metals reads exactly this
+    Ethereum  USDC 0.034632
+    Ethereum  ETH  0.001609
+    Arbitrum  USDC 1.867313 | ETH 0.001149
+
+The resume fix (requestId persisted before the first signature) remains the correct fix: even though
+this one settled itself, the next route that stalls mid-step needs a handle, and the shipped code
+now keeps one.
+
+## Ledger (final)
+
+| # | Tx | What |
+|---|---|---|
+| 1 | `0xadaf7576…a36e` | approve USDC (Arbitrum) |
+| 2 | `0x31df72d6…2a09` | 5 USDC → ETH on Arbitrum |
+| 3 | `0xb519e876…f153` | 0.001 ETH Arbitrum → Ethereum (Across) |
+| 4 | `0x58b2f2e3…827f` | approve USDC → 0 (Arbitrum) |
+| 5 | `0x1637a13b…e1e6` | approve USDC → 5 (Arbitrum) |
+| 6 | `0xd512ec66…0792` | 5 USDC into CCTP (**settled 10-29: 4.9346 USDC arrived**) |
+| 7 | `0xd0456d7a…cf84` | 0.0007 ETH → 0.0004037 PAXG |
+| 8 | `0x3e7efdaf…cd1e` | 0.0015 ETH Arbitrum → Ethereum (Across, gas top-up) |
+| 9 | `0x2329e451…518a` | approve USDC (Ethereum) |
+| 10 | `0xeb3e271f…1d29` | 4.9 USDC → 0.00121 PAXG (**the loop closes**) |
