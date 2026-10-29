@@ -60,6 +60,12 @@
           <button id="connect" class="ghost">connect</button>
           <span class="addr" id="account">not connected</span>
         </div>
+        <div class="row" style="margin-top:6px">
+          <input id="watchAddr" type="text" placeholder="watch another address — read-only, never signed" aria-label="watch address"
+            style="flex:1;padding:10px;border:1px solid var(--muted,#2a2a2a);background:transparent;color:inherit;font-family:'DM Mono',monospace;font-size:13px" />
+          <button id="addWatch" class="ghost">add</button>
+        </div>
+        <div id="watches" style="margin-top:6px;min-height:6px"></div>
         <div class="total">
           <div><div class="k">gold</div><div class="v" id="goldOz">—</div></div>
           <div><div class="k">silver</div><div class="v" id="silverOz">—</div></div>
@@ -129,41 +135,90 @@
       const USDC_ETH = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
 
       let account = null;
-      let prices = { PAXG: null, XAUT: null, KAG: null };
+      // The page's promise is "every ounce you hold, across wallets". That means the connected
+      // wallet PLUS any addresses the visitor pastes in — read-only, never signed, so it stays
+      // outside every custody question. Watched addresses live in localStorage.
+      const WATCH_KEY = "planet.watched";
+      const readWatched = () => {
+        try { return JSON.parse(localStorage.getItem(WATCH_KEY) || "[]"); } catch { return []; }
+      };
+      let watched = readWatched().filter((a) => /^0x[0-9a-fA-F]{40}$/.test(a));
+
+      function renderWatches() {
+        const el = $("watches");
+        el.innerHTML = watched
+          .map(
+            (a) => `<span data-watch="${a}" style="display:inline-block;margin:2px 6px 2px 0;padding:3px 8px;border:1px solid var(--muted,#2a2a2a);border-radius:999px;font-family:'DM Mono',monospace;font-size:11px;cursor:pointer" title="remove">${a.slice(0, 6)}…${a.slice(-4)} ×</span>`,
+          )
+          .join("");
+        el.querySelectorAll("[data-watch]").forEach((chip) =>
+          chip.addEventListener("click", () => {
+            watched = watched.filter((a) => a !== chip.dataset.watch);
+            localStorage.setItem(WATCH_KEY, JSON.stringify(watched));
+            readWallet();
+          }),
+        );
+      }
 
       const $ = (id) => document.getElementById(id);
       const fmt = (n, d = 4) =>
         n == null || Number.isNaN(Number(n)) ? "—" : Number(n).toLocaleString(undefined, { maximumFractionDigits: d });
 
       async function readWallet() {
-        if (!account) return;
+        const addrs = [...new Set([account, ...watched].filter(Boolean))];
+        if (!addrs.length) return;
         $("status").textContent = "reading balances…";
         try {
-          const r = await fetch("/api/metals?address=" + encodeURIComponent(account));
-          if (!r.ok) {
-            const j = await r.json().catch(() => ({}));
-            throw new Error(j?.error?.message || "HTTP " + r.status);
+          const ds = await Promise.all(
+            addrs.map((a) =>
+              fetch("/api/metals?address=" + encodeURIComponent(a)).then((r) => (r.ok ? r.json() : null)),
+            ),
+          );
+          const ok = ds.filter(Boolean);
+          if (!ok.length) throw new Error("could not read balances — retry shortly");
+
+          const tokens = [];
+          for (const t of ok[0].tokens) {
+            const same = ok.map((d) => d.tokens.find((x) => x.symbol === t.symbol)).filter(Boolean);
+            tokens.push({
+              symbol: t.symbol,
+              metal: t.metal,
+              issuer: t.issuer,
+              note: t.note,
+              priceUsd: same.find((x) => x.priceUsd != null)?.priceUsd ?? null,
+              marketPriceUsd: same.find((x) => x.marketPriceUsd != null)?.marketPriceUsd ?? null,
+              balance: same.some((x) => x.balance != null) ? same.reduce((s, x) => s + (x.balance ?? 0), 0) : null,
+              oz: same.some((x) => x.oz != null) ? same.reduce((s, x) => s + (x.oz ?? 0), 0) : null,
+              usd: same.every((x) => x.usd == null) ? null : same.reduce((s, x) => s + (x.usd ?? 0), 0),
+              marketUsd: same.every((x) => x.marketUsd == null) ? null : same.reduce((s, x) => s + (x.marketUsd ?? 0), 0),
+            });
           }
-          const d = await r.json();
-          prices = Object.fromEntries(d.tokens.map((t) => [t.symbol, t.priceUsd]));
 
-          $("goldOz").textContent = fmt(d.totals.goldOz, 4) + " oz";
-          $("silverOz").textContent = fmt(d.totals.silverOz, 4) + " oz";
-          $("usd").textContent = d.totals.usd == null ? "—" : "$" + fmt(d.totals.usd, 2);
+          const sum = (f) => tokens.reduce((s, t) => s + (f(t) ?? 0), 0);
+          const anyUsd = tokens.some((t) => t.usd != null);
+          $("goldOz").textContent = fmt(sum((t) => (t.metal === "gold" ? t.oz : 0)), 4) + " oz";
+          $("silverOz").textContent = fmt(sum((t) => (t.metal === "silver" ? t.oz : 0)), 4) + " oz";
+          $("usd").textContent = anyUsd ? "$" + fmt(sum((t) => t.usd), 2) : "—";
 
-          const rows = d.tokens
+          const rows = tokens
             .filter((t) => t.balance != null)
-            .map(
-              (t) => `<tr>
+            .map((t) => {
+              const gap = t.priceUsd && t.marketPriceUsd ? (t.marketPriceUsd / t.priceUsd) * 100 : null;
+              const market = t.marketUsd != null && t.priceUsd != null && t.marketPriceUsd != null && Math.abs(t.marketPriceUsd / t.priceUsd - 1) > 0.05
+                ? ` <span class="issuer">(trades ${fmt((t.marketPriceUsd / t.priceUsd - 1) * 100, 0)}% ${t.marketPriceUsd < t.priceUsd ? "below" : "above"} spot: $${fmt(t.marketUsd, 2)})</span>`
+                : "";
+              return `<tr>
                 <td>${t.symbol}</td>
                 <td class="issuer">${t.issuer}</td>
                 <td class="num">${fmt(t.oz, 6)}</td>
-                <td class="num">${t.usd == null ? "—" : "$" + fmt(t.usd, 2)}</td>
-              </tr>`,
-            )
+                <td class="num">${t.usd == null ? "—" : "$" + fmt(t.usd, 2)}${market}</td>
+              </tr>`;
+            })
             .join("");
-          $("rows").innerHTML = rows || `<tr><td colspan="4" class="issuer">no metal in this wallet</td></tr>`;
-          $("status").textContent = d.priceSource === "unavailable" ? "balances read · price source unavailable" : "";
+          $("rows").innerHTML = rows || `<tr><td colspan="4" class="issuer">no metal in these wallets</td></tr>`;
+          $("status").textContent =
+            ok.some((d) => d.priceSource === "unavailable") ? "balances read · price source unavailable" : "";
+          renderWatches();
         } catch (e) {
           $("status").innerHTML = `<span style="color:#e03131">${e.message}</span>`;
         }
@@ -431,6 +486,20 @@
       $("buyPaxg").addEventListener("click", () => { quotingFor = "PAXG"; buy(PAXG); });
       $("buyXaut").addEventListener("click", () => { quotingFor = "XAUT"; buy(XAUT); });
       $("buyKag").addEventListener("click", () => { quotingFor = "KAG"; buy(KAG); });
+      $("addWatch").addEventListener("click", () => {
+        const a = String($("watchAddr").value).trim();
+        if (!/^0x[0-9a-fA-F]{40}$/.test(a)) {
+          $("status").innerHTML = '<span style="color:#e03131">paste a full 0x… address</span>';
+          return;
+        }
+        if (!watched.includes(a) && a.toLowerCase() !== String(account || "").toLowerCase()) {
+          watched.push(a);
+          localStorage.setItem(WATCH_KEY, JSON.stringify(watched));
+        }
+        $("watchAddr").value = "";
+        readWallet();
+      });
+      renderWatches();
     </script>
   </body>
 </html>

@@ -48,8 +48,16 @@ const TOKENS = [
     priceId: "kinesis-silver",
     issuer: "KMS Labs S.A. (Panama) — 1:1 claim on Kinesis silver (KAG)",
     note: "Upgradeable proxy (EIP-1967); redemption requires KMS Labs compliance onboarding.",
+    marketVia: "rango",
   },
 ];
+
+// The spot price is what the 1:1 claim is worth. The on-chain price is what the market will
+// actually pay — for KAG the two diverge, because redeeming the wrapper requires compliance
+// onboarding and thin liquidity discounts it. Showing only the spot price would overstate the
+// holding; showing only the market price would hide the claim. Both are shown, labelled.
+const RANGO_API_KEY = process.env.RANGO_API_KEY || "";
+let marketCache = { ts: 0, price: null };
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -91,6 +99,36 @@ async function prices() {
   }
 }
 
+// One quote of 100 USDC -> KAG, cached 10 minutes, is enough to price the whole holding: the
+// market price per ounce is 100 / outputAmount.
+async function kagMarketPrice() {
+  if (!RANGO_API_KEY) return null;
+  if (Date.now() - marketCache.ts < 600000) return marketCache.price;
+  try {
+    const r = await fetch(
+      `https://api.rango.exchange/routing/bests?apiKey=${encodeURIComponent(RANGO_API_KEY)}`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          from: { blockchain: "ETH", symbol: "USDC", address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" },
+          to: { blockchain: "ETH", symbol: "KAG", address: "0x56Ba8B58B7d1f6d384A1C4dD553F39ebc8741B8e" },
+          amount: "100",
+          slippage: "1",
+        }),
+      },
+    );
+    if (!r.ok) return marketCache.price;
+    const j = await r.json();
+    const out = Number(j.results?.[0]?.outputAmount);
+    const price = out > 0 ? 100 / out : null;
+    marketCache = { ts: Date.now(), price };
+    return price;
+  } catch {
+    return marketCache.price;
+  }
+}
+
 function sendJson(res, data, maxAge) {
   const body = JSON.stringify(data);
   res.setHeader("Cache-Control", `public, s-maxage=${maxAge}, stale-while-revalidate=${maxAge * 2}`);
@@ -117,14 +155,14 @@ export default async function handler(req, res) {
 
   // one batch: balanceOf for every token
   const calls = TOKENS.map((t) => ({ to: t.address, data: "0x70a08231" + address.slice(2).padStart(64, "0") }));
-  const results = await rpcBatch(calls);
-  const priceMap = await prices();
+  const [results, priceMap, kagMarket] = await Promise.all([rpcBatch(calls), prices(), kagMarketPrice()]);
 
   const tokens = TOKENS.map((t, i) => {
     const hex = results[i];
     const balance = hex && hex !== "0x" ? Number(BigInt(hex)) / SCALE : null;
     const oz = balance == null ? null : balance * t.ozPerToken;
     const priceUsd = priceMap?.[t.priceId]?.usd ?? null;
+    const marketPriceUsd = t.marketVia === "rango" ? kagMarket : null;
     return {
       symbol: t.symbol,
       address: t.address,
@@ -134,7 +172,9 @@ export default async function handler(req, res) {
       balance,
       oz,
       priceUsd,
+      marketPriceUsd,
       usd: oz != null && priceUsd != null ? oz * priceUsd : null,
+      marketUsd: oz != null && marketPriceUsd != null ? oz * marketPriceUsd : null,
     };
   });
 
