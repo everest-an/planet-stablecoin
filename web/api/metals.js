@@ -69,10 +69,10 @@ const TOKENS = [
     address: "0x14DAB79fD7B7B3f748d434812Fd6a9Aac460EA52",
     ozPerToken: 1,
     metal: "gold",
-    priceId: "kinesis-gold",
+    priceId: "pax-gold",
     issuer: "KMS Labs S.A. (Panama) — 1:1 claim on Kinesis gold (KAU)",
     url: "https://kinesis.money/gold/",
-    note: "Very thin on-chain liquidity; no aggregator route found, so it can be read but not bought here.",
+    note: "Very thin on-chain liquidity; no aggregator route found, so it can be read but not bought here. Spot reference is the gold spot price.",
   },
 ];
 
