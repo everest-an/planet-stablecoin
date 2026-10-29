@@ -24,4 +24,4 @@ jobs:
         working-directory: relayer
         env:
           ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
-        run: node ../scripts/verify-arbiscan.mjs
+        run: node verify-arbiscan.mjs
