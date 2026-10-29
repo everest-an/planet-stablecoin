@@ -64,3 +64,31 @@ lagged the settlement. Fixed by computing `cumFunding + rate × elapsed` in the 
 3. /perps page with the riskState banner
 4. review, then a small mainnet cap
 ```
+
+## Contract review (self, 2026-10-29)
+
+A deliberate pass over the two contracts found one real bug and three completeness gaps. All are
+fixed and covered by tests.
+
+| # | Severity | Finding | Fix |
+|---|---|---|---|
+| 1 | **High (bug)** | `PPIPriceSource.riskLevel()` subtracted `last` from `block.timestamp` in uint64. The signer publishes `now + 120`, so for two minutes after every push the subtraction underflowed and **reverted** — bricking `open()` and `liquidate()`. | Future timestamps count as age zero. |
+| 2 | High (gap) | `liquidate()` ignored `riskLevel`, so a frozen feed could still liquidate a borderline position at a stale price — the exact cascade the confidence signal exists to prevent. | While frozen, only positions underwater by half the maintenance buffer may be closed. |
+| 3 | Medium (gap) | LPs could withdraw the whole pool while positions were open; the payout cap then pushed the shortfall onto traders. | Withdrawal blocked when the pool no longer covers `maxOiToPoolBps` of open interest. |
+| 4 | Medium (gap) | Every fee went to the pool; the platform earned nothing, contradicting the stated model. | `treasury` + `protocolShareBps` (30% of open/close fees). |
+
+Also tightened: open interest may not exceed `maxOiToPoolBps` (2x) of the pool, enforced on open and
+after a withdrawal.
+
+Tests added and passing: future-timestamp no-revert, price mapping, 3h caution / 7h frozen, asset
+caution propagation, 30% protocol fee, OI cap vs pool, withdrawal blocked under open interest, and a
+frozen feed protecting a borderline position while still liquidating a deeply underwater one.
+
+### Still open before any real money
+
+1. No external audit.
+2. The owner is a plain EOA and can repoint `priceSource`; in production both must sit behind the
+   timelock, and the source change should be treated like an oracle upgrade (delay + announcement).
+3. Funding is keeper-set within a cap rather than derived from a mark price — honest for a one-sided
+   market, but it is discretion, not mechanism.
+
