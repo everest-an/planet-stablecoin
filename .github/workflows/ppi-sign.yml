@@ -1,0 +1,54 @@
+name: PPI sign (zero gas)
+
+# Publishes signed price payloads. NO transactions: the signer signs, the JSON goes to the
+# oracle-data branch, and whoever consumes the price carries the payload in their own transaction
+# and pays that gas. This replaces the hourly push as the default; push remains available manually
+# (ppi-push-mainnet.yml) for a keeper that wants the on-chain value refreshed on a schedule.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "7 * * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  sign:
+    name: Fetch + sign prices
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: relayer
+    env:
+      PRIVATE_KEY: ${{ secrets.MAINNET_RELAYER_KEY }}
+      ORACLE: "0x0daf541ef7e41402070bc549f91475ab368d1824"
+      RPC: https://arb1.arbitrum.io/rpc
+      OUT: price-signed.json
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install deps
+        run: npm install --no-audit --no-fund
+
+      - name: Sign (no gas)
+        run: node sign-prices.mjs
+
+      - name: Publish to oracle-data
+        working-directory: .
+        run: |
+          set -e
+          cp relayer/price-signed.json /tmp/price-signed.json
+          git config user.name "planet-oracle"
+          git config user.email "oracle@ppppp.space"
+          git checkout --orphan oracle-data-tmp
+          git rm -rf . --quiet
+          cp /tmp/price-signed.json ./price-signed.json
+          git add -f price-signed.json
+          git commit -m "signed prices $(date -u +%FT%TZ)"
+          git push -f origin HEAD:oracle-data

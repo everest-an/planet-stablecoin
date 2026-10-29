@@ -15,8 +15,9 @@ on:
         description: "Preflight only: fetch prices + eth_call simulate, send nothing (true/false)"
         required: false
         default: "false"
-  schedule:
-    - cron: "27 * * * *"
+  # No schedule on purpose. The default is now the pull model (ppi-sign.yml): the publisher signs
+  # for free and whoever consumes a price carries it on-chain and pays that one transaction. Run
+  # this workflow by hand only when a keeper wants the on-chain value refreshed on a schedule.
 
 concurrency:
   group: ppi-push-mainnet
