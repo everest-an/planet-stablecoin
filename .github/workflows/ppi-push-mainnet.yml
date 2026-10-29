@@ -1,0 +1,77 @@
+name: PPI price push (Arbitrum One)
+
+# Mainnet heartbeat for the index. Same logic as the Sepolia workflow, different chain and key:
+# Core.relayer on Arbitrum One is the deployment wallet 0xBf0D...768C, so this workflow needs that
+# key as MAINNET_RELAYER_KEY. push-evm.mjs refuses to run if the derived address is not the on-chain
+# relayer, which is what makes a wrong secret fail in one line instead of burning gas.
+#
+# Costs: the delta gate skips assets that have not moved >0.1%, so a calm hour is usually 0-3
+# transactions. Keep the relayer funded: it pays for every push.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Preflight only: fetch prices + eth_call simulate, send nothing (true/false)"
+        required: false
+        default: "false"
+  schedule:
+    - cron: "27 * * * *"
+
+concurrency:
+  group: ppi-push-mainnet
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  push:
+    name: Fetch + push prices (mainnet)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: relayer
+    env:
+      PRIVATE_KEY: ${{ secrets.MAINNET_RELAYER_KEY }}
+      RPC: https://arb1.arbitrum.io/rpc
+      CORE: "0x61de052af7cb7dc957a07b1e6298152bb851cbbb"
+      ASSETS_JSON: assets.example.json
+      MAX_PUSH_AGE_H: "6"
+      MIN_PUSH_DELTA: "0.001"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install deps
+        run: npm install --no-audit --no-fund
+
+      - name: Preflight (simulate only, no transactions)
+        if: ${{ inputs.dry_run == 'true' }}
+        run: node push-evm.mjs --dry-run
+
+      - name: Push prices
+        if: ${{ inputs.dry_run != 'true' }}
+        run: node push-evm.mjs
+
+      - name: Confirm the oracle moved
+        if: ${{ inputs.dry_run != 'true' }}
+        run: |
+          node -e '
+            import("viem").then(async ({ createPublicClient, http, parseAbi }) => {
+              const c = createPublicClient({ transport: http(process.env.RPC) });
+              const abi = parseAbi(["function lastOracleUpdate() view returns (uint64)","function currentPpi() view returns (uint64)"]);
+              const lu = await c.readContract({ address: process.env.CORE, abi, functionName: "lastOracleUpdate" });
+              const ppi = await c.readContract({ address: process.env.CORE, abi, functionName: "currentPpi" });
+              console.log(`lastOracleUpdate=${lu} currentPpi=${Number(ppi)/1e6}`);
+              const now = Math.floor(Date.now()/1000);
+              const age = now - Number(lu);
+              console.log(`oracle age=${age}s (limit 21600s)`);
+              if (Number(lu) === 0) { console.error("FAIL: oracle has never been pushed"); process.exit(1); }
+              if (age > 21600) { console.error("FAIL: oracle is past the on-chain 6h gate"); process.exit(1); }
+            });
+          '
