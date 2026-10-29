@@ -101,16 +101,9 @@
         <button id="buyKag" class="ghost" data-i18n="buy_kag">buy silver · KAG</button>
         </div>
         <p class="note" style="margin-top:10px" data-i18n="uniswap_note">
-          Opens the pair on Uniswap with the amount prefilled — one click, then confirm in your wallet.
+          Pick a metal above, then one quote compares every chain you could pay from — with the step count, so you see what is instant and what bridges.
         </p>
         <div class="row" style="margin-top:14px">
-          <select id="fromChain" style="flex:1;padding:10px;border:1px solid var(--muted,#2a2a2a);background:transparent;color:inherit;font-family:'DM Mono',monospace;font-size:13px">
-            <option value="ARBITRUM" data-i18n="pay_arb">pay from Arbitrum</option>
-            <option value="BASE" data-i18n="pay_base">pay from Base</option>
-            <option value="OPTIMISM" data-i18n="pay_op">pay from Optimism</option>
-            <option value="POLYGON" data-i18n="pay_poly">pay from Polygon</option>
-            <option value="ETH" data-i18n="pay_eth">pay from Ethereum</option>
-          </select>
           <button id="quoteBtn" class="ghost" data-i18n="quote_btn">get cross-chain quote</button>
         </div>
         <div class="note" id="quoteOut" style="min-height:18px;margin-top:8px" translate="no"></div>
@@ -125,7 +118,6 @@
       const PAXG = "0x45804880De22913dAFE09f4980848ECE6EcbAf78";
       const XAUT = "0x68749665FF8D2d112Fa859AA293F07A622782F38";
       const KAG = "0x56Ba8B58B7d1f6d384A1C4dD553F39ebc8741B8e";
-      const USDC_ETH = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
 
       let account = null;
       // The page's promise is "every ounce you hold, across wallets". That means the connected
@@ -189,7 +181,7 @@
           rows_empty: "connect a wallet to read balances",
           buy_label: "buy", amount_aria: "amount in USD",
           buy_paxg: "buy gold · PAXG", buy_xaut: "buy gold · XAUT", buy_kag: "buy silver · KAG",
-          uniswap_note: "Opens the pair on Uniswap with the amount prefilled — one click, then confirm in your wallet.",
+          uniswap_note: "Pick a metal above, then one quote compares every chain you could pay from — with the step count, so you see what is instant and what bridges.",
           pay_arb: "pay from Arbitrum", pay_base: "pay from Base", pay_op: "pay from Optimism",
           pay_poly: "pay from Polygon", pay_eth: "pay from Ethereum",
           quote_btn: "get cross-chain quote",
@@ -199,6 +191,9 @@
           status_unavailable: "balances read · price source unavailable",
           status_read_fail: "could not read balances — retry shortly",
           quoting: "quoting…",
+          quote_all: "{0} USDC → {1} — pick the chain you pay from",
+          one_step: "instant · 1 step",
+          n_steps: "{0} steps",
           quote_line: "{0} USDC on {1} → {2} {3}",
           quote_two_step: "two-step route: it bridges first, which can take minutes to hours. Once you sign, it continues on its own — keep this tab open.",
           swap_now: "swap now", continue_rango: "or continue in Rango →",
@@ -234,7 +229,7 @@
           rows_empty: "连接钱包以读取余额",
           buy_label: "买入", amount_aria: "美元金额",
           buy_paxg: "买入黄金 · PAXG", buy_xaut: "买入黄金 · XAUT", buy_kag: "买入白银 · KAG",
-          uniswap_note: "在 Uniswap 打开该交易对并预填金额——点一下，然后在钱包里确认。",
+          uniswap_note: "先选上方的金属，一次报价即可对比所有可支付的链——含步骤数，一眼看出哪条即时、哪条需要桥接。",
           pay_arb: "从 Arbitrum 支付", pay_base: "从 Base 支付", pay_op: "从 Optimism 支付",
           pay_poly: "从 Polygon 支付", pay_eth: "从 Ethereum 支付",
           quote_btn: "获取跨链报价",
@@ -244,6 +239,9 @@
           status_unavailable: "余额已读取 · 价格源不可用",
           status_read_fail: "无法读取余额——请稍后重试",
           quoting: "报价中…",
+          quote_all: "{0} USDC → {1} ——选择你用来支付的链",
+          one_step: "即时 · 1 步",
+          n_steps: "{0} 步",
           quote_line: "{1} 上的 {0} USDC → {2} {3}",
           quote_two_step: "两步路线：先跨链桥接，可能需要几分钟到几小时。签名后它会自动继续——保持本页打开。",
           swap_now: "立即兑换", continue_rango: "或在 Rango 继续 →",
@@ -377,48 +375,81 @@
         }
       }
 
-      // One click: open the exact pair with the amount already filled in. The user still confirms in
+      // One click: pick the metal, then one quote compares every chain. The user still confirms in
       // their wallet — that confirmation is the only signature anywhere in this flow.
       function buy(token) {
-        const usd = Number(String($("amount").value).replace(/[^0-9.]/g, ""));
-        const amt = Number.isFinite(usd) && usd > 0 ? Math.floor(usd) : null;
-        const params = new URLSearchParams({
-          chain: "mainnet",
-          inputCurrency: USDC_ETH,
-          outputCurrency: token,
-        });
-        if (amt) {
-          params.set("exactField", "input");
-          params.set("exactAmount", String(amt));
-        }
-        window.open("https://app.uniswap.org/swap?" + params.toString(), "_blank", "noopener");
+        quotingFor = token === KAG ? "KAG" : token === XAUT ? "XAUT" : "PAXG";
+        crossChainQuote();
       }
 
       async function crossChainQuote() {
         const sym = quotingFor || "PAXG";
         const amount = String($("amount").value).replace(/[^0-9.]/g, "") || "100";
-        const from = $("fromChain").value;
         $("quoteOut").textContent = t("quoting");
         try {
-          const r = await fetch(`/api/quote?symbol=${sym}&from=${from}&amount=${amount}`);
-          const j = await r.json();
-          if (!r.ok) throw new Error(j?.error?.message || t("no_tx"));
-          const b = j.best;
-          pendingQuote = { requestId: j.requestId, symbol: sym, from, amount };
-          track("quote", `${sym} ${from} ${amount}`);
-          const steps = Number(b.steps) || 1;
+          const chains = ["ETH", "ARBITRUM", "BASE", "OPTIMISM", "POLYGON"];
+          const results = await Promise.all(
+            chains.map((from) =>
+              fetch(`/api/quote?symbol=${sym}&from=${from}&amount=${amount}`)
+                .then((r) => r.json().catch(() => null))
+                .catch(() => null),
+            ),
+          );
+          const rows = chains
+            .map((from, i) => {
+              const j = results[i];
+              const b = j && !j.error ? j.best : null;
+              if (!b || !b.outputAmount) return null;
+              return {
+                from,
+                amount,
+                sym,
+                requestId: j.requestId,
+                out: Number(b.outputAmount).toFixed(6),
+                steps: Number(b.steps) || 1,
+                secs: b.timeSeconds,
+                route: b.route,
+              };
+            })
+            .filter(Boolean);
+          if (!rows.length) throw new Error(t("no_tx"));
+          track("quote", `${sym} ${amount} ${rows.map((r) => r.from).join(",")}`);
+          quoteRows = rows;
+          const label = (steps, secs) =>
+            steps === 1 ? t("one_step") : `${t("n_steps", steps)}${secs ? ` · ~${Math.round(secs / 60)}m` : ""}`;
           $("quoteOut").innerHTML =
-            `<b>${t("quote_line", amount, from, Number(b.outputAmount).toFixed(6), sym)}</b>` +
-            (b.timeSeconds ? ` · ~${b.timeSeconds}s` : "") +
-            ` · ${b.route}` +
-            (j.alternatives ? ` · +${j.alternatives} other route(s)` : "") +
-            (steps > 1 ? `<br><span style="color:#f08c00">${t("quote_two_step")}</span>` : "") +
-            `<div class="buy" style="margin-top:8px"><button id="swapNow">${t("swap_now")}</button></div>` +
-            `<span style="opacity:.7"><a href="${rangoLink(sym, from, amount)}" target="_blank" rel="noopener">${t("continue_rango")}</a></span>`;
-          $("swapNow").addEventListener("click", () => { track("swap_clicked", sym); executeSwap(false); });
+            `<b>${t("quote_all", amount, sym)}</b><br>` +
+            rows
+              .map(
+                (r, i) =>
+                  `<div class="quote-row" data-i="${i}" style="margin:6px 0;padding:8px 10px;border:1px solid var(--muted,#2a2a2a);cursor:pointer">
+                     <b>${r.from}</b> → ${r.out} ${r.sym} · ${label(r.steps, r.secs)}
+                   </div>`,
+              )
+              .join("") +
+            `<div id="quotePick"></div>`;
+          $("quoteOut").querySelectorAll(".quote-row").forEach((el) => {
+            el.addEventListener("click", () => pickRow(rows[Number(el.dataset.i)]));
+          });
+          pickRow(rows.find((r) => r.steps === 1) || rows[0]);
         } catch (e) {
           $("quoteOut").innerHTML = `<span style="color:#e03131">${e.message}</span>`;
         }
+      }
+
+      let quoteRows = [];
+      function pickRow(r) {
+        pendingQuote = { requestId: r.requestId, symbol: r.sym, from: r.from, amount: r.amount };
+        $("quoteOut").querySelectorAll(".quote-row").forEach((el) => (el.style.borderColor = "var(--muted,#2a2a2a)"));
+        const idx = quoteRows.indexOf(r);
+        const el = $("quoteOut").querySelector(`.quote-row[data-i="${idx}"]`);
+        if (el) el.style.borderColor = "#2f9e44";
+        const warn = r.steps > 1 ? `<br><span style="color:#f08c00">${t("quote_two_step")}</span>` : "";
+        $("quotePick").innerHTML =
+          `<div class="buy" style="margin-top:8px"><button id="swapNow">${t("swap_now")} — ${r.from}</button></div>` +
+          `<span style="opacity:.7"><a href="${rangoLink(r.sym, r.from, r.amount)}" target="_blank" rel="noopener">${t("continue_rango")}</a></span>` +
+          warn;
+        $("swapNow").addEventListener("click", () => { track("swap_clicked", `${r.sym} ${r.from}`); executeSwap(false); });
       }
 
       // Rango's documented deep-link shape: BLOCKCHAIN.SYMBOL--ADDRESS
