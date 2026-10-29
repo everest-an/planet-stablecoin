@@ -60,6 +60,21 @@ for (const t of targets) {
   const okAlready = /already verified/i.test(String(j.result));
   console.log(`${t.name.padEnd(18)} ${j.status} ${j.message} ${String(j.result).slice(0, 70)}`);
   if (j.status !== "1" && !okAlready) failures++;
-  if (j.status === "1") console.log(`  guid ${j.result} — poll: module=contract&action=checkverifystatus`);
+  if (j.status !== "1") continue;
+
+  // poll the queue so the run itself reports the final answer
+  let outcome = "pending";
+  for (let i = 0; i < 20; i++) {
+    await new Promise((res) => setTimeout(res, 4000));
+    const q = await fetch(
+      `https://api.etherscan.io/v2/api?chainid=42161&module=contract&action=checkverifystatus&guid=${j.result}&apikey=${KEY}`,
+    );
+    const s = await q.json();
+    const msg = String(s.result || "");
+    if (/pass|success|verified/i.test(msg) && !/not yet/i.test(msg)) { outcome = "verified"; break; }
+    if (/fail|error/i.test(msg)) { outcome = msg.slice(0, 120); break; }
+  }
+  console.log(`  ${outcome}`);
+  if (outcome !== "verified") failures++;
 }
 process.exit(failures ? 1 : 0);
