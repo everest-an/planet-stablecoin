@@ -1,8 +1,9 @@
 # PPI — Planet Commodity Index. Methodology, v1.0
 
-Status: deployed on Arbitrum Sepolia; mainnet deployment pending. This document is the specification
-a venue's risk team would read before listing a perp against PPI. It states the rules **and the
-limitations**, because an index that hides its warts is not licensable.
+Status: **live on Arbitrum One** (2026-10-29), index-only — no deposit token is set, so mint/redeem
+are disabled and no funds can enter. This document is the specification a venue's risk team would
+read before listing a perp against PPI. It states the rules **and the limitations**, because an index
+that hides its warts is not licensable.
 
 ---
 
