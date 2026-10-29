@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Planet — the LP side: you are the counterparty</title>
+    <meta name="description" content="What it means to provide liquidity to the PPI perpetual market: where the fees come from, what the pool is short, and a worked example of a losing month." />
+    <link rel="icon" href="/icon.png" />
+    <link rel="canonical" href="https://ppppp.space/lp" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+    <style>
+      .wrap { max-width: 820px; margin: 0 auto; padding: 32px 20px 64px; }
+      h1 { font-family: "Space Grotesk", sans-serif; font-size: 30px; margin: 18px 0 8px; }
+      h2 { font-family: "Space Grotesk", sans-serif; font-size: 20px; margin: 34px 0 10px; }
+      p, li { font-family: "DM Mono", monospace; font-size: 13px; line-height: 1.85; }
+      .k { font-family: "DM Mono", monospace; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted,#8a8a8a); }
+      .box { border: 1px solid var(--muted,#2a2a2a); padding: 16px; margin: 14px 0; }
+      .bad { border-left: 3px solid #c2401c; padding: 10px 14px; margin: 16px 0; }
+      table { width: 100%; border-collapse: collapse; font-family: "DM Mono", monospace; font-size: 12px; margin: 10px 0; }
+      th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--muted,#2a2a2a); }
+      th { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted,#8a8a8a); }
+      td.num, th.num { text-align: right; }
+      code { font-family: "DM Mono", monospace; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="wordmark" href="/">Planet</a>
+      <nav class="nav">
+        <a href="/">home</a>
+        <a href="/ppi">index</a>
+        <a href="/methodology">methodology</a>
+        <a href="/metals">metals</a>
+        <a href="/lp">LP</a>
+      </nav>
+    </header>
+
+    <main class="wrap">
+      <p class="k">[ liquidity providers · you are the counterparty · not deployed yet ]</p>
+      <h1>If you provide liquidity, you are the house</h1>
+      <p>
+        The PPI perpetual market has no external market maker. Traders trade against a pool, and the
+        people who deposit into that pool take the other side of every position. This page exists so
+        nobody deposits without understanding that sentence.
+      </p>
+
+      <div class="bad">
+        <b>Read this first.</b> LPs are <b>short the index and short the average trader's skill</b>.
+        When traders win, the pool pays them out of LP capital. Fees and funding are what LPs earn for
+        taking that risk; they are not a guarantee, and a strong one-way move can lose more than the
+        fees earned.
+      </div>
+
+      <h2>1. Where the money comes from (and goes)</h2>
+      <table>
+        <thead><tr><th>Flow</th><th class="num">direction</th><th>when</th></tr></thead>
+        <tbody>
+          <tr><td>Open / close fee (0.10% of notional)</td><td class="num">→ pool</td><td>every trade</td></tr>
+          <tr><td>Funding</td><td class="num">→ pool</td><td>when traders are net long</td></tr>
+          <tr><td>Traders' net profit</td><td class="num">← pool</td><td>when they win</td></tr>
+          <tr><td>Liquidation remainder (half)</td><td class="num">→ pool</td><td>when a position is liquidated</td></tr>
+        </tbody>
+      </table>
+      <p>
+        The pool's return is therefore <code>fees + funding − trader PnL</code>. The first two are
+        small and steady; the third is large and can be negative for months.
+      </p>
+
+      <h2>2. What the pool is short</h2>
+      <p>
+        When traders are net long, the pool is net short the commodity index. A rising index costs the
+        pool money; a falling index makes it. That is a real directional exposure, not a rounding error.
+      </p>
+
+      <h2>3. A worked losing month</h2>
+      <div class="box">
+        <p style="margin:0 0 8px"><b>Setup:</b> pool $1,000,000. Traders are net long $2,000,000 notional (2× the pool).</p>
+        <table>
+          <tbody>
+            <tr><td>Month: index +6%</td><td class="num">traders' PnL = 2,000,000 × 6% = <b>+$120,000</b></td></tr>
+            <tr><td>Fees at $20m monthly volume, 0.2% round trip</td><td class="num">+$40,000</td></tr>
+            <tr><td>Funding received (illustrative)</td><td class="num">+$15,000</td></tr>
+            <tr><td><b>Pool result</b></td><td class="num"><b>−$65,000 (−6.5%)</b></td></tr>
+          </tbody>
+        </table>
+        <p style="margin:8px 0 0">
+          In the opposite month (index −6%) the pool earns roughly $55,000 + fees. The distribution is
+          wide; a $1,000 deposit could be worth meaningfully less after a strong rally.
+        </p>
+      </div>
+
+      <h2>4. Why the pool may be safer than a naive perp pool</h2>
+      <p>
+        Margin here is driven by data quality, not only by price. When the commodity feeds disagree or
+        go stale, the market raises margin requirements and blocks new positions, so a bad print cannot
+        be liquidated through the pool. That reduces one specific loss mode (oracle-driven liquidation
+        cascades). It does <b>not</b> reduce directional risk: if the index genuinely rises, the pool
+        still pays.
+      </p>
+
+      <h2>5. Who should not deposit</h2>
+      <ul>
+        <li>Anyone who needs the principal back on a known date.</li>
+        <li>Anyone who cannot look at a −10% month without withdrawing at the bottom.</li>
+        <li>Anyone who thinks "LP yield" is a savings rate.</li>
+      </ul>
+
+      <h2>Status</h2>
+      <p>
+        The pool and the market are built and tested on a local EVM (see
+        <a href="/methodology">the rulebook</a> for the index). <b>Nothing is deployed yet</b> and no
+        LP can deposit: the contracts have not been reviewed, and an unaudited market holding other
+        people's money is not a product, it is a liability.
+      </p>
+    </main>
+  </body>
+</html>
