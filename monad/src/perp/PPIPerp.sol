@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import {IPerpPrice} from "./IPerpPrice.sol";
 
 interface IERC20 {
+    function decimals() external view returns (uint8);
     function transfer(address to, uint256 amount) external returns (bool);
     function transferFrom(address from, address to, uint256 amount) external returns (bool);
     function balanceOf(address who) external view returns (uint256);
@@ -110,6 +111,9 @@ contract PPIPerp {
 
     constructor(address usdc_, address priceSource_, address owner_) {
         require(usdc_ != address(0) && priceSource_ != address(0) && owner_ != address(0), "zero addr");
+        // Every number in this contract assumes 6 decimals (USDC). Deploying with an 18-decimal
+        // token would be off by 1e12 and would look like a working market until the first close.
+        require(IERC20(usdc_).decimals() == 6, "usdc must be 6 decimals");
         usdc = IERC20(usdc_);
         priceSource = IPerpPrice(priceSource_);
         owner = owner_;
@@ -222,7 +226,11 @@ contract PPIPerp {
         if (priceSource.riskLevel() >= 2 && equity >= int256(maint / 2)) revert Frozen();
 
         uint256 remaining = equity > 0 ? uint256(equity) : 0;
-        keeperReward = remaining / 2;
+        // A keeper that earns nothing on the positions that matter (equity <= 0) simply does not
+        // liquidate them, and the bad debt sits until the pool is insolvent. Pay from the trader's
+        // collateral with the liquidation fee, and only fall back to the remaining equity when that
+        // is larger.
+        keeperReward = _keeperReward(p.collateral, remaining);
         if (keeperReward < minPayout) revert BadInput();
 
         // Collateral never leaves the contract except as the keeper's cut; whatever is left of the
@@ -262,6 +270,9 @@ contract PPIPerp {
         if (maxLeverageBps_ < BPS || maxLeverageBps_ > 2_000_000) revert BadInput();
         if (openFeeBps_ > 100 || closeFeeBps_ > 100) revert BadInput();
         if (maintenanceBps_ < 100 || maintenanceBps_ >= 5000) revert BadInput();
+        // Maintenance margin must stay below the initial margin, otherwise every position is
+        // liquidatable the instant it opens (a one-call griefing vector for whoever holds the key).
+        if (maintenanceBps_ * maxLeverageBps_ >= BPS * BPS) revert BadInput();
         maxLeverageBps = maxLeverageBps_;
         openFeeBps = openFeeBps_;
         closeFeeBps = closeFeeBps_;
@@ -308,6 +319,15 @@ contract PPIPerp {
     }
 
     // ---------------------------------------------------------------- internals
+
+    /// @dev Pay the keeper from the trader collateral via the liquidation fee when equity is gone,
+    ///      otherwise share the remaining equity. Never more than the collateral itself.
+    function _keeperReward(uint256 collateral, uint256 remaining) internal view returns (uint256 r) {
+        uint256 feeReward = (collateral * liqFeeBps) / BPS / 2;
+        uint256 equityShare = remaining / 2;
+        r = feeReward > equityShare ? feeReward : equityShare;
+        if (r > collateral) r = collateral;
+    }
 
     function _takeProtocolFee(uint256 fee) internal returns (uint256 cut) {
         cut = (fee * protocolShareBps) / BPS;

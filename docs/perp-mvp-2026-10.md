@@ -92,3 +92,59 @@ frozen feed protecting a borderline position while still liquidating a deeply un
 3. Funding is keeper-set within a cap rather than derived from a mark price — honest for a one-sided
    market, but it is discretion, not mechanism.
 
+## Second review — perp-engineer pass (2026-10-29)
+
+Reading it the way a perp auditor would, not a contract reviewer. Five more issues, all fixed and
+tested.
+
+### 1. Critical: the perp was pricing off the 1-of-1 relayer path
+
+The whole point of the 2-of-3 signed oracle is that no single key can move a price. But `PPIPerp`
+reads `PlanetCore.currentPpi`, which `updatePrice` (one relayer key) writes just as happily as
+`updatePriceSigned` (2-of-3). A compromised relayer could push a price inside the 50% jump guard and
+be liquidated through the pool — the signature work protected nothing that mattered.
+
+Fix: `PPIPriceSource` now **refuses to construct against a core whose `relayer` is not `address(0)`**.
+A market that settles money may only consume the signed path. Operational consequence: before
+deploying a perp, the core's relayer must be zeroed through the timelock.
+
+### 2. High: keepers earned nothing on the positions that matter
+
+`keeperReward = remaining / 2` where `remaining = max(equity, 0)`. For an underwater position
+(equity ≤ 0) the keeper got **zero**, so a rational keeper never liquidates it and the bad debt sits
+until the pool is insolvent. The `liqFeeBps` parameter existed but was unused.
+
+Fix: the keeper is paid from the trader's collateral via the liquidation fee, falling back to the
+equity share when that is larger, capped at the collateral. Verified: a position at equity −510 now
+pays the keeper 4.95 instead of 0.
+
+### 3. High: no decimals check
+
+Every number assumes 6 decimals. Deploying against an 18-decimal token would be off by 1e12 —
+and would look fine until the first close. The constructor now requires `decimals() == 6`.
+
+### 4. Medium: maintenance margin could exceed the initial margin
+
+`setParams` allowed maintenance up to 49.99% while 10x leverage implies 10% initial margin. At that
+setting every position is liquidatable the instant it opens — a one-call griefing vector for the
+key holder. Now enforced: `maintenanceBps × maxLeverageBps < BPS²`.
+
+### 5. Medium: a two-hour-old commodity price was still tradable
+
+`CAUTION_AGE` was 2 hours. For a spot-like index that is defensible; for a perp it is free alpha
+against the pool. Tightened to **30 minutes** (6h remains the hard freeze).
+
+Also: the liquidation refactor hit `Stack too deep`, fixed by extracting `_keeperReward` rather than
+switching on `viaIR` — the deployed bytecode keeps the same compiler settings as the verified
+contracts.
+
+### Open by design (not bugs, but must be said to an LP)
+
+1. **The pool is structurally short commodities with no hedge.** In a sustained inflationary trend it
+   bleeds; funding only offsets when traders are net long. This is the LP's actual bet.
+2. **No separate insurance fund.** Bad debt lands on LP capital directly.
+3. **Withdrawal can be blocked indefinitely** while open interest exceeds the pool multiple — correct
+   for solvency, but an LP cannot always exit on demand.
+4. **Funding is discretionary** within a cap, not derived from a mark price.
+
+

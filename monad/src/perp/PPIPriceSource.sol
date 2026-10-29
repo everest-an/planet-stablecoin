@@ -7,6 +7,7 @@ interface IPlanetCore {
     function currentPpi() external view returns (uint64);
     function lastOracleUpdate() external view returns (uint64);
     function assetCount() external view returns (uint256);
+    function relayer() external view returns (address);
     function assets(uint256 i)
         external
         view
@@ -32,10 +33,14 @@ contract PPIPriceSource is IPerpPrice {
     uint256 public immutable usdPerIndex;
 
     uint64 public constant MAX_ORACLE_AGE = 6 hours;
-    uint64 public constant CAUTION_AGE = 2 hours;
+    uint64 public constant CAUTION_AGE = 30 minutes;
 
     constructor(address core_, uint256 usdPerIndex_) {
         require(core_ != address(0) && usdPerIndex_ > 0, "bad args");
+        // The core has two write paths: updatePrice (one relayer key) and updatePriceSigned
+        // (2-of-3). A perp that settles money must not read a price a single key can move, so a core
+        // with an active relayer is rejected here. Disable the relayer before deploying this source.
+        require(IPlanetCore(core_).relayer() == address(0), "core relayer must be disabled");
         core = IPlanetCore(core_);
         usdPerIndex = usdPerIndex_;
     }

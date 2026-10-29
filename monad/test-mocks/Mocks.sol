@@ -62,11 +62,16 @@ contract MockCore {
     uint64 public currentPpi = 1_000_000;
     uint64 public lastOracleUpdate;
     uint8 public st;
+    address public relayer;
 
     function set(uint64 ppi_, uint64 ts_, uint8 st_) external {
         currentPpi = ppi_;
         lastOracleUpdate = ts_;
         st = st_;
+    }
+
+    function setRelayer(address r) external {
+        relayer = r;
     }
 
     function assetCount() external pure returns (uint256) {
