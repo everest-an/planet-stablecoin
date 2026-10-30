@@ -22,9 +22,13 @@ can put funds into an unaudited contract.**
 - PPI at inception: **1.000000** (base = the 14 assets' prices on 2026-10-29); weightSum `1,000,000`.
 - Deploy cost: ~0.00015 ETH including the oracle.
 
-**Wiring pending:** `core.setOracle(oracle)` is proposed through the 6h timelock and executes
-automatically via `.github/workflows/timelock-execute.yml`. Until it executes, `updatePriceSigned`
-reverts and the on-chain PPI stays at its last pushed value.
+**Wired.** `core.setOracle(oracle)` executed through the timelock on 2026-10-30
+(tx `0x6aabd976…c9d1`, gas 64,872); `updatePriceSigned` is live and the first 14-payload submission
+moved PPI to **1.009055**.
+
+**Cost of one full refresh, measured: 0.0000426 ETH (~$0.17)** — 14 signed updates at ~152k gas each.
+Signing is free; submitting is not. That cost belongs to whoever consumes the price (a venue bundles
+it into its trade). Paying it ourselves on a schedule is the treadmill that was deliberately removed.
 
 ## Arbitrum Sepolia (421614) — PoC, 2026-10
 
