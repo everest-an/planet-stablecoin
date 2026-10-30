@@ -1,0 +1,32 @@
+name: Relayer lockdown (execute + verify)
+
+# Clears the single-key price path on mainnet and proves it is gone: execute the pending
+# setRelayer(0) proposal after its delay, assert relayer == 0, and assert a direct updatePrice
+# reverts. Idempotent - it reports PASS on every run after the first.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "35 8 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  lockdown:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: relayer
+    env:
+      PRIVATE_KEY: ${{ secrets.MAINNET_RELAYER_KEY }}
+      RPC: https://arb1.arbitrum.io/rpc
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install deps
+        run: npm install --no-audit --no-fund
+      - name: Execute if pending, then verify
+        run: node verify-lockdown.mjs
