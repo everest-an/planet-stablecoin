@@ -1,0 +1,40 @@
+name: Perp demo refresh (Sepolia)
+
+# Keeps the Sepolia demo alive: pushes 14 signed prices so the index does not drift into the 6h
+# freeze, then runs one keeper pass (which costs nothing unless a position is liquidatable).
+#
+# Cost: every 2 hours, not every minute. A pass that finds nothing costs 0 gas; a push costs a few
+# hundred thousand Sepolia gas (testnet ETH, no value) because the 14 assets are signed individually.
+# The real budget is Actions minutes: 12 runs/day x ~2 min = ~720/month, inside the free tier.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "15 */2 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: relayer
+    env:
+      PRIVATE_KEY: ${{ secrets.MAINNET_RELAYER_KEY }}
+      RPC: https://ethereum-sepolia-rpc.publicnode.com
+      CORE: "0xe0aeb4c5a15a6e09e0dcdaf552083bd253cfc64d"
+      ORACLE: "0xa1fdb9f95210af1d968872f6fc86f623a3e3017c"
+      PERP: "0x48fecec7f876540a4584fc71c22b8d49051ffe26"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install deps
+        run: npm install --no-audit --no-fund
+      - name: Push signed prices
+        run: node perp-refresh.mjs
+      - name: Keeper pass (liquidates only if something is under-margined)
+        run: node perp-keeper.mjs --once
