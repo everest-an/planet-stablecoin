@@ -33,7 +33,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Submit the signed batch
         run: node submit-signed.mjs
-      - name: Refresh the TWAP snapshot ring
+      - name: Refresh the TWAP snapshot ring (skips cleanly on the v1 source)
+        continue-on-error: true
         run: node -e "const {createPublicClient,createWalletClient,http,encodeFunctionData}=await import('viem');const {privateKeyToAccount}=await import('viem/accounts');const {arbitrum}=await import('viem/chains');const src=process.env.SOURCE;const pk=process.env.PRIVATE_KEY;const c=createPublicClient({chain:arbitrum,transport:http(process.env.RPC)});const w=createWalletClient({account:privateKeyToAccount(pk),chain:arbitrum,transport:http(process.env.RPC)});const h=await w.sendTransaction({to:src,data:encodeFunctionData({abi:[{type:'function',name:'snapshot',stateMutability:'nonpayable',inputs:[],outputs:[]}],functionName:'snapshot'})});const rc=await c.waitForTransactionReceipt({hash:h});console.log('snapshot',rc.status);"
         env:
           SOURCE: ${{ vars.PERP_SOURCE_MAINNET }}

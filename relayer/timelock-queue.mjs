@@ -31,6 +31,7 @@ const k = key();
 const account = privateKeyToAccount(k.startsWith("0x") ? k : "0x" + k);
 const wallet = createWalletClient({ account, chain: arbitrum, transport: http(process.env.RPC || "https://arbitrum-one-rpc.publicnode.com") });
 
+const PERP = D.perpV2 || D.perp; // v2 once deployed, v1 until then
 const eta = await pub.readContract({ address: D.timelock, abi: TL_ABI, functionName: "eta" });
 const now = BigInt(Math.floor(Date.now() / 1000));
 
@@ -50,7 +51,7 @@ if (!next) { console.log("queue exhausted"); process.exit(0); }
 
 const args = next.args.map((a) => (typeof a === "string" && /^0x[0-9a-fA-F]{40}$/.test(a) ? a : BigInt(a)));
 const data = encodeFunctionData({ abi: P_ABI, functionName: next.fn, args });
-const h2 = await wallet.writeContract({ address: D.timelock, abi: TL_ABI, functionName: "propose", args: [D.perp, data] });
+const h2 = await wallet.writeContract({ address: D.timelock, abi: TL_ABI, functionName: "propose", args: [PERP, data] });
 const rc2 = await pub.waitForTransactionReceipt({ hash: h2 });
 if (rc2.status !== "success") throw new Error("propose reverted");
 next.proposed = true;
