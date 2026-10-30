@@ -23,6 +23,14 @@ const state = existsSync(STATE) ? JSON.parse(readFileSync(STATE, "utf8")) : {};
 const save = () => writeFileSync(STATE, JSON.stringify(state, null, 1));
 const log = (...a) => console.log(...a);
 
+// A committed record means the market already exists; redeploying would create a second one and
+// split liquidity. This guard is what makes the script safe to re-run from CI.
+if (existsSync("./perp-mainnet.json") && !process.env.FORCE) {
+  const prev = JSON.parse(readFileSync("./perp-mainnet.json", "utf8"));
+  log("already deployed:", prev.perp, "— set FORCE=1 to deploy another");
+  process.exit(0);
+}
+
 const relayer = await pub.readContract({ address: D.core, abi: A.PlanetCore.abi, functionName: "relayer" });
 log("core.relayer:", relayer);
 if (relayer !== "0x0000000000000000000000000000000000000000") {

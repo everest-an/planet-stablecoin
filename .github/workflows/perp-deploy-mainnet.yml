@@ -1,0 +1,31 @@
+name: Deploy perp on Arbitrum One (gated)
+
+# Refuses unless core.relayer == 0, refuses if a deployment record already exists, and gives the market
+# a timelock owner from the first block. Run it once after the relayer lockdown has executed.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: relayer
+    env:
+      PRIVATE_KEY: ${{ secrets.MAINNET_RELAYER_KEY }}
+      DELAY: "21600"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install deps
+        run: npm install --no-audit --no-fund
+      - name: Deploy (refuses if the relayer is live, or if already deployed)
+        run: node deploy-perp-mainnet.mjs
+      - name: Show the record
+        run: cat perp-mainnet.json || true
