@@ -44,7 +44,7 @@
     </header>
 
     <main class="wrap">
-      <p class="k">[ Sepolia demo · collateral is mock USDC with a public mint · nothing here has value ]</p>
+      <p class="k">[ Arbitrum One limited beta · real USDC · self-audited, not externally audited ]</p>
       <h1>PPI perpetual</h1>
       <p>
         Trade the commodity index with leverage. The counterparty is the LP pool, not the platform, and
@@ -76,8 +76,7 @@
           <span class="k" id="acct">not connected</span>
         </div>
         <div class="row">
-          <button id="mint" class="ghost">get 10,000 test USDC</button>
-          <span class="k" id="bal">balance —</span>
+          <span class="k" id="bal">USDC on Arbitrum One —</span>
         </div>
         <div class="row">
           <label class="k">direction</label>
@@ -167,8 +166,8 @@
       $("connect").onclick = async () => {
         if (!window.ethereum) return log("no injected wallet");
         try {
-          await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0xaa36a7" }] }).catch(async () => {
-            await window.ethereum.request({ method: "wallet_addEthereumChain", params: [{ chainId: "0xaa36a7", chainName: "Sepolia", nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 }, rpcUrls: ["https://ethereum-sepolia-rpc.publicnode.com"] }] });
+          await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0xa4b1" }] }).catch(async () => {
+            await window.ethereum.request({ method: "wallet_addEthereumChain", params: [{ chainId: "0xa4b1", chainName: "Arbitrum One", nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 }, rpcUrls: ["https://arb1.arbitrum.io/rpc"] }] });
           });
           const [a] = await window.ethereum.request({ method: "eth_requestAccounts" });
           account = a;
@@ -187,7 +186,7 @@
         await refreshAccount();
       };
 
-      $("mint").onclick = () => send(S.contracts.collateral, ERC20_ABI, "mint", [account, parseUnits("10000", 6)]).catch((e) => log(e.shortMessage || e.message));
+      // No mint on mainnet: the collateral is real USDC, obtained off-platform.
       $("deposit").onclick = async () => {
         try {
           await send(S.contracts.collateral, ERC20_ABI, "approve", [S.contracts.perp, 2n ** 255n]);

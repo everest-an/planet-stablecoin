@@ -1,0 +1,33 @@
+name: Perp keeper (Arbitrum One)
+
+# Scans open positions every two hours and liquidates what is under maintenance. liquidate is
+# permissionless, so this runs without the keeper role; funding updates need setKeeper, which is a
+# pending timelock proposal. Idle passes cost nothing.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 */2 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  keeper:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: relayer
+    env:
+      RPC: https://arbitrum-one-rpc.publicnode.com
+      PERP: "0x9c2250914c457914af3bffb085ae44141667f5ac"
+      PRIVATE_KEY: ${{ secrets.MAINNET_RELAYER_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install deps
+        run: npm install --no-audit --no-fund
+      - name: Keeper pass
+        run: node perp-keeper.mjs --once

@@ -1,0 +1,36 @@
+name: Perp invariant monitor (Arbitrum One)
+
+# Same invariants as the Sepolia monitor, against the live market: balance == collateral + pool,
+# position sums agree with aggregates, exposure inside the pool multiple, index not frozen.
+# Alerts through the Telegram bot. Runs hourly; the market is empty until an LP deposits, so a green
+# run with zero positions is the expected baseline.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "42 * * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: relayer
+    env:
+      RPC: https://arbitrum-one-rpc.publicnode.com
+      PERP: "0x9c2250914c457914af3bffb085ae44141667f5ac"
+      COLLATERAL: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831"
+      TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+      TG_ALERT_CHAT_ID: ${{ secrets.TG_ALERT_CHAT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install deps
+        run: npm install --no-audit --no-fund
+      - name: Check invariants
+        run: node perp-monitor.mjs

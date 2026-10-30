@@ -1,12 +1,12 @@
 // GET /api/v1/perp — the Sepolia perp market, read straight from the chain.
 // Read-only; the page does its own signing. Every field is a chain read, no database.
 import { createPublicClient, http } from "viem";
-import { sepolia } from "viem/chains";
+import { arbitrum } from "viem/chains";
 
-const PERP = process.env.PERP_ADDRESS || "0x48fecec7f876540a4584fc71c22b8d49051ffe26";
-const CORE = process.env.PERP_CORE || "0xe0aeb4c5a15a6e09e0dcdaf552083bd253cfc64d";
-const SOURCE = process.env.PERP_SOURCE || "0x132920e32fa9e1d65b64a37b1b18bc4305e4675b";
-const RPC = process.env.PERP_RPC || "https://ethereum-sepolia-rpc.publicnode.com";
+const PERP = process.env.PERP_ADDRESS || "0x9c2250914c457914af3bffb085ae44141667f5ac";
+const CORE = process.env.PERP_CORE || "0x61de052af7cb7dc957a07b1e6298152bb851cbbb";
+const SOURCE = process.env.PERP_SOURCE || "0x5d767020ab6e830f5914fbe11401ad536b720d6c";
+const RPC = process.env.PERP_RPC || "https://arbitrum-one-rpc.publicnode.com";
 
 const PERP_ABI = [
   { name: "poolAssets", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
@@ -34,7 +34,7 @@ const CORE_ABI = [
   { name: "assetCount", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
 ];
 
-const pub = createPublicClient({ chain: sepolia, transport: http(RPC) });
+const pub = createPublicClient({ chain: arbitrum, transport: http(RPC) });
 let cache = { at: 0, body: null };
 
 export default async function handler(req, res) {
@@ -65,8 +65,8 @@ export default async function handler(req, res) {
     const assets = await pub.readContract({ address: CORE, abi: CORE_ABI, functionName: "assetCount" });
 
     const body = {
-      chain: { name: "ethereum-sepolia", id: 11155111 },
-      contracts: { perp: PERP, core: CORE, priceSource: SOURCE, collateral: "0x5a46eca6a7ee7b1514715f29bd9305d0db34b5ef" },
+      chain: { name: "arbitrum-one", id: 42161 },
+      contracts: { perp: PERP, core: CORE, priceSource: SOURCE, collateral: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831" },
       market: {
         price: Number(price) / 1e18,
         ppi: Number(ppi) / 1e6,
@@ -91,8 +91,8 @@ export default async function handler(req, res) {
       },
       roles: { keeper, treasury },
       notes: [
-        "Sepolia demo. Collateral is a mock USDC with a public mint; nothing here has value.",
-        "Minting on the index is disabled: there is no deposit token on this core.",
+        "Arbitrum One limited beta. Collateral is real USDC. The contracts are self-audited, not externally audited.",
+        "The pool is empty until an LP deposits; open interest is capped at 2x the pool.",
       ],
     };
     cache = { at: Date.now(), body };
