@@ -55,6 +55,7 @@
         <div class="k">current PPI</div>
         <div class="big" id="ppi">—</div>
         <div class="k" id="ppiNote">reading Arbitrum One…</div>
+        <div id="staleNote" style="margin-top:10px;font-family:'DM Mono',monospace;font-size:11px;line-height:1.7;color:#f08c00"></div>
       </div>
 
       <h2>The basket</h2>
@@ -100,6 +101,18 @@
           const age = d.oracleAgeSeconds;
           document.getElementById("ppiNote").textContent =
             `oracle updated ${age < 90 ? age + "s" : Math.round(age / 60) + "m"} ago · ${d.assetCount} assets · weightSum ${d.weightSum} · base ${d.baseLocked ? "locked" : "open"}`;
+
+          const stale = document.getElementById("staleNote");
+          if (age > 21600) {
+            stale.innerHTML =
+              "<b>This index is frozen.</b> The price is " + Math.round(age / 3600) + "h old, past the 6h gate: " +
+              "any market settling against it would be close-only. Publishing is free; submitting costs gas, so " +
+              "nothing refreshes it unless a consumer does.";
+          } else if (age > 1800) {
+            stale.textContent =
+              "Stale by " + Math.round(age / 60) + " minutes: past the 30-minute caution window, so a market would " +
+              "require more margin.";
+          }
 
           document.getElementById("rows").innerHTML = d.assets
             .map((a) => {

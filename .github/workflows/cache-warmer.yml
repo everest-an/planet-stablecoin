@@ -16,7 +16,9 @@ name: Cache warmer
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/5 * * * *"
+    # Hourly, not every five minutes: 288 runs/day was the single largest consumer of Actions
+    # minutes in this repo, and the CDN cache windows are sized in hours anyway.
+    - cron: "17 * * * *"
 
 jobs:
   warm:

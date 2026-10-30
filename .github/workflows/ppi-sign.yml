@@ -8,7 +8,9 @@ name: PPI sign (zero gas)
 on:
   workflow_dispatch:
   schedule:
-    - cron: "7 * * * *"
+    # Daily, not hourly: the API signs on demand now, so this workflow is only the public audit
+    # trail of what was signed. Signing costs no gas; the schedule costs Actions minutes.
+    - cron: "7 3 * * *"
 
 permissions:
   contents: write
