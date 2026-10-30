@@ -15,9 +15,9 @@ const DELAY = BigInt(process.env.DELAY || "21600");
 const env = readFileSync("E:/Protocol Bank/.env.local", "utf8");
 const rawPk = env.match(/^AGENT_TEST_WALLET_PRIVATE_KEY=(.*)$/m)[1].trim().replace(/^["']|["']$/g, "");
 const account = privateKeyToAccount(rawPk.startsWith("0x") ? rawPk : "0x" + rawPk);
-const RPC = "https://arb1.arbitrum.io/rpc";
-const pub = createPublicClient({ chain: arbitrum, transport: http(RPC) });
-const wallet = createWalletClient({ account, chain: arbitrum, transport: http(RPC) });
+const RPC = process.env.RPC || "https://arb1.arbitrum.io/rpc";
+const pub = createPublicClient({ chain: arbitrum, transport: http(RPC, { timeout: 120000, retryCount: 5, retryDelay: 3000 }) });
+const wallet = createWalletClient({ account, chain: arbitrum, transport: http(RPC, { timeout: 120000, retryCount: 5, retryDelay: 3000 }) });
 
 const state = existsSync(STATE) ? JSON.parse(readFileSync(STATE, "utf8")) : {};
 const save = () => writeFileSync(STATE, JSON.stringify(state, null, 1));
