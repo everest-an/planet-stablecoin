@@ -24,6 +24,8 @@ const ABI = [
   { name: "liquidate", type: "function", stateMutability: "nonpayable", inputs: [{ type: "address" }, { type: "uint256" }], outputs: [{ type: "uint256" }] },
   { name: "setFundingRate", type: "function", stateMutability: "nonpayable", inputs: [{ type: "int256" }], outputs: [] },
   { name: "keeper", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
+  { name: "netSize", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "int256" }] },
+  { name: "poolAssets", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
 ];
 
 function chainFor(rpc) {
@@ -34,7 +36,9 @@ function chainFor(rpc) {
   return arbitrum;
 }
 
-export async function runOnce({ rpc, perp, key, dry = false, fundingRate = null, log = console.log }) {
+const AUTO_FUNDING_CAP = 58_000_000_000n; // ~50 bps/day at the 1.16e10 scaling
+
+export async function runOnce({ rpc, perp, key, dry = false, fundingRate = null, autoFunding = false, log = console.log }) {
   const chain = chainFor(rpc);
   const pub = createPublicClient({ chain, transport: http(rpc) });
   const account = privateKeyToAccount(key.startsWith("0x") ? key : "0x" + key);
@@ -75,6 +79,27 @@ export async function runOnce({ rpc, perp, key, dry = false, fundingRate = null,
     }
   }
 
+  if (autoFunding && !dry && account.address.toLowerCase() === keeperAddr.toLowerCase()) {
+    const [netSize, poolAssets] = await Promise.all([
+      pub.readContract({ address: perp, abi: ABI, functionName: "netSize" }),
+      pub.readContract({ address: perp, abi: ABI, functionName: "poolAssets" }),
+    ]);
+    // net long -> positive (longs pay); net short -> negative. Zero pool -> leave the rate alone.
+    let rate = 0n;
+    if (poolAssets > 0n) {
+      const ratio = (netSize * AUTO_FUNDING_CAP * 1000n) / BigInt(poolAssets); // 1000x for integer precision
+      rate = ratio / 1000n;
+      if (rate > AUTO_FUNDING_CAP) rate = AUTO_FUNDING_CAP;
+      if (rate < -AUTO_FUNDING_CAP) rate = -AUTO_FUNDING_CAP;
+    }
+    try {
+      const h = await wallet.writeContract({ address: perp, abi: ABI, functionName: "setFundingRate", args: [rate] });
+      const rc = await pub.waitForTransactionReceipt({ hash: h });
+      log("    setFundingRate " + rate + " (netSize " + netSize + ", pool " + poolAssets + "): " + rc.status);
+    } catch (e) {
+      log("    setFundingRate skipped: " + (e.shortMessage || e.message));
+    }
+  }
   if (fundingRate !== null && !dry && account.address.toLowerCase() === keeperAddr.toLowerCase()) {
     try {
       const h = await wallet.writeContract({ address: perp, abi: ABI, functionName: "setFundingRate", args: [BigInt(fundingRate)] });
@@ -98,12 +123,13 @@ if (isMain) {
     process.exit(1);
   }
   const once = process.argv.includes("--once");
+  const autoFunding = process.argv.includes("--auto-funding");
   const dry = process.argv.includes("--dry");
   const interval = Number(process.env.INTERVAL_MS || 30000);
   const funding = process.env.FUNDING_RATE ? String(process.env.FUNDING_RATE) : null;
 
   const tick = async () => {
-    const r = await runOnce({ rpc, perp, key, dry, fundingRate: funding });
+    const r = await runOnce({ rpc, perp, key, dry, fundingRate: funding, autoFunding });
     console.log(`[${new Date().toISOString()}] risk=${r.risk} positions=${r.positions} liquidatable=${r.liquidatable.length}${r.dry ? " (dry)" : ""}`);
   };
   await tick();

@@ -1,0 +1,39 @@
+name: Index refresh (Arbitrum One)
+
+# The pull-oracle design means the index only moves when someone pays to submit the signed feed.
+# Until a venue embeds the update in its own transactions, this workflow IS the consumer: every 5h
+# it submits the fresh signed batch, keeping the market inside the 6h liveness gate and the PPI
+# honest. Cost is real gas: ~0.0006 ETH per full 14-asset batch, ~$2/day at current prices. The
+# market freezes if this stops - that is the honest failure mode, and perp-monitor alerts on it.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "37 */5 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: relayer
+    env:
+      RPC: https://arb1.arbitrum.io/rpc
+      API: https://ppppp.space/api/v1/price-signed
+      PRIVATE_KEY: ${{ secrets.MAINNET_RELAYER_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install deps
+        run: npm install --no-audit --no-fund
+      - name: Submit the signed batch
+        run: node submit-signed.mjs
+      - name: Refresh the TWAP snapshot ring
+        run: node -e "const {createPublicClient,createWalletClient,http,encodeFunctionData}=await import('viem');const {privateKeyToAccount}=await import('viem/accounts');const {arbitrum}=await import('viem/chains');const src=process.env.SOURCE;const pk=process.env.PRIVATE_KEY;const c=createPublicClient({chain:arbitrum,transport:http(process.env.RPC)});const w=createWalletClient({account:privateKeyToAccount(pk),chain:arbitrum,transport:http(process.env.RPC)});const h=await w.sendTransaction({to:src,data:encodeFunctionData({abi:[{type:'function',name:'snapshot',stateMutability:'nonpayable',inputs:[],outputs:[]}],functionName:'snapshot'})});const rc=await c.waitForTransactionReceipt({hash:h});console.log('snapshot',rc.status);"
+        env:
+          SOURCE: ${{ vars.PERP_SOURCE_MAINNET }}

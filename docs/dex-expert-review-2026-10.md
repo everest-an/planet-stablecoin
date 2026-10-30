@@ -74,18 +74,22 @@ Cosmetic, but a page that lies about which chain it trades on is not a finished 
 - Keeper economics fixed (paid on negative-equity positions); frozen-feed liquidation guard.
 - Timelock ownership from the first block; caps designed; exit runbook written.
 
-## What "complete" would require, ordered
+## Resolution status (updated after the review)
 
-1. **A consumer or a funded keeper for the index** — without it, every other fix is moot.
-2. **A guardian pause** — one address, one-way pause, reachable in minutes.
-3. **setKeeper + setTreasury proposals** — two more 6h rounds; the revenue line and the operator.
-4. **A funding rule** — even a simple one (funding = clamped deviation from a rolling median) beats
-   a hand-set number.
-5. **TWAP liquidation price.**
-6. **A delta for the pool or a real funding rate that prices the short exposure.**
+| # | Fix | Status |
+|---|-----|--------|
+| 1 | Guardian emergency pause: one-way `emergencyPause()` + `setGuardian`, in PPIPerp v2. Only pause, no resume, no other power. | **Implemented + tested; live after v2 redeploy** |
+| 2 | Index consumer: `index-refresh-mainnet.yml` submits the signed batch every 5h (the venue-absent treadmill). Freeze = honest failure mode, monitor alerts. | **Automated; costs ~$2/day of gas** |
+| 3 | Keeper + treasury: `timelock-queue.mjs` advances setParams → setKeeper → setTreasury → setGuardian, one 6h round per day, fully automatic. | **Automated (4-day sequence)** |
+| 4 | Treasury wired: same queue; the 30% share starts flowing once the round executes. | **Queued** |
+| 5 | Funding rule: `perp-keeper.mjs --auto-funding` derives the rate from netSize/poolAssets, clamped at ±50 bps/day (the cap is 8%/day). It is a rule now, not a hand-set number. | **Implemented; active once setKeeper executes** |
+| 6 | TWAP liquidation gate: `triggerPrice(isLong)` = trader-favorable side of {spot, 15-min ring TWAP}; a position must be underwater at both to be liquidated. Settlement stays at spot. | **Implemented + tested (wick-protection cases pass)** |
+| 7 | LP short exposure: still structural. The 2x OI cap, 3x leverage cap and the funding rule bound it; a delta venue is future work, not rushed. | **Bounded, disclosed** |
+| 8 | Default params: replaced by the v2 queue; defaults only exist in the minutes between deploy and first execute. | **Queued** |
+| 9 | /perps page + API read mainnet. | **Done** |
 
-Items 1–3 are operational and cheap. Items 4–6 are design work and should not be rushed into a
-market that already has real money in it.
+The v2 deployment itself is gated on gas (see the deploy-perp-v2.mjs header) and, after deploy,
+four 6h timelock rounds. Everything else is in the repository and runs unattended.
 
 ---
 

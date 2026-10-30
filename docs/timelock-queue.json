@@ -1,0 +1,5 @@
+[
+  { "label": "setKeeper", "fn": "setKeeper", "args": ["0xBf0D7119F553eB5f85C9806f0849f9c86a9B768C"] },
+  { "label": "setTreasury", "fn": "setTreasury", "args": ["0xBf0D7119F553eB5f85C9806f0849f9c86a9B768C"] },
+  { "label": "setGuardian", "fn": "setGuardian", "args": ["0xBf0D7119F553eB5f85C9806f0849f9c86a9B768C"] }
+]

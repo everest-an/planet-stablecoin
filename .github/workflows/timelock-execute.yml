@@ -28,6 +28,6 @@ jobs:
       - name: Execute if pending
         working-directory: relayer
         run: node execute-timelock.mjs
-      - name: Execute the perp timelock if pending
+      - name: Advance the proposal queue (execute when due, propose the next)
         working-directory: relayer
-        run: node execute-perp-timelock.mjs || true
+        run: node timelock-queue.mjs || true
