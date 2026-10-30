@@ -27,4 +27,4 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Execute if pending
         working-directory: relayer
-        run: node ../scripts/execute-timelock.mjs
+        run: node execute-timelock.mjs
