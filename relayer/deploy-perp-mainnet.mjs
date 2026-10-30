@@ -7,7 +7,7 @@ import { readFileSync, writeFileSync, existsSync } from "node:fs";
 
 const A = JSON.parse(readFileSync("./artifacts.json", "utf8"));
 const P = JSON.parse(readFileSync("./perp-artifacts.json", "utf8"));
-const D = JSON.parse(readFileSync("./deployment-mainnet.json", "utf8"));
+const D = JSON.parse(readFileSync(new URL("../docs/mainnet-deployment.json", import.meta.url), "utf8"));
 const STATE = "./perp-mainnet-state.json";
 const USDC = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
 const DELAY = BigInt(process.env.DELAY || "21600");
