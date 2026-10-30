@@ -1,0 +1,11 @@
+{
+ "chain": "arbitrum-one",
+ "chainId": 42161,
+ "core": "0x61de052af7cb7dc957a07b1e6298152bb851cbbb",
+ "collateral": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+ "timelock": "0xa1fdb9f95210af1d968872f6fc86f623a3e3017c",
+ "priceSource": "0x5d767020ab6e830f5914fbe11401ad536b720d6c",
+ "perp": "0x9c2250914c457914af3bffb085ae44141667f5ac",
+ "owner": "0xBf0D7119F553eB5f85C9806f0849f9c86a9B768C",
+ "delay": 21600
+}
