@@ -1,0 +1,36 @@
+name: Perp invariant monitor (Sepolia)
+
+# The one failure that must never be silent: the pool's accounting. Hourly, cheap, and it alerts
+# through the same Telegram bot as the oracle monitor. A green run means balance == collateral + pool,
+# the position sums agree with the aggregates, exposure is inside the configured multiple, and the
+# index is not frozen.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "42 * * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: relayer
+    env:
+      RPC: https://ethereum-sepolia-rpc.publicnode.com
+      PERP: "0x48fecec7f876540a4584fc71c22b8d49051ffe26"
+      COLLATERAL: "0x5a46eca6a7ee7b1514715f29bd9305d0db34b5ef"
+      TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+      TG_ALERT_CHAT_ID: ${{ secrets.TG_ALERT_CHAT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install deps
+        run: npm install --no-audit --no-fund
+      - name: Check invariants
+        run: node perp-monitor.mjs
