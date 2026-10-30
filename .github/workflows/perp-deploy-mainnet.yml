@@ -1,17 +1,22 @@
 name: Deploy perp on Arbitrum One (gated)
 
-# Refuses unless core.relayer == 0, refuses if a deployment record already exists, and gives the market
-# a timelock owner from the first block. Run it once after the relayer lockdown has executed.
+# One-shot deployment after the relayer lockdown. Refuses while core.relayer is live, refuses if a
+# deployment record is already committed, and gives the market a timelock owner from the first block.
+# After deploying it proposes the beta parameters and commits the record back, so a rerun is a no-op.
 on:
   workflow_dispatch:
+  schedule:
+    # One shot: today at 08:45 UTC, 16 minutes after the relayer lockdown becomes executable. The
+    # record is committed back, so any later run sees it and exits instead of deploying a second market.
+    - cron: "45 8 30 10 *"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: relayer
@@ -25,7 +30,16 @@ jobs:
           node-version: "22"
       - name: Install deps
         run: npm install --no-audit --no-fund
-      - name: Deploy (refuses if the relayer is live, or if already deployed)
+      - name: Deploy and propose beta parameters
         run: node deploy-perp-mainnet.mjs
-      - name: Show the record
-        run: cat perp-mainnet.json || true
+      - name: Commit the deployment record
+        working-directory: .
+        run: |
+          set -e
+          if [ -f relayer/perp-mainnet.json ]; then
+            git config user.name "planet-deployer"
+            git config user.email "deploy@ppppp.space"
+            git add -f relayer/perp-mainnet.json
+            git commit -m "deploy: perp market on Arbitrum One" || echo "nothing to commit"
+            git push || echo "push skipped"
+          fi
