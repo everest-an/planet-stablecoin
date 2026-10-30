@@ -52,7 +52,10 @@ const deploy = async (key, abi, bytecode, args) => {
 log("deployer:", account.address, "| ETH:", formatUnits(await pub.getBalance({ address: account.address }), 18));
 
 // 1. the perp's own timelock (owner of the market from the first block)
-const timelock = await deploy("timelock", A.PlanetTimelock.abi, A.PlanetTimelock.bytecode, [account.address, DELAY]);
+// Reuse the governance that already owns the index: one more contract under the same timelock beats a
+// second governance system, and it saves ~0.9M gas on a thin balance.
+const timelock = D.timelock;
+log(`${"timelock".padEnd(14)} ${timelock}  (existing)`);
 // 2. price source - refuses a core with an active relayer by construction
 const source = await deploy("priceSource", P.PPIPriceSource.abi, P.PPIPriceSource.bytecode, [D.core, 1000n]);
 // 3. the market, owned by the timelock
@@ -78,8 +81,9 @@ await propose("setParams", encodeFunctionData({
   functionName: "setParams",
   args: [30_000n, 10n, 10n, 1_000n], // 3x, 0.10% open, 0.10% close, 10% maintenance
 }));
-await propose("setTreasury", encodeFunctionData({ abi: P.PPIPerp.abi, functionName: "setTreasury", args: [account.address] }));
-await propose("setMaxOiToPool", encodeFunctionData({ abi: P.PPIPerp.abi, functionName: "setMaxOiToPool", args: [20_000n] }));
+// The timelock holds ONE pending proposal, so a second propose would silently replace the first.
+// setParams is the one that matters (3x, 10% maintenance); treasury 0 and the 2x pool multiple are
+// already the contract defaults, so they do not need a proposal.
 
 const eta = await pub.readContract({ address: timelock, abi: A.PlanetTimelock.abi, functionName: "eta" });
 log(`beta parameters executable at ${new Date(Number(eta) * 1000).toISOString()}`);
