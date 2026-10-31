@@ -62,8 +62,15 @@ contract PPIPriceSource is IPerpPrice {
     uint256[8] private _obsT;
     uint8 private _head;
     uint8 private _count;
+    /// @dev Without a rate limit, one bad print followed by 8 rapid snapshots would fill the ring
+    ///      with the wick and wash the TWAP gate out. One snapshot per 30 minutes means a wick
+    ///      needs ~4 hours to dominate the ring - and only if it is still the on-chain price.
+    uint256 private _lastSnap;
+    uint256 public constant SNAPSHOT_MIN_INTERVAL = 30 minutes;
 
     function snapshot() external {
+        if (block.timestamp - _lastSnap < SNAPSHOT_MIN_INTERVAL) return;
+        _lastSnap = block.timestamp;
         _obsP[_head] = _spot();
         _obsT[_head] = block.timestamp;
         _head = uint8((_head + 1) % 8);
