@@ -165,7 +165,7 @@ This page documents the <b>Sepolia proof of concept</b>. The live index is on <b
       <p>The live Arbitrum One write path is the 2-of-3 signed oracle; the single-relayer path is disabled there (locked to <code>address(0)</code>). The Sepolia reference keeps the single-relayer demo path.
         The M-of-N verifier is <b>deployed and wired in</b> (<code>updatePriceSigned</code>), and its signer set
         is configured with <code>setSigners(address[], uint8)</code> on the oracle. Today it is
-        <b>1-of-1 with the same operator key</b>; raising it to 2-of-3 is a <code>setSigners()</code> call —
+        <b>2-of-3 with threshold 2 on Arbitrum One</b>; it was raised via <code>setSigners()</code> —
         no redeploy.</p>
 
       <h2 id="token">4. Token, mint &amp; redeem</h2>
