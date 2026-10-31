@@ -1,0 +1,35 @@
+name: PPI daily snapshot
+
+# The public track record: one committed JSON per day (index value, per-asset prices and risk
+# states). This is the asset a venue evaluates before licensing the index.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: relayer
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install deps
+        run: npm install --no-audit --no-fund
+      - name: Capture
+        run: node snapshot-ppi.mjs
+      - name: Commit
+        run: |
+          git config user.name "planet-bot"
+          git config user.email "bot@ppppp.space"
+          git add ../docs/data/ppi
+          git diff --cached --quiet || git commit -m "data: PPI snapshot $(date -u +%F)"
+          git push
