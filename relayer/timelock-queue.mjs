@@ -36,10 +36,22 @@ const eta = await pub.readContract({ address: D.timelock, abi: TL_ABI, functionN
 const now = BigInt(Math.floor(Date.now() / 1000));
 
 if (eta !== 0n && now >= eta) {
-  const h = await wallet.writeContract({ address: D.timelock, abi: TL_ABI, functionName: "execute" });
-  const rc = await pub.waitForTransactionReceipt({ hash: h });
-  if (rc.status !== "success") throw new Error("execute reverted");
-  console.log("executed", h, "gas", rc.gasUsed);
+  try {
+    const h = await wallet.writeContract({ address: D.timelock, abi: TL_ABI, functionName: "execute" });
+    const rc = await pub.waitForTransactionReceipt({ hash: h });
+    if (rc.status !== "success") throw new Error("execute reverted");
+    console.log("executed", h, "gas", rc.gasUsed);
+  } catch (e) {
+    // F5: past eta+gracePeriod the proposal is permanently un-executable. Cancel and re-propose
+    // the same item rather than stalling the queue for good.
+    if ((e.message || "").includes("TooLate")) {
+      const c = await wallet.writeContract({ address: D.timelock, abi: TL_ABI, functionName: "cancel" });
+      await pub.waitForTransactionReceipt({ hash: c });
+      console.log("proposal expired (TooLate) - cancelled, will re-propose below");
+    } else {
+      throw e;
+    }
+  }
 } else if (eta !== 0n) {
   console.log(`proposal pending, executable at ${new Date(Number(eta) * 1000).toISOString()}`);
   process.exit(0);

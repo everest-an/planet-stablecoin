@@ -134,8 +134,61 @@ not changed.
 - adversarial: 5/5 (donation, invariant breach detection, replay rejection, healthy-liq rejection, relayer closure)
 - twap-guardian: 12/12 (guardian one-way, TWAP gate both directions)
 
-## Bottom line
+## Round 2 — economic, game-theoretic and infrastructure layer (2026-10-31)
 
-The attack surface is closed for everything a third party can do without keys. The residual risks are
-all key-holder scenarios (F1, F2) and the honest structural limits of a pull-oracle index. No
-new third-party exploitability was found in this pass; F1 is the one to fix before real money.
+The first pass covered third-party code attacks. This round asks the harsher questions: what can
+someone do WITHOUT breaking any rule, and what breaks if the infrastructure is compromised.
+
+### F0 — Public signed feed + batched submission = a known-price front-run race (HIGH)
+
+The flow: the API signs a fresh batch, publishes it PUBLICLY at `/api/v1/price-signed`, and the
+refresh workflow submits it on-chain only every 5 hours. On-chain, the index still holds the old
+price for up to 5 hours. A watcher reads the public feed, sees the signed next price, and knows the
+direction of the next on-chain move with certainty.
+
+The trade: open LONG at the old on-chain entry price before the batch lands, close after it lands.
+PnL = notional × Δ/entry — guaranteed when |Δ| > the 0.2% round-trip fee. And because the watcher
+only trades when the feed shows a big move, this is **free convexity, not a coin flip**: they never
+take the losing side. The counterparty who pays every time is the **LP pool**.
+
+Severity is high because it is systematic (every 5h batch is a window), permissionless, and it does
+not require any key or any contract flaw — it uses the design's own publication cadence.
+**Fix (the pull model done right):** the trade UI submits the signed batch for the moved assets
+immediately before open/close, so the entry price is the fresh one and the trader pays the gas. The
+5h keeper remains as liveness-only (it stops being a profit window once entries are fresh). Until
+that ships, an LP must not deposit into a market whose oracle is 5 hours behind a public feed.
+
+### F4 — Key separation is logical, not physical (LOW/ops)
+
+Both oracle signer keys live in Vercel env vars. The 2-of-3 threshold protects against ONE key
+leaking, not against one VENDOR being compromised. Keeper, guardian, owner-EOA and queue-proposer
+are all the same wallet (0xBf0D…). Fix (before real money): move signer key #2 to a second vendor
+(GitHub Actions secret) and the guardian to a cold key.
+
+### F5 — The queue script does not handle grace-period expiry (LOW/ops)
+
+If the daily executor misses three consecutive days (Actions outage, repo down), the pending
+proposal passes `eta + gracePeriod` and `execute()` reverts TooLate forever — the queue stalls
+instead of cancelling and re-proposing. Fix: in `timelock-queue.mjs`, catch TooLate, call `cancel()`,
+and re-propose the same item.
+
+### F6 — Index weight changes move the perp price (INFO, governance)
+
+`setAsset` changes a weight → `computePpi` moves → the perp's settlement price moves. It is
+timelock-gated with a 6h window and the market watches it, but it means index governance IS price
+governance for the perp. No exploit; it belongs in the operator runbook as a market-moving action.
+
+### F7 — Close is always allowed, even during a guardian pause (confirmed SAFE)
+
+`close()` and `withdraw()` have no pause check: a guardian pause blocks new risk but never traps
+exits. A leaked guardian key can only freeze the market — it cannot steal and cannot trap anyone.
+This asymmetry is deliberate and correct.
+
+## Bottom line after round 2
+
+The code holds. The remaining risk is not in the contracts — it is in the **cadence** (F0: a public
+feed that lands on-chain 5 hours late is a profit window against the LPs) and the **key topology**
+(F1, F4). Both are fixable without touching the settled contracts: F0 via trade-triggered price
+submission in the UI, F1/F4 via a self-owned timelock and split custody. None of them should stop
+the deployment pipeline, but F0 must ship before the first LP deposit, and F1 before the first
+large one.
