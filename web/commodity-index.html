@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>On-chain commodity index: how a 14-asset PPI works — Planet</title>
+    <meta
+      name="description"
+      content="What an on-chain commodity index is, why single-source price feeds fail in perpetual markets, and how a 2-of-3 signed pull oracle with machine-readable risk states prices 14 commodities into one PPI."
+    />
+    <link rel="canonical" href="https://ppppp.space/commodity-index" />
+    <link rel="stylesheet" href="/styles.css" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is an on-chain commodity index?",
+            "acceptedAnswer": { "@type": "Answer", "text": "A commodity index published on a blockchain: prices for a basket of commodities are written on-chain by an authorised oracle, and the weighted average is computed by the contract itself. Because the number lives on-chain, perpetual markets, lending markets and RWA products can settle against it without trusting an off-chain server." }
+          },
+          {
+            "@type": "Question",
+            "name": "Why do single-source price feeds fail in perpetual markets?",
+            "acceptedAnswer": { "@type": "Answer", "text": "A perpetual market liquidates positions against its price. If the price comes from one key or one API, a stale value or a bad print is indistinguishable from a real move, and the liquidation engine treats it as real. The result is either a cascade of wrongful liquidations or bad debt when a genuine move goes unpriced." }
+          },
+          {
+            "@type": "Question",
+            "name": "What are data-quality states in the Planet PPI?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Each of the 14 assets carries a state: normal, caution (stale or unconfirmed), or frozen (excluded from the index). A venue reading the index can raise margin or block new positions when a state degrades, before a bad print is liquidated through the pool." }
+          },
+          {
+            "@type": "Question",
+            "name": "How is the PPI computed?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Each asset contributes weight × (current price / base price). The sum is divided by the sum of active weights, so frozen assets are renormalised out. The index is 1.0 at inception; a value of 1.01 means the basket costs 1% more than at launch." }
+          }
+        ]
+      }
+    </script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="wordmark" href="/">Planet</a>
+      <nav class="nav">
+        <a href="/ppi">index</a>
+        <a href="/methodology">methodology</a>
+        <a href="/perps">perps</a>
+        <a href="/metals">metals</a>
+      </nav>
+    </header>
+
+    <main class="wrap">
+      <p class="k">[ research · 2026-10 ]</p>
+      <h1>On-chain commodity index: how a 14-asset PPI works</h1>
+      <p>
+        A commodity index turns many prices into one number. Doing it on a blockchain changes who can
+        use that number: any contract can read it, settle against it, and react to its state without a
+        server in between. This page explains what the Planet PPI is, why the data-quality layer
+        matters more than the price formula, and what a venue can do with it.
+      </p>
+
+      <h2>1. What "on-chain" actually buys you</h2>
+      <p>
+        An off-chain index is a number in a database. To settle a derivative against it you need a
+        trusted party to report it, and a dispute process when the report is wrong. An on-chain index
+        is a state variable: the contract stores each asset's price, computes the weighted mean, and
+        exposes it through a read call. The settlement is the same transaction that reads it.
+      </p>
+      <p>
+        Planet's index lives in <code>PlanetCore</code> on Arbitrum One. The 14 assets cover energy,
+        precious and industrial metals, agriculture and industrial inputs. Each asset has a weight
+        (capped at 15%), a base price locked at inception, a current price, and a risk state.
+      </p>
+
+      <h2>2. Why a single price source is the wrong design</h2>
+      <p>
+        A perpetual market liquidates positions against its price. If the price comes from one key or
+        one API, the liquidation engine cannot tell a real move from a bad print. It treats both the
+        same way: it liquidates. That is how oracle-driven cascades happen.
+      </p>
+      <p>
+        Planet's mainnet deployment removes the single-key path entirely: the core's relayer address
+        is locked to zero, so the only way to move a price is a payload signed by two of three
+        independent keys, bound to this contract and this chain. The same signed feed is public, so
+        anyone can relay it and pay the gas.
+      </p>
+
+      <h2>3. The part most indices do not publish: data quality</h2>
+      <p>
+        Every update carries a risk state per asset: normal, caution (stale or unconfirmed) or frozen
+        (excluded from the index and from the staleness gate). The index renormalises over active
+        weights, so a dead feed does not block the market forever — and a freeze cap prevents the
+        basket from being collapsed onto one commodity.
+      </p>
+      <p>
+        The practical value: a venue reading the index can tighten margin or refuse new positions while
+        a feed is degraded, instead of learning about it after a liquidation. That is the difference
+        between a price and a <em>usable</em> price.
+      </p>
+
+      <h2>4. The formula, in one paragraph</h2>
+      <p>
+        For each active asset, the contribution is <code>weight × currentPrice / basePrice</code>. The
+        contract sums the contributions and divides by the sum of active weights. The result is a
+        1e6-fixed number where 1.0 is inception. A frozen asset is skipped in both numerator and
+        denominator; the freeze cap limits how much weight can be skipped at once.
+      </p>
+
+      <h2>5. What it is used for</h2>
+      <ul>
+        <li><b>Perpetual settlement.</b> <a href="/perps">A perpetual market</a> where an LP pool is the counterparty settles against the index. Liquidation requires the position to be underwater at both the spot price and a 30-minute snapshot average, so a single print cannot force it.</li>
+        <li><b>RWA pricing reference.</b> Tokenised commodity products can quote in index terms rather than per-asset terms.</li>
+        <li><b>Research and monitoring.</b> The <a href="/ppi">live index</a> and the daily snapshot series in the repository are public.</li>
+      </ul>
+
+      <h2>6. What it is not</h2>
+      <ul>
+        <li>Not a stablecoin: there is no commodity reserve and no redemption right.</li>
+        <li>Not a DEX: Planet builds no AMM; spot metals route through an external aggregator.</li>
+        <li>Not externally audited: the contracts are self-audited with reproducible test suites.</li>
+      </ul>
+
+      <h2>7. Reading the index</h2>
+      <p>
+        The live value, the 14 assets and their states are at <a href="/ppi">/ppi</a>. The public JSON
+        API is <code>/api/v1/ppi</code>; the signed feed a venue would relay is
+        <code>/api/v1/price-signed</code>. The rulebook is at <a href="/methodology">/methodology</a>.
+      </p>
+    </main>
+  </body>
+</html>
