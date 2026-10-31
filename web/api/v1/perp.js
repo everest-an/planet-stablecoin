@@ -2,6 +2,7 @@
 // Read-only; the page does its own signing. Every field is a chain read, no database.
 import { createPublicClient, http } from "viem";
 import { arbitrum } from "viem/chains";
+import { rateLimit } from "../_ratelimit.js";
 
 const PERP = process.env.PERP_ADDRESS || "0x9c2250914c457914af3bffb085ae44141667f5ac";
 const CORE = process.env.PERP_CORE || "0x61de052af7cb7dc957a07b1e6298152bb851cbbb";
@@ -38,6 +39,7 @@ const pub = createPublicClient({ chain: arbitrum, transport: http(RPC) });
 let cache = { at: 0, body: null };
 
 export default async function handler(req, res) {
+  if (!rateLimit(req, res, { limit: 30, name: "perp" })) return;
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
   if (req.method === "OPTIONS") return res.status(204).end();

@@ -8,6 +8,7 @@ import { keccak256, encodeAbiParameters, parseAbiParameters, createPublicClient,
 import { privateKeyToAccount } from "viem/accounts";
 import { arbitrum } from "viem/chains";
 import { ASSETS, readAsset } from "../_channels.js";
+import { rateLimit } from "../_ratelimit.js";
 
 const ORACLE = process.env.PPI_ORACLE || "0x0daf541ef7e41402070bc549f91475ab368d1824";
 const CORE = process.env.PPI_CORE || "0x61de052af7cb7dc957a07b1e6298152bb851cbbb";
@@ -28,6 +29,7 @@ async function prices() {
 }
 
 export default async function handler(req, res) {
+  if (!rateLimit(req, res, { limit: 8, name: "price-signed" })) return;
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
   if (req.method === "OPTIONS") return res.status(204).end();

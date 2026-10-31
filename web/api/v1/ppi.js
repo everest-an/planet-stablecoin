@@ -3,6 +3,7 @@
 // prices, and the oracle's state. Cached briefly; every field comes from the chain, not a database.
 import { createPublicClient, http } from "viem";
 import { arbitrum } from "viem/chains";
+import { rateLimit } from "../_ratelimit.js";
 
 const CORE = process.env.PPI_CORE || "0x61de052af7cb7dc957a07b1e6298152bb851cbbb";
 const ORACLE = process.env.PPI_ORACLE || "0x0daf541ef7e41402070bc549f91475ab368d1824";
@@ -48,6 +49,7 @@ const pub = createPublicClient({ chain: arbitrum, transport: http(RPC) });
 let cache = { at: 0, body: null };
 
 export default async function handler(req, res) {
+  if (!rateLimit(req, res, { limit: 30, name: "ppi" })) return;
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
   if (req.method === "OPTIONS") return res.status(204).end();
