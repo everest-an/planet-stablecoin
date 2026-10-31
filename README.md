@@ -1,6 +1,6 @@
 # Planet — 全球大宗商品购买力指数协议
 
-> **当前部署：Arbitrum Sepolia（chainId 421614）** — Solidity + ERC-20 + Timelock + SignedPriceOracle。
+> **当前部署：Arbitrum One（chainId 42161）** — PPI 指数 + PPI 永续 + 金属路由前端；Sepolia 仅保留为历史演示。
 > 唯一可信状态见 [`docs/HANDOFF.md`](docs/HANDOFF.md) §0；更早的实现已归档，不参与当前部署。
 
 Planet（PLT）把一篮子全球大宗商品（能源/金属/农产品/工业原料）的真实价格聚合为链上**购买力指数 PPI**，
@@ -9,7 +9,29 @@ Planet（PLT）把一篮子全球大宗商品（能源/金属/农产品/工业�
 > ⚠️ **版本声明**：这是**阶段一概念验证（PoC）**。抵押物是 **Circle Arbitrum Sepolia 测试 USDC**
 > （无价值），**没有真实大宗商品储备，不是足额抵押稳定币**。主网/1:1 RWA 版本需托管方 + 合规 + 审计。
 
-## 线上地址（Arbitrum Sepolia）
+## 线上地址（Arbitrum One）
+
+| 合约 | 地址 |
+|---|---|
+| PlanetCore（PPI 指数） | `0x61de052af7cb7dc957a07b1e6298152bb851cbbb` |
+| PPIPerp（永续市场） | `0x9c2250914c457914af3bffb085ae44141667f5ac` |
+| PPIPriceSource（TWAP 价格源） | `0x5d767020ab6e830f5914fbe11401ad536b720d6c` |
+| SignedPriceOracle（2-of-3） | `0x0daf541Ef7e41402070BC549f91475ab368D1824` |
+| PlanetTimelock（6h） | `0xA1Fdb9F95210AF1d968872F6FC86F623A3e3017C` |
+| 抵押品（原生 USDC） | `0xaf88d065e77c8cC2239327C5EDb3A432268e5831` |
+
+## 产品功能（2026-10-31）
+
+- 14 商品 PPI 指数；2-of-3 签名拉取式预言机，主网单钥路径已禁用
+- 永续市场：LP 池做对手盘，真实 USDC，10bps 开平仓费，2x OI/池上限，3x 杠杆，10% 维持保证金
+- 风险分级保证金：数据质量驱动，冻结状态只允许减仓
+- TWAP 清算门：必须在现货与 30 分钟快照均值两侧都击穿才可强平
+- guardian 单向急停（只能暂停，不能解禁）
+- 交易时提交新价：开/平仓前由交易者提交签名喂价，entry 永远新鲜
+- 公开 API 限流：签名喂价 8 次/分，读取 30 次/分
+- 治理：6 小时 timelock，参数/keeper/treasury/guardian 全部排队执行
+
+## 历史部署（Arbitrum/Ethereum Sepolia，仅作参考）
 
 | 合约 | 地址 |
 |---|---|
