@@ -105,8 +105,8 @@
 
     <script type="module">
       import { createPublicClient, createWalletClient, custom, http, parseUnits, formatUnits, defineChain } from "https://esm.sh/viem@2.21.0";
-      const chain = defineChain({ id: 11155111, name: "sepolia", nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 }, rpcUrls: { default: { http: ["https://ethereum-sepolia-rpc.publicnode.com"] } } });
-      const pub = createPublicClient({ chain, transport: http("https://ethereum-sepolia-rpc.publicnode.com") });
+      const chain = defineChain({ id: 42161, name: "arbitrum", nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 }, rpcUrls: { default: { http: ["https://arb1.arbitrum.io/rpc"] } } });
+      const pub = createPublicClient({ chain, transport: http("https://arb1.arbitrum.io/rpc") });
 
       let S = null, account = null, wallet = null;
       const $ = (id) => document.getElementById(id);
@@ -123,7 +123,6 @@
       const ERC20_ABI = [
         { name: "balanceOf", type: "function", stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }] },
         { name: "approve", type: "function", stateMutability: "nonpayable", inputs: [{ type: "address" }, { type: "uint256" }], outputs: [{ type: "bool" }] },
-        { name: "mint", type: "function", stateMutability: "nonpayable", inputs: [{ type: "address" }, { type: "uint256" }], outputs: [] },
       ];
 
       async function refresh() {
@@ -173,7 +172,7 @@
           account = a;
           wallet = createWalletClient({ account, chain, transport: custom(window.ethereum) });
           $("acct").textContent = a.slice(0, 10) + "…";
-          log("connected on Sepolia");
+          log("connected on Arbitrum One");
           await refreshAccount();
         } catch (e) { log(e.message); }
       };
