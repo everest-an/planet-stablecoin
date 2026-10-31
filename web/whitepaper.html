@@ -134,10 +134,9 @@ This page documents the <b>Sepolia proof of concept</b>. The live index is on <b
           <b>Which implementation this document describes.</b> Everything below documents the <b>EVM reference
           implementation</b> in the <code>monad/</code> directory, deployed on <b>Arbitrum Sepolia</b>: Solidity
           0.8.24, an ERC-20 PLT, a timelock owner and a signed-price oracle. The mathematics of the index, the
-          fee schedule and the stability mechanism are settlement-agnostic. The live write path is
-          <code>updatePrice</code> from an authorised relayer; the separate <code>SignedPriceOracle</code>
-          (ECDSA M-of-N) is deployed and wired for <code>updatePriceSigned</code>, but its signer set is
-          currently 1-of-1. For the deployed addresses and exact behaviour, read
+          fee schedule and the stability mechanism are settlement-agnostic. The live <b>Arbitrum One</b> write path is the signed oracle: <b>2-of-3</b> with threshold 2, and the
+          single-relayer path is <b>disabled</b> there (locked to <code>address(0)</code>). The Sepolia
+          reference keeps the single-relayer demo path this document describes. For the deployed addresses and exact behaviour, read
           <a href="/docs">/docs</a>. <span style="opacity:.7">(Updated 2026-10-25.)</span>
         </p>
         <div id="wp-toggle" role="group" aria-label="whitepaper version">
@@ -210,8 +209,8 @@ This page documents the <b>Sepolia proof of concept</b>. The live index is on <b
           0.5% (not a median). PlanetCore applies guards: strictly increasing timestamps, a
           single-update price-jump limit, a 6-hour freshness ceiling on minting over the
           <i>stalest active asset</i>, and a caution state when a reading has no confirmation.
-          The live write path is an authorised relayer; the <code>SignedPriceOracle</code> adds an
-          ECDSA M-of-N path, deployed today with a 1-of-1 signer set.
+          The Arbitrum One write path is the signed oracle: 2-of-3 with threshold 2, relayer disabled. The
+          Sepolia reference keeps the single-relayer demo path this document describes.
         </p>
         <h2>7. Governance</h2>
         <p>
@@ -226,9 +225,10 @@ This page documents the <b>Sepolia proof of concept</b>. The live index is on <b
         <ul>
           <li><b>Now:</b> Arbitrum Sepolia — PlanetCore + PLT (ERC-20) + Timelock + SignedPriceOracle; 14-asset basket;
             hourly price push; <b>70 Foundry tests</b>. The site, the public API and <a href="/app">/app</a>
-            (mint/redeem against test USDC) run against this deployment. The live oracle is a single relayer
-            key; the M-of-N verifier is deployed but its signer set is 1-of-1.</li>
-          <li><b>Next:</b> third-party audit; multisig owner; raise the signer set to 2-of-3; production oracle sources.</li>
+            (mint/redeem against test USDC) run against this deployment. The live Arbitrum One oracle is the
+            2-of-3 signed set (threshold 2) with the relayer path disabled; the perpetual market
+            (PPIPerp) is deployed on the same chain.</li>
+          <li><b>Next:</b> third-party audit; multisig owner; production oracle sources; perpetual-market expansion.</li>
           <li><b>Later:</b> 1:1 commodity reserve via an RWA custodian, proof-of-reserve and compliance; PLTG governance.</li>
         </ul>
         <h2>9. Disclaimer</h2>
@@ -352,7 +352,7 @@ L0  Reserve/RWA    physical &amp; ETF custody · proof-of-reserve               
             <tr><td>PlanetCore</td><td>basket, on-chain PPI, mint/redeem against USDC, fees, oracle state</td><td>implemented</td></tr>
             <tr><td>PlanetToken (ERC-20)</td><td>PLT — mint/burn restricted to the Core</td><td>implemented</td></tr>
             <tr><td>PlanetTimelock</td><td>owner of Core; <code>propose → delay → execute</code></td><td>implemented</td></tr>
-            <tr><td>SignedPriceOracle</td><td>ECDSA M-of-N verifier for <code>updatePriceSigned</code></td><td>implemented (1-of-1)</td></tr>
+            <tr><td>SignedPriceOracle</td><td>ECDSA M-of-N verifier for <code>updatePriceSigned</code></td><td>implemented (2-of-3, Arbitrum One)</td></tr>
             <tr><td>PlanetBond</td><td>stabilisation bonds (request / operator-settled redeem)</td><td>ported, not deployed</td></tr>
             <tr><td>PlanetGov / PlanetFund</td><td>PLTG staking/voting; tokenised ETF shares</td><td>design — not in this deployment</td></tr>
           </tbody>
@@ -635,7 +635,7 @@ admin     owner ──propose(dest, body)──▶ PlanetTimelock ──(wait de
         </div>
         <p class="eq-note">
           The live write path is the authorised relayer. The <code>SignedPriceOracle</code> is deployed
-          and wired for <code>updatePriceSigned</code>, but its signer set is <b>1-of-1</b> today;
+          and wired for <code>updatePriceSigned</code>, and its signer set is <b>2-of-3</b> on Arbitrum One;
           raising it to 2-of-3 is a <code>setSigners([a,b,c], 2)</code> call, not a redeploy.
         </p>
         <h3>7.3 Guards</h3>

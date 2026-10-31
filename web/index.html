@@ -231,7 +231,7 @@
           <li><b>Verifiable on-chain</b> — every price update is written on-chain by the authorised relayer and the index is computed on-chain, so the number on screen is recomputable from the contract.</li>
           <li><b>Fail-safe oracle</b> — four independent price channels (Yahoo, Sina, Tencent, Eastmoney) with a confirmation rule, staleness and price-jump guards, and a caution flag when a reading cannot be confirmed.</li>
           <li><b>Governance</b> — owner actions can be migrated to a multisig and gated by a timelock (Propose → delay → Execute).</li>
-          <li><b>Honest limits</b> — <b>not audited yet</b>; both price paths run on one operator key (the M-of-N verifier is deployed, but its signer set is 1-of-1); Phase 1 holds no real reserve (see “what it is not”).</li>
+          <li><b>Honest limits</b> — <b>not audited yet</b>; on Arbitrum One the relayer path is disabled and the signed oracle is 2-of-3 with threshold 2; Phase 1 holds no real reserve (see “what it is not”).</li>
         </ul>
       </section>
 

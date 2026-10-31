@@ -169,7 +169,7 @@
         they land within <b>0.5%</b>. It is <b>not a median</b> — a 1% gap is usually a different
         contract expiry, and averaging two expiries blends two different assets. The live write path
         is an authorised relayer; the <code>SignedPriceOracle</code> ECDSA M-of-N path is deployed
-        and wired, but its signer set is <b>1-of-1</b> today.
+        and its signer set is <b>2-of-3</b> on Arbitrum One today.
       </p>
 
       <h2>7. Validation gates</h2>
@@ -178,7 +178,7 @@
         <tbody>
           <tr><td>confirmation</td><td>no channel within 0.5% of the primary</td><td>reading marked <b>caution</b> (still counts); the owner may freeze a dead feed</td></tr>
           <tr><td>single-update jump</td><td>an update moves a price by &gt; 50%</td><td>rejected outright; <code>forcePrice</code> is the timelocked escape hatch</td></tr>
-          <tr><td>authorisation</td><td><code>updatePrice</code> onlyRelayer; <code>SignedPriceOracle</code> ECDSA M-of-N (1-of-1 today)</td><td>unauthorised / under-signed updates rejected</td></tr>
+          <tr><td>authorisation</td><td><code>updatePrice</code> onlyRelayer; <code>SignedPriceOracle</code> ECDSA M-of-N (2-of-3, Arbitrum One)</td><td>unauthorised / under-signed updates rejected</td></tr>
           <tr><td>domain separation</td><td>the digest covers the oracle address + chain id + payload</td><td>a signature cannot be replayed on another oracle or chain</td></tr>
           <tr><td>timestamp</td><td>strictly increasing</td><td>replays rejected</td></tr>
           <tr><td>staleness (mint)</td><td>the <b>stalest active asset</b> is older than 6 hours</td><td><b>minting is refused</b> — the protocol never prices off a stale oracle</td></tr>

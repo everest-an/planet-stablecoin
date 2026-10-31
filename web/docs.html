@@ -162,7 +162,7 @@ This page documents the <b>Sepolia proof of concept</b>. The live index is on <b
         off it was.
       </p>
       </p>
-      <p>The live write path is one relayer address set by <code>setRelayer(address)</code> (owner action).
+      <p>The live Arbitrum One write path is the 2-of-3 signed oracle; the single-relayer path is disabled there (locked to <code>address(0)</code>). The Sepolia reference keeps the single-relayer demo path.
         The M-of-N verifier is <b>deployed and wired in</b> (<code>updatePriceSigned</code>), and its signer set
         is configured with <code>setSigners(address[], uint8)</code> on the oracle. Today it is
         <b>1-of-1 with the same operator key</b>; raising it to 2-of-3 is a <code>setSigners()</code> call —
