@@ -10,6 +10,7 @@
 ## Core
 
 - [PPI index](https://ppppp.space/ppi): live value, 14 assets with weights and prices, oracle state, risk level. On-chain, Arbitrum One.
+- [Commodity index explainer](https://ppppp.space/commodity-index): what an on-chain commodity index is, why single-source feeds fail, and how data-quality states work.
 - [Methodology](https://ppppp.space/methodology): how the index is computed, the data-quality states, fee bands, oracle design, and what the index is not.
 - [Perpetual market](https://ppppp.space/perps): a perpetual on the PPI index where an LP pool is the counterparty; 3x leverage, 10% maintenance, TWAP-gated liquidation.
 - [Liquidity provision](https://ppppp.space/lp): LP deposit/withdraw panel and the full exposure disclosure (the pool is structurally short the index).
