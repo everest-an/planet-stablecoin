@@ -186,6 +186,61 @@
       };
 
       // No mint on mainnet: the collateral is real USDC, obtained off-platform.
+
+      // --- F0 fix: the pull oracle used the way it was designed ---
+      // The public signed feed lands on-chain only every 5h. Trading against an entry price that is
+      // hours behind a public feed is a known-price race the pool pays for. So before every open/close
+      // the page submits the signed batch for every asset that moved since the last on-chain update
+      // (or one asset to refresh the global clock when everything is flat). The trader pays the gas;
+      // the entry price is fresh; there is no window left to race.
+      const CORE_ABI = [
+        { name: "assets", type: "function", stateMutability: "view", inputs: [{ type: "uint256" }],
+          outputs: [{ type: "uint64" }, { type: "uint64" }, { type: "uint64" }, { type: "uint64" }, { type: "uint64" }, { type: "uint8" }, { type: "uint64" }] },
+        { name: "lastOracleUpdate", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint64" }] },
+        { name: "updatePriceSigned", type: "function", stateMutability: "nonpayable",
+          inputs: [
+            { name: "p", type: "tuple", components: [
+              { name: "index", type: "uint256" }, { name: "price", type: "uint64" }, { name: "volatility", type: "uint64" },
+              { name: "liquidity", type: "uint64" }, { name: "riskState", type: "uint8" }, { name: "timestamp", type: "uint64" },
+            ] },
+            { name: "sigs", type: "bytes" },
+          ], outputs: [] },
+      ];
+      async function submitFreshPrices() {
+        if (!account || !wallet || !S?.contracts?.core) return;
+        const feed = await (await fetch("/api/v1/price-signed", { headers: { "cache-control": "no-cache" } })).json();
+        if (!feed.payloads?.length) { log("price feed unavailable - trading on the on-chain price"); return; }
+        const core = S.contracts.core;
+        const last = await pub.readContract({ address: core, abi: CORE_ABI, functionName: "lastOracleUpdate" });
+        const toSend = [];
+        for (const pl of feed.payloads) {
+          if (BigInt(pl.timestamp) <= last) continue;
+          const a = await pub.readContract({ address: core, abi: CORE_ABI, functionName: "assets", args: [pl.index] });
+          const onChain = a[2];
+          const signed = BigInt(pl.price);
+          if (onChain !== 0n) {
+            const d = onChain > signed ? onChain - signed : signed - onChain;
+            if (d * 10000n <= onChain * 2n) continue; // within 2 bps of on-chain: nothing to race
+          }
+          toSend.push(pl);
+        }
+        // everything flat but the global clock is aging: one payload keeps the market out of caution
+        if (!toSend.length && BigInt(feed.payloads[0].timestamp) > last && Date.now() / 1000 - Number(last) > 1800) {
+          toSend.push(feed.payloads[0]);
+        }
+        if (!toSend.length) { log("prices fresh - trading"); return; }
+        log("submitting " + toSend.length + " fresh price update" + (toSend.length > 1 ? "s" : "") + " (your gas)…");
+        for (const pl of toSend) {
+          const payload = {
+            index: BigInt(pl.index), price: BigInt(pl.price), volatility: BigInt(pl.volatility),
+            liquidity: BigInt(pl.liquidity), riskState: pl.riskState, timestamp: BigInt(pl.timestamp),
+          };
+          const h = await wallet.writeContract({ address: core, abi: CORE_ABI, functionName: "updatePriceSigned", args: [payload, pl.sig] });
+          await pub.waitForTransactionReceipt({ hash: h });
+        }
+        log("prices fresh - trading");
+      }
+
       $("deposit").onclick = async () => {
         try {
           await send(S.contracts.collateral, ERC20_ABI, "approve", [S.contracts.perp, 2n ** 255n]);
@@ -195,6 +250,7 @@
       };
       $("open").onclick = async () => {
         try {
+          await submitFreshPrices();
           const size = parseUnits($("size").value, 6);
           const margin = parseUnits($("margin").value, 6);
           const signed = $("dir").value === "long" ? size : -size;
@@ -203,7 +259,10 @@
           await refresh();
         } catch (e) { log(e.shortMessage || e.message); }
       };
-      $("closeBtn").onclick = () => send(S.contracts.perp, PERP_ABI, "close", []).catch((e) => log(e.shortMessage || e.message));
+      $("closeBtn").onclick = async () => {
+        try { await submitFreshPrices(); await send(S.contracts.perp, PERP_ABI, "close", []); }
+        catch (e) { log(e.shortMessage || e.message); }
+      };
 
       await refresh();
       setInterval(refresh, 20000);
