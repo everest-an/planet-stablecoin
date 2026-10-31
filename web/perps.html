@@ -251,6 +251,7 @@
       $("open").onclick = async () => {
         try {
           await submitFreshPrices();
+          if (!S || !S.pool || Number(S.pool.assets) === 0) { log("pool is empty - the market cannot take a position until an LP deposits at /lp"); return; }
           const size = parseUnits($("size").value, 6);
           const margin = parseUnits($("margin").value, 6);
           const signed = $("dir").value === "long" ? size : -size;

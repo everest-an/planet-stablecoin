@@ -39,7 +39,7 @@
     </header>
 
     <main class="wrap">
-      <p class="k">[ liquidity providers · you are the counterparty · not deployed yet ]</p>
+      <p class="k">[ liquidity providers · you are the counterparty · Arbitrum One limited beta ]</p>
       <h1>If you provide liquidity, you are the house</h1>
       <p>
         The PPI perpetual market has no external market maker. Traders trade against a pool, and the
@@ -108,13 +108,104 @@
         <li>Anyone who thinks "LP yield" is a savings rate.</li>
       </ul>
 
+      <h2 id="deposit">Deposit / withdraw</h2>
+      <p class="k" id="poolstats">pool —</p>
+      <div class="box" style="max-width:560px">
+        <p style="margin:0 0 10px"><button id="connect">connect wallet</button> <span class="k" id="acct">not connected</span></p>
+        <p class="k" id="lpstate">balances —</p>
+        <div style="display:flex;gap:8px;margin:10px 0;flex-wrap:wrap">
+          <input id="amount" value="1000" inputmode="decimal" style="flex:1;min-width:120px" placeholder="USDC" />
+          <button id="dep">deposit USDC</button>
+          <button id="wd" class="ghost">withdraw all</button>
+        </div>
+        <p class="k" id="log">connect a wallet on Arbitrum One</p>
+      </div>
+      <p class="k">
+        Depositing makes you the counterparty to every trade. Read sections 1–5 above before you press
+        deposit. Withdrawals are blocked while open interest needs the capital (the pool cannot leave
+        traders unpaid).
+      </p>
+
       <h2>Status</h2>
       <p>
-        The pool and the market are built and tested on a local EVM (see
-        <a href="/methodology">the rulebook</a> for the index). <b>Nothing is deployed yet</b> and no
-        LP can deposit: the contracts have not been reviewed, and an unaudited market holding other
-        people's money is not a product, it is a liability.
+        The market is deployed on <b>Arbitrum One</b> (perpetual on the PPI index, real USDC collateral).
+        The pool is empty until the first deposit - that deposit is what opens the market. The contracts
+        are self-audited, <b>not externally audited</b>; the full review is in the repository.
       </p>
     </main>
+
+    <script type="module">
+      import { createPublicClient, createWalletClient, custom, http, parseUnits, formatUnits, defineChain } from "https://esm.sh/viem@2.21.0";
+      const chain = defineChain({ id: 42161, name: "arbitrum", nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 }, rpcUrls: { default: { http: ["https://arb1.arbitrum.io/rpc"] } } });
+      const pub = createPublicClient({ chain, transport: http("https://arb1.arbitrum.io/rpc") });
+      let S = null, account = null, wallet = null;
+      const $ = (id) => document.getElementById(id);
+      const log = (s) => ($("log").textContent = s);
+      const fmt = (n, d = 2) => (n == null || Number.isNaN(Number(n)) ? "—" : Number(n).toLocaleString(undefined, { maximumFractionDigits: d }));
+      const PERP_ABI = [
+        { name: "deposit", type: "function", stateMutability: "nonpayable", inputs: [{ type: "uint256" }], outputs: [{ type: "uint256" }] },
+        { name: "withdraw", type: "function", stateMutability: "nonpayable", inputs: [{ type: "uint256" }], outputs: [{ type: "uint256" }] },
+        { name: "shares", type: "function", stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }] },
+        { name: "sharePrice", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+      ];
+      const ERC20_ABI = [
+        { name: "balanceOf", type: "function", stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }] },
+        { name: "approve", type: "function", stateMutability: "nonpayable", inputs: [{ type: "address" }, { type: "uint256" }], outputs: [{ type: "bool" }] },
+      ];
+      async function refresh() {
+        S = await (await fetch("/api/v1/perp", { headers: { "cache-control": "no-cache" } })).json();
+        if (S.error) { log(S.error.message); return; }
+        $("poolstats").textContent = "pool $" + fmt(S.pool.assets) + " · share price $" + fmt(S.pool.sharePrice, 4) + " · net OI $" + fmt(Math.abs(S.pool.netExposure)) + " · risk " + S.market.riskLabel;
+        if (account) await refreshAcct();
+      }
+      async function refreshAcct() {
+        const [b, sh, sp] = await Promise.all([
+          pub.readContract({ address: S.contracts.collateral, abi: ERC20_ABI, functionName: "balanceOf", args: [account] }),
+          pub.readContract({ address: S.contracts.perp, abi: PERP_ABI, functionName: "shares", args: [account] }),
+          pub.readContract({ address: S.contracts.perp, abi: PERP_ABI, functionName: "sharePrice" }),
+        ]);
+        const sharesN = Number(formatUnits(sh, 6));
+        $("lpstate").textContent = "wallet " + fmt(Number(formatUnits(b, 6))) + " USDC · shares " + fmt(sharesN, 4) + " ≈ $" + fmt(sharesN * Number(formatUnits(sp, 6)));
+      }
+      $("connect").onclick = async () => {
+        if (!window.ethereum) return log("no injected wallet");
+        try {
+          await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0xa4b1" }] }).catch(async () => {
+            await window.ethereum.request({ method: "wallet_addEthereumChain", params: [{ chainId: "0xa4b1", chainName: "Arbitrum One", nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 }, rpcUrls: ["https://arb1.arbitrum.io/rpc"] }] });
+          });
+          const [a] = await window.ethereum.request({ method: "eth_requestAccounts" });
+          account = a;
+          wallet = createWalletClient({ account, chain, transport: custom(window.ethereum) });
+          $("acct").textContent = a.slice(0, 10) + "…";
+          log("connected on Arbitrum One");
+          await refresh();
+        } catch (e) { log(e.message); }
+      };
+      const send = async (addr, abi, fn, args) => {
+        const h = await wallet.writeContract({ address: addr, abi, functionName: fn, args });
+        log(fn + ": " + h.slice(0, 18) + "… waiting");
+        await pub.waitForTransactionReceipt({ hash: h });
+        log(fn + " confirmed");
+        await refresh();
+      };
+      $("dep").onclick = async () => {
+        try {
+          if (!wallet) return log("connect first");
+          const amt = parseUnits($("amount").value, 6);
+          await send(S.contracts.collateral, ERC20_ABI, "approve", [S.contracts.perp, amt]);
+          await send(S.contracts.perp, PERP_ABI, "deposit", [amt]);
+        } catch (e) { log(e.shortMessage || e.message); }
+      };
+      $("wd").onclick = async () => {
+        try {
+          if (!wallet) return log("connect first");
+          const sh = await pub.readContract({ address: S.contracts.perp, abi: PERP_ABI, functionName: "shares", args: [account] });
+          if (sh === 0n) return log("no shares to withdraw");
+          await send(S.contracts.perp, PERP_ABI, "withdraw", [sh]);
+        } catch (e) { log(e.shortMessage || e.message); }
+      };
+      await refresh();
+      setInterval(refresh, 20000);
+    </script>
   </body>
 </html>
