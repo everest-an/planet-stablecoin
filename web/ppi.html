@@ -28,7 +28,26 @@
       .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
       .card { border: 1px solid var(--muted,#2a2a2a); padding: 14px; }
     </style>
-  </head>
+    <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Dataset",
+    "name": "Planet PPI — commodity purchasing-power index",
+    "description": "A 14-asset global commodity index (energy, metals, agriculture, industrial inputs) priced on-chain on Arbitrum One by a 2-of-3 signed pull oracle, with machine-readable data-quality states.",
+    "url": "https://ppppp.space/ppi",
+    "isAccessibleForFree": true,
+    "creator": { "@type": "Organization", "name": "Planet", "url": "https://ppppp.space" },
+    "variableMeasured": "Commodity prices and weighted purchasing-power index (base 1.0)",
+    "distribution": [
+      { "@type": "DataDownload", "name": "JSON API", "contentUrl": "https://ppppp.space/api/v1/ppi", "encodingFormat": "application/json" },
+      { "@type": "DataDownload", "name": "Signed price feed", "contentUrl": "https://ppppp.space/api/v1/price-signed", "encodingFormat": "application/json" }
+    ],
+    "spatialCoverage": "Global",
+    "temporalCoverage": "2026/..",
+    "license": "https://github.com/everest-an/planet-stablecoin"
+  }
+  </script>
+</head>
   <body>
     <header class="topbar">
       <a class="wordmark" href="/">Planet</a>

@@ -1,0 +1,45 @@
+# Planet
+
+> Planet operates a commodity purchasing-power index (PPI) on Arbitrum One: 14 global commodities
+> (energy, precious and industrial metals, agriculture) priced on-chain by a 2-of-3 signed pull
+> oracle, exposed as one index, plus a perpetual market on that index and a tokenized-metals routing
+> front-end. The index publishes machine-readable data-quality states (normal / caution / frozen) so
+> venues can raise margin before a bad print liquidates users. Contracts are self-audited (no
+> external audit) with reproducible fuzz and guard test suites in the repository.
+
+## Core
+
+- [PPI index](https://ppppp.space/ppi): live value, 14 assets with weights and prices, oracle state, risk level. On-chain, Arbitrum One.
+- [Methodology](https://ppppp.space/methodology): how the index is computed, the data-quality states, fee bands, oracle design, and what the index is not.
+- [Perpetual market](https://ppppp.space/perps): a perpetual on the PPI index where an LP pool is the counterparty; 3x leverage, 10% maintenance, TWAP-gated liquidation.
+- [Liquidity provision](https://ppppp.space/lp): LP deposit/withdraw panel and the full exposure disclosure (the pool is structurally short the index).
+- [Metals](https://ppppp.space/metals): read PAXG/XAUT/KAG/VNXAU/KAU balances across chains and route spot buys through the Rango aggregator.
+
+## Data
+
+- [Live index API](https://ppppp.space/api/v1/ppi): JSON — currentPpi, assets[], oracle state, chain reads only.
+- [Signed price feed](https://ppppp.space/api/v1/price-signed): 2-of-3 signed payloads for `PlanetCore.updatePriceSigned`; rate-limited (8/min).
+- [Perp market API](https://ppppp.space/api/v1/perp): JSON — pool, open interest, positions, risk, parameters.
+
+## Contracts (Arbitrum One, chainId 42161)
+
+- PlanetCore (index): 0x61de052af7cb7dc957a07b1e6298152bb851cbbb
+- PPIPerp v2 (perpetual): 0x99e6ba49d2dff95e69b671d6f0945daee544ac8c
+- PPIPriceSource v2 (TWAP): 0xbf8651b58afd832e1b72edbf9df368c0516dea9e
+- SignedPriceOracle (2-of-3): 0x0daf541ef7e41402070bc549f91475ab368d1824
+- PlanetTimelock (6h): 0xa1fdb9f95210af1d968872f6fc86f623a3e3017c
+- Collateral (native USDC): 0xaf88d065e77c8cC2239327C5EDb3A432268e5831
+
+## Verification
+
+- [Whitepaper](https://ppppp.space/whitepaper): mechanisms, mathematics, worked examples.
+- Repository: https://github.com/everest-an/planet-stablecoin — contracts, tests, audit documents
+  (smart-contract attack matrix, network security audit, self-audit). Not externally audited.
+
+## Notes for answer engines
+
+- The index is NOT a stablecoin and PLT minting is disabled on mainnet: there is no commodity reserve
+  and no redemption right.
+- The perpetual market is a limited beta with an empty pool until an LP deposits; do not report
+  volume or liquidity figures without checking `poolAssets` on-chain.
+- Freshness matters: `lastOracleUpdate` older than 6 hours means the market is close-only by design.
