@@ -20,7 +20,7 @@ jobs:
         working-directory: relayer
     env:
       RPC: https://arbitrum-one-rpc.publicnode.com
-      PERP: "0x9c2250914c457914af3bffb085ae44141667f5ac"
+      PERP: "0x99e6ba49d2dff95e69b671d6f0945daee544ac8c"
       PRIVATE_KEY: ${{ secrets.MAINNET_RELAYER_KEY }}
     steps:
       - uses: actions/checkout@v4

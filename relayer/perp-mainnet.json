@@ -7,5 +7,7 @@
  "priceSource": "0x5d767020ab6e830f5914fbe11401ad536b720d6c",
  "perp": "0x9c2250914c457914af3bffb085ae44141667f5ac",
  "owner": "0xBf0D7119F553eB5f85C9806f0849f9c86a9B768C",
- "delay": 21600
+ "delay": 21600,
+ "perpV2Source": "0xbf8651b58afd832e1b72edbf9df368c0516dea9e",
+ "perpV2": "0x99e6ba49d2dff95e69b671d6f0945daee544ac8c"
 }

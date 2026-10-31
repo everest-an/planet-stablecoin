@@ -4,20 +4,26 @@
   "fn": "setKeeper",
   "args": [
    "0xBf0D7119F553eB5f85C9806f0849f9c86a9B768C"
-  ]
+  ],
+  "proposed": false,
+  "done": false
  },
  {
   "label": "setTreasury",
   "fn": "setTreasury",
   "args": [
    "0xBf0D7119F553eB5f85C9806f0849f9c86a9B768C"
-  ]
+  ],
+  "proposed": false,
+  "done": false
  },
  {
   "label": "setGuardian",
   "fn": "setGuardian",
   "args": [
    "0x7D89ef80cdDa45ca9B7B7DE33E03B10337D2f25d"
-  ]
+  ],
+  "proposed": false,
+  "done": false
  }
 ]

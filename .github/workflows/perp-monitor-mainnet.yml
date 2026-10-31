@@ -21,7 +21,7 @@ jobs:
         working-directory: relayer
     env:
       RPC: https://arbitrum-one-rpc.publicnode.com
-      PERP: "0x9c2250914c457914af3bffb085ae44141667f5ac"
+      PERP: "0x99e6ba49d2dff95e69b671d6f0945daee544ac8c"
       COLLATERAL: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831"
       TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
       TG_ALERT_CHAT_ID: ${{ secrets.TG_ALERT_CHAT_ID }}

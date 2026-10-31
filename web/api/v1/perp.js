@@ -4,9 +4,9 @@ import { createPublicClient, http } from "viem";
 import { arbitrum } from "viem/chains";
 import { rateLimit } from "../_ratelimit.js";
 
-const PERP = process.env.PERP_ADDRESS || "0x9c2250914c457914af3bffb085ae44141667f5ac";
+const PERP = process.env.PERP_ADDRESS || "0x99e6ba49d2dff95e69b671d6f0945daee544ac8c";
 const CORE = process.env.PERP_CORE || "0x61de052af7cb7dc957a07b1e6298152bb851cbbb";
-const SOURCE = process.env.PERP_SOURCE || "0x5d767020ab6e830f5914fbe11401ad536b720d6c";
+const SOURCE = process.env.PERP_SOURCE || "0xbf8651b58afd832e1b72edbf9df368c0516dea9e";
 const RPC = process.env.PERP_RPC || "https://arbitrum-one-rpc.publicnode.com";
 
 const PERP_ABI = [

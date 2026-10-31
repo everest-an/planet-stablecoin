@@ -31,3 +31,6 @@ jobs:
       - name: Advance the proposal queue (execute when due, propose the next)
         working-directory: relayer
         run: node timelock-queue.mjs || true
+      - name: Advance the timelock-v2 handover when the old timelock is free
+        working-directory: relayer
+        run: node deploy-timelock-v2.mjs || true
