@@ -1,4 +1,4 @@
-﻿# Arbitrum Foundation Grant — Application (Multichain Track)
+# Arbitrum Foundation Grant — Application (Multichain Track)
 
 > **Applicant:** Everest Holdings Group Co., Ltd.（珠峰控股集团）· Everest An · e@ppppp.space · Telegram @EverestAn
 > **Track:** **Multichain** ($20k–$60k, 2+ milestones) — for projects from another chain integrating with Arbitrum
@@ -15,7 +15,7 @@ single index, expressed as an ERC-20, with a governance timelock and an M-of-N s
 
 **Repo (public):** https://github.com/everest-an/planet — the EVM implementation is in `monad/`.
 **Evidence:** **5 contracts, 70 Foundry tests, all passing in CI** (`monad-build.yml`).
-**Docs:** `monad/` contains the contracts; `docs/audit-prep.md` holds the scope, the 10 invariants, and the
+**Docs:** `monad/` contains the contracts; `docs/audit-scope-2026-10.md` holds the scope, the 10 invariants, and the
 trust/threat model that an auditor would start from.
 
 ## 2. Why Arbitrum, and why now

@@ -15,6 +15,7 @@
 - [Perpetual market](https://ppppp.space/perps): a perpetual on the PPI index where an LP pool is the counterparty; 3x leverage, 10% maintenance, TWAP-gated liquidation.
 - [Liquidity provision](https://ppppp.space/lp): LP deposit/withdraw panel and the full exposure disclosure (the pool is structurally short the index).
 - [Metals](https://ppppp.space/metals): read PAXG/XAUT/KAG/VNXAU/KAU balances across chains and route spot buys through the Rango aggregator.
+- [Gold desk partner brief](https://ppppp.space/reports/gold-desk-2026-11): a partner intelligence brief for gold-token dealers — five tokens, five chains, spot vs on-chain market prices, the PPI index, issuer risk, and commercial models. PDF: https://ppppp.space/reports/planet-gold-desk-2026-11.pdf
 
 ## Data
 
