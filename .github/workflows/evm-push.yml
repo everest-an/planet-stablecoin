@@ -40,8 +40,8 @@ jobs:
         working-directory: relayer
     env:
       PRIVATE_KEY: ${{ secrets.MONAD_DEPLOY_KEY }}
-      RPC: ${{ vars.EVM_RPC || 'https://sepolia-rollup.arbitrum.io/rpc' }}
-      CORE: ${{ vars.EVM_CORE || '0xCEcad784A6cEB1aF12c69639a5027D935651F946' }}
+      RPC: ${{ vars.EVM_RPC || 'https://arb1.arbitrum.io/rpc' }}
+      CORE: ${{ vars.EVM_CORE || '0x61de052af7cb7dc957a07b1e6298152bb851cbbb' }}
       ASSETS_JSON: assets.example.json
       # Push even a flat price once the reading is this old, so the global timestamp
       # can never idle past the on-chain 6h gate.
