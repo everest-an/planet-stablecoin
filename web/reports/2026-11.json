@@ -1,0 +1,165 @@
+{
+  "month": "2026-11",
+  "generatedAt": "2026-11-01T06:16:38.604Z",
+  "core": "0xCEcad784A6cEB1aF12c69639a5027D935651F946",
+  "ppi": 0.987977,
+  "supply": 0,
+  "reserve": 0,
+  "lastOracleUpdate": 1793510148,
+  "assets": [
+    {
+      "index": 0,
+      "name": "WTI Crude",
+      "sector": "energy",
+      "weightPpm": 140000,
+      "weightPct": 14,
+      "basePrice": 88.18,
+      "currentPrice": 104.12,
+      "riskState": 1,
+      "sinceLaunchPct": 18.076661374461334
+    },
+    {
+      "index": 1,
+      "name": "Brent Crude",
+      "sector": "energy",
+      "weightPpm": 110000,
+      "weightPct": 11,
+      "basePrice": 98.44,
+      "currentPrice": 113.43,
+      "riskState": 0,
+      "sinceLaunchPct": 15.227549776513616
+    },
+    {
+      "index": 2,
+      "name": "Natural Gas",
+      "sector": "energy",
+      "weightPpm": 80000,
+      "weightPct": 8,
+      "basePrice": 3.1,
+      "currentPrice": 2.898,
+      "riskState": 1,
+      "sinceLaunchPct": -6.516129032258067
+    },
+    {
+      "index": 3,
+      "name": "Gold",
+      "sector": "metals",
+      "weightPpm": 120000,
+      "weightPct": 12,
+      "basePrice": 4191.1,
+      "currentPrice": 3898.9,
+      "riskState": 0,
+      "sinceLaunchPct": -6.9719166805850445
+    },
+    {
+      "index": 4,
+      "name": "Silver",
+      "sector": "metals",
+      "weightPpm": 70000,
+      "weightPct": 7,
+      "basePrice": 61.575,
+      "currentPrice": 49.276,
+      "riskState": 0,
+      "sinceLaunchPct": -19.97401542833942
+    },
+    {
+      "index": 5,
+      "name": "Copper",
+      "sector": "metals",
+      "weightPpm": 60000,
+      "weightPct": 6,
+      "basePrice": 6.641,
+      "currentPrice": 6.482,
+      "riskState": 0,
+      "sinceLaunchPct": -2.3942177382924257
+    },
+    {
+      "index": 6,
+      "name": "Wheat",
+      "sector": "agriculture",
+      "weightPpm": 90000,
+      "weightPct": 9,
+      "basePrice": 694,
+      "currentPrice": 603.5,
+      "riskState": 0,
+      "sinceLaunchPct": -13.04034582132565
+    },
+    {
+      "index": 7,
+      "name": "Corn",
+      "sector": "agriculture",
+      "weightPpm": 70000,
+      "weightPct": 7,
+      "basePrice": 501.75,
+      "currentPrice": 447.75,
+      "riskState": 0,
+      "sinceLaunchPct": -10.76233183856502
+    },
+    {
+      "index": 8,
+      "name": "Soybean",
+      "sector": "agriculture",
+      "weightPpm": 60000,
+      "weightPct": 6,
+      "basePrice": 1292.5,
+      "currentPrice": 1234.25,
+      "riskState": 0,
+      "sinceLaunchPct": -4.5067698259187665
+    },
+    {
+      "index": 9,
+      "name": "Coffee",
+      "sector": "agriculture",
+      "weightPpm": 40000,
+      "weightPct": 4,
+      "basePrice": 305.1,
+      "currentPrice": 287.15,
+      "riskState": 0,
+      "sinceLaunchPct": -5.88331694526385
+    },
+    {
+      "index": 10,
+      "name": "Lumber (ETF)",
+      "sector": "industrial",
+      "weightPpm": 40000,
+      "weightPct": 4,
+      "basePrice": 66.28,
+      "currentPrice": 65.259,
+      "riskState": 0,
+      "sinceLaunchPct": -1.5404345202172598
+    },
+    {
+      "index": 11,
+      "name": "Lithium (ETF)",
+      "sector": "industrial",
+      "weightPpm": 30000,
+      "weightPct": 3,
+      "basePrice": 71.18,
+      "currentPrice": 59.81,
+      "riskState": 0,
+      "sinceLaunchPct": -15.973588086541168
+    },
+    {
+      "index": 12,
+      "name": "Water (ETF)",
+      "sector": "industrial",
+      "weightPpm": 50000,
+      "weightPct": 5,
+      "basePrice": 69.475,
+      "currentPrice": 73.76,
+      "riskState": 0,
+      "sinceLaunchPct": 6.16768621806405
+    },
+    {
+      "index": 13,
+      "name": "Carbon (ETF)",
+      "sector": "industrial",
+      "weightPpm": 40000,
+      "weightPct": 4,
+      "basePrice": 33.68,
+      "currentPrice": 35.001,
+      "riskState": 0,
+      "sinceLaunchPct": 3.922209026128276
+    }
+  ]
+}
