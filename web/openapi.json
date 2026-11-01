@@ -149,7 +149,7 @@
         "type": "object",
         "required": ["ppi", "assetCount", "assets", "core", "network"],
         "properties": {
-          "network": { "type": "string", "examples": ["testnet"] },
+          "network": { "type": "string", "examples": ["mainnet"] },
           "core": { "type": "string", "description": "PlanetCore contract address this snapshot was read from." },
           "isCurrentDeployment": { "type": "boolean", "description": "False when the snapshot comes from the previous deployment (kept serving during a redeploy)." },
           "readMs": { "type": "integer", "description": "Wall-clock milliseconds the API spent reading the chain." },

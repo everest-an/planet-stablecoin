@@ -70,9 +70,10 @@ This page documents the <b>Sepolia proof of concept</b>. The live index is on <b
       <p class="sub">last reviewed <time datetime="2026-10">October 2026</time> · plain answers, no marketing</p>
 
       <p class="warn">
-        Plain-language notice: Planet is a <b>testnet proof of concept</b>. It is <b>not</b> a
-        stablecoin, has <b>no commodity reserve</b> and <b>no market price</b>, and nothing here is
-        investment advice. Mints are collateralised by test USDC held by the contract.
+        Plain-language notice: the index is <b>live on Arbitrum One</b> but <b>index-only</b> — minting is
+        disabled there. The <b>Arbitrum Sepolia</b> proof of concept is what mint/redeem runs on. PLT is
+        <b>not</b> a stablecoin, has <b>no commodity reserve</b> and <b>no market price</b>; nothing here is
+        investment advice.
       </p>
 
       <p class="toc">
@@ -89,7 +90,7 @@ This page documents the <b>Sepolia proof of concept</b>. The live index is on <b
       <article id="what">
         <h2>What is Planet?</h2>
         <p>
-          Planet is an <b>on-chain commodity purchasing-power index</b> on Arbitrum Sepolia. It reads the real
+          Planet is an <b>on-chain commodity purchasing-power index</b> on Arbitrum One. It reads the real
           prices of a basket of 14 global commodities — energy, metals, agriculture and industrial
           materials — combines them into one number (the PPI), and expresses that number as a
           ERC-20 token (PLT). It is a data product first and a token second.
@@ -100,10 +101,10 @@ This page documents the <b>Sepolia proof of concept</b>. The live index is on <b
         <h2>Is PLT a stablecoin?</h2>
         <p>
           <b>No.</b> PLT is a synthetic index token: it tracks the index and is not redeemable for
-          commodities. Mints are collateralised by test USDC held by the contract, and redeeming pays
-          test USDC back from that reserve — but that token has no value, and there is no peg or
-          promise of one. The Phase 1 build is a proof of concept on testnet; anything describing PLT
-          as a stablecoin or a yield product is wrong.
+          commodities. On the Sepolia proof of concept, mints are collateralised by test USDC held by the
+          contract and redeeming pays it back from that reserve — but that token has no value. On
+          Arbitrum One, minting is <b>disabled</b> entirely: it is an index-only deployment. There is no peg
+          or promise of one; anything describing PLT as a stablecoin or a yield product is wrong.
         </p>
       </article>
 
@@ -191,11 +192,10 @@ This page documents the <b>Sepolia proof of concept</b>. The live index is on <b
       <article id="network">
         <h2>Which network is it on? Is it live on mainnet?</h2>
         <p>
-          One testnet, no mainnet. The <b>Arbitrum Sepolia</b> deployment holds the basket, the
-          on-chain index, the PLT token and the test-USDC collateral, and is what this site and
-          <a href="/app">/app</a> use. There is no public sale, no exchange listing, and the published
-          addresses are testnet addresses whose tokens carry no value. Mainnet is gated behind an
-          independent audit.
+          The index is live on <b>Arbitrum One</b>: the 14-asset basket, the on-chain PPI and the PLT token are
+          readable there, with minting <b>disabled</b> (index-only) until an independent audit. Minting and
+          redemption run against the <b>Arbitrum Sepolia</b> proof of concept, which uses test USDC and is
+          what <a href="/app">/app</a> writes to. There is no public sale and no exchange listing.
         </p>
       </article>
 
@@ -261,8 +261,8 @@ This page documents the <b>Sepolia proof of concept</b>. The live index is on <b
           { "@type": "Question", "name": "How do I mint or redeem PLT?", "acceptedAnswer": { "@type": "Answer", "text": "Open /app on Arbitrum Sepolia and connect an EVM wallet. Minting pulls test USDC from your wallet via transferFrom at the on-chain index; redeeming burns PLT and pays test USDC back from the reserve. You approve the amount first and always sign in your own wallet." } },
           { "@type": "Question", "name": "What fees are there?", "acceptedAnswer": { "@type": "Answer", "text": "A band-based fee of 0.5% near the index, 1% when the index is 3-5% off, and 2% beyond, with an extra penalty for exiting far below. Fees split 30% burn, 40% reserve, 20% staking and 10% risk fund." } },
           { "@type": "Question", "name": "Is there a governance token?", "acceptedAnswer": { "@type": "Answer", "text": "Not in this deployment. PLTG and its staking/voting design exist, but no governance token is deployed on Arbitrum; parameter authority is the timelock owner. Nothing is for sale." } },
-          { "@type": "Question", "name": "Which network is it on?", "acceptedAnswer": { "@type": "Answer", "text": "One testnet, no mainnet. Arbitrum Sepolia holds the basket, the on-chain index, the PLT token and the test-USDC collateral, and is what this site and /app use. There is no public sale and no exchange listing. Published addresses are testnet and their tokens carry no value." } },
-          { "@type": "Question", "name": "Is the code audited?", "acceptedAnswer": { "@type": "Answer", "text": "Not by a third party yet; that is the main gate before mainnet. The contract code is open Solidity, backed by 70 Foundry tests in CI, plus a self-review of known failure classes." } },
+          { "@type": "Question", "name": "Which network is it on?", "acceptedAnswer": { "@type": "Answer", "text": "The index is live on Arbitrum One: the 14-asset basket, the on-chain PPI and the PLT token are readable there, with minting disabled (index-only). Arbitrum Sepolia is the mint/redeem proof of concept with test USDC, and is what /app writes to. There is no public sale and no exchange listing." } },
+          { "@type": "Question", "name": "Is the code audited?", "acceptedAnswer": { "@type": "Answer", "text": "Not by a third party yet; that is the main gate before minting opens on mainnet. The contract code is open Solidity, backed by 70 Foundry tests in CI, plus a self-review of known failure classes." } },
           { "@type": "Question", "name": "Who controls the basket weights?", "acceptedAnswer": { "@type": "Answer", "text": "Governance, through on-chain actions to add a commodity or re-weight an existing one, including setting a weight to zero to retire it. Base prices can never change. On testnet the owner is a 60-second timelock." } },
           { "@type": "Question", "name": "What are the main risks?", "acceptedAnswer": { "@type": "Answer", "text": "The index is a synthetic construction and can diverge from real-market value; oracle data can be wrong or manipulated; the code is unaudited; and liquidity is thin. It is a research prototype, not a savings product." } },
           { "@type": "Question", "name": "How do I verify it myself?", "acceptedAnswer": { "@type": "Answer", "text": "Read the contracts directly: the core exposes currentPpi(), assetCount(), assets(i) and oldestActiveUpdate(). The live basket is rendered at /dashboard and the same data is available as JSON from /api/v1/status." } }

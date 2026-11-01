@@ -11,13 +11,24 @@
 // so decoding is word slicing. If a future getter returns a string/bytes/dynamic array this helper
 // must grow an offset-following decoder — do not silently extend `words()` and assume it works.
 //
-// ENV: EVM_CORE / EVM_RPC (NOT PLANET_CORE — that variable still holds a legacy address in the Vercel
-// project, and inheriting it would point every read at a legacy address and fail silently).
+// ENV: EVM_CORE / EVM_ORACLE / EVM_RPC (NOT PLANET_CORE — that variable still holds a legacy address in
+// the Vercel project, and inheriting it would point every read at a legacy address and fail silently).
+//
+// TARGET: Arbitrum One (42161) — the deployment the product is described by everywhere else (README,
+// HANDOFF, whitepaper, the grant). The Sepolia proof of concept is still live; set EVM_CORE + EVM_RPC to
+// read that instead, which is what the `poc` block in /api/v1/status advertises.
 
-// Arbitrum Sepolia = 421614. The RPC is public and needs no key.
-export const RPC = process.env.EVM_RPC || "https://sepolia-rollup.arbitrum.io/rpc";
-export const CORE = process.env.EVM_CORE || "0xCEcad784A6cEB1aF12c69639a5027D935651F946";
-export const CHAIN = { name: "arbitrum-sepolia", id: 421614 };
+// Arbitrum One. The RPC is public and needs no key.
+export const RPC = process.env.EVM_RPC || "https://arb1.arbitrum.io/rpc";
+export const CORE = process.env.EVM_CORE || "0x61de052af7cb7dc957a07b1e6298152bb851cbbb";
+// SignedPriceOracle. On Arbitrum One the single-relayer path is OFF (Core.relayer == 0x0), so this
+// contract IS the price path: 2-of-3. The threshold is read from the contract, never assumed.
+export const ORACLE = process.env.EVM_ORACLE || "0x0daf541ef7e41402070bc549f91475ab368d1824";
+// The chain id travels with the RPC override: pointing EVM_RPC at Sepolia while still labelling the
+// snapshot 42161 is exactly the kind of wrong-metadata bug this file exists to avoid.
+const CHAIN_ID = Number(process.env.EVM_CHAIN_ID || 42161);
+export const CHAIN = { name: CHAIN_ID === 421614 ? "arbitrum-sepolia" : "arbitrum-one", id: CHAIN_ID };
+export const NETWORK = CHAIN_ID === 42161 ? "mainnet" : "testnet";
 export const SCALE = 1e6;
 // PlanetCore.MAX_ORACLE_AGE == 6 hours, and mint()/redeem() revert StaleOracle past it. This is a
 // CONTRACT constant, not a policy knob: if the contract changes, this must change with it.
@@ -48,6 +59,9 @@ export const SEL = {
   mintCap: "0x76c71ca1",
   // assets(uint256) — the auto-generated getter for `Asset[] public assets`
   assets: "0xcf35bdd0",
+  // SignedPriceOracle policy. Read from the oracle contract, not from the core.
+  threshold: "0x42cde4e8",
+  signerCount: "0x7ca548c6",
 };
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -126,6 +140,21 @@ export async function readScalars(selectors, opts) {
     out[name] = w.length ? w[0] : null;
   });
   return out;
+}
+
+// The signer policy lives on SignedPriceOracle, so it cannot be read from CORE. Two extra calls, in
+// the same round-trip budget as the rest of the snapshot.
+export async function readOracleConfig(opts) {
+  const results = await ethCallMany(
+    [
+      { to: ORACLE, data: SEL.threshold },
+      { to: ORACLE, data: SEL.signerCount },
+    ],
+    opts,
+  );
+  const t = words(results[0]);
+  const n = words(results[1]);
+  return { threshold: t.length ? Number(t[0]) : null, signerCount: n.length ? Number(n[0]) : null };
 }
 
 function decodeAsset(hex, index) {

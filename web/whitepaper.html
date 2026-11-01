@@ -122,11 +122,11 @@ This page documents the <b>Sepolia proof of concept</b>. The live index is on <b
         </div>
       </section>
       <section class="hero">
-        <p class="eyebrow">[ whitepaper · v2.0 · complete edition · reference implementation: Arbitrum Sepolia ]</p>
+        <p class="eyebrow">[ whitepaper · v2.0 · complete edition · live index: Arbitrum One · mint/redeem PoC: Arbitrum Sepolia ]</p>
         <h1>Planet — an on-chain commodity purchasing-power index.</h1>
         <p class="lede">
           Planet (PLT) aggregates the real prices of a basket of global commodities into a single
-          on-chain <b>purchasing-power index (PPI)</b>, expressed as a ERC-20 token on <b>Arbitrum Sepolia</b>.
+          on-chain <b>purchasing-power index (PPI)</b>, expressed as an ERC-20 token (PLT) — live on <b>Arbitrum One</b> as an index-only deployment, with mint/redeem on the <b>Arbitrum Sepolia</b> reference.
           This page is the <b>complete whitepaper</b> — mathematics, basket, stability, oracle,
           governance, tokenomics, worked simulation and technical appendix.
         </p>
@@ -223,11 +223,11 @@ This page documents the <b>Sepolia proof of concept</b>. The live index is on <b
         </p>
         <h2>8. Status &amp; roadmap</h2>
         <ul>
-          <li><b>Now:</b> Arbitrum Sepolia — PlanetCore + PLT (ERC-20) + Timelock + SignedPriceOracle; 14-asset basket;
-            hourly price push; <b>70 Foundry tests</b>. The site, the public API and <a href="/app">/app</a>
-            (mint/redeem against test USDC) run against this deployment. The live Arbitrum One oracle is the
-            2-of-3 signed set (threshold 2) with the relayer path disabled; the perpetual market
-            (PPIPerp) is deployed on the same chain.</li>
+          <li><b>Now:</b> the index is live on <b>Arbitrum One</b> — PlanetCore + PLT (ERC-20) + a 6-hour Timelock +
+            a 2-of-3 SignedPriceOracle, 14-asset basket, relayer path disabled (index-only). The site, the
+            public API and the dashboard read that deployment. The mint/redeem build runs on
+            <b>Arbitrum Sepolia</b> against test USDC and is what <a href="/app">/app</a> writes to. The
+            perpetual market (PPIPerp) is deployed on Arbitrum One. <b>70 Foundry tests</b> in CI.</li>
           <li><b>Next:</b> third-party audit; multisig owner; production oracle sources; perpetual-market expansion.</li>
           <li><b>Later:</b> 1:1 commodity reserve via an RWA custodian, proof-of-reserve and compliance; PLTG governance.</li>
         </ul>
@@ -400,7 +400,7 @@ admin     owner ──propose(dest, body)──▶ PlanetTimelock ──(wait de
         <h3>3.1 The live basket (14 commodities)</h3>
         <p class="small">
           The full design targets 20+ commodities, each class ≤15%, with global geographic spread.
-          The live testnet basket holds 14; the futures column is the price reference and the ETF
+          The live basket holds 14; the futures column is the price reference and the ETF
           column the investable proxy for the future reserve phase.
         </p>
         <table class="doc-table">
@@ -1065,7 +1065,7 @@ admin     owner ──propose(dest, body)──▶ PlanetTimelock ──(wait de
       <footer class="foot">
       <div class="foot-row">
         <span class="wordmark">Planet</span>
-        <span class="ver">[ v2.0 · reference implementation: Arbitrum Sepolia ]</span>
+        <span class="ver">[ v2.0 · live index: Arbitrum One · PoC: Arbitrum Sepolia ]</span>
       </div>
       <nav class="foot-nav">
         <a href="/">home</a>

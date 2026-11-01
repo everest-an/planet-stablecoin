@@ -16,14 +16,14 @@
     <meta property="og:title" content="Planet — on-chain commodity purchasing-power index (Arbitrum)" />
     <meta
       property="og:description"
-      content="A basket of 14 global commodities priced on-chain, expressed as one index (PPI) and the PLT token. Phase 1 PoC on Arbitrum Sepolia — test-USDC collateral, no commodity reserve, not a stablecoin."
+      content="A basket of 14 global commodities priced on-chain, expressed as one index (PPI) and the PLT token. The index is live on Arbitrum One (index-only); mint/redeem runs on the Arbitrum Sepolia proof of concept. No commodity reserve, not a stablecoin."
     />
     <meta property="og:image" content="https://ppppp.space/icon.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Planet — on-chain commodity purchasing-power index (Arbitrum)" />
     <meta
       name="twitter:description"
-      content="14 commodities, one on-chain index. Phase 1 PoC on Arbitrum Sepolia — test-USDC collateral, no commodity reserve, not a stablecoin."
+      content="14 commodities, one on-chain index — live on Arbitrum One, index-only. Mint/redeem runs on the Sepolia proof of concept. Not a stablecoin."
     />
     <meta name="twitter:image" content="https://ppppp.space/icon.png" />
     <script type="application/ld+json">
@@ -36,7 +36,7 @@
             "name": "Planet",
             "url": "https://ppppp.space/",
             "logo": "https://ppppp.space/icon.png",
-            "description": "Planet builds an on-chain commodity purchasing-power index (PPI) on Arbitrum Sepolia. Phase 1 synthetic index token — not a stablecoin."
+            "description": "Planet builds an on-chain commodity purchasing-power index (PPI), live on Arbitrum One. Index-only: minting is disabled. Not a stablecoin."
           },
           {
             "@type": "WebSite",
@@ -50,7 +50,7 @@
             "@type": "WebPage",
             "url": "https://ppppp.space/",
             "isPartOf": { "@id": "https://ppppp.space/#site" },
-            "about": "On-chain commodity purchasing-power index (PPI) on Arbitrum Sepolia"
+            "about": "On-chain commodity purchasing-power index (PPI) on Arbitrum One"
           }
         ]
       }
@@ -120,8 +120,8 @@
         <div class="col" style="margin-top:12px">
           <ul class="marks yes">
             <li>An on-chain <b>commodity purchasing-power index</b> expressed as the PLT token.</li>
-            <li>A <b>synthetic index token</b> (ERC-20) on <b>Arbitrum Sepolia</b>, with mint / burn / redemption accounting.</li>
-            <li>Prices sourced by an <b>off-chain relayer</b> from up to <b>four independent channels</b> (Yahoo primary + confirmations), pushed by an authorised relayer; the <b>SignedPriceOracle</b> M-of-N path is deployed (1-of-1 today).</li>
+            <li>A <b>synthetic index token</b> (ERC-20) — PLT on <b>Arbitrum One</b> (index-only), and on <b>Arbitrum Sepolia</b> with mint / burn / redemption accounting.</li>
+            <li>Prices sourced by an <b>off-chain relayer</b> from up to <b>four independent channels</b> (Yahoo primary + confirmations), pushed by an authorised relayer; the <b>SignedPriceOracle</b> M-of-N path is live on Arbitrum One (<b>2-of-3</b>).</li>
             <li>Governed by an <b>owner + timelock</b> (Propose → delay → Execute), multisig-ready.</li>
           </ul>
         </div>
@@ -191,7 +191,7 @@
             <tr><td>network</td><td>Arbitrum One (live index + perp) · Ethereum Sepolia (demo)</td></tr>
             <tr><td>contracts</td><td>PlanetCore · PLT token · Timelock</td></tr>
             <tr><td>phase</td><td>Phase 1 PoC — synthetic index token</td></tr>
-            <tr><td>audit</td><td>not yet — pre-mainnet gate</td></tr>
+            <tr><td>audit</td><td>not yet — self-audited only</td></tr>
             <tr><td>1:1 reserve</td><td>future — requires RWA custody + compliance</td></tr>
           </tbody>
         </table>
@@ -210,7 +210,7 @@
           </li>
           <li>
             <span class="step-n">02</span>
-            <div><h3>Get testnet ETH</h3><p>This is Arbitrum Sepolia — get free test ETH from a faucet (e.g. <code>faucet.arbitrum.io</code>) if you want to send transactions.</p></div>
+            <div><h3>Get testnet ETH</h3><p>Mint/redeem runs on <b>Arbitrum Sepolia</b> — get free test ETH from a faucet (e.g. <code>faucet.arbitrum.io</code>). Reading the index needs no wallet and no gas.</p></div>
           </li>
           <li>
             <span class="step-n">03</span>
@@ -237,16 +237,16 @@
 
       <!-- CONTRACTS -->
       <section id="contracts">
-        <div class="sec-head"><span class="num">[ 08 ]</span><span class="lbl">contracts · Arbitrum Sepolia</span><span class="end">¬</span></div>
+        <div class="sec-head"><span class="num">[ 08 ]</span><span class="lbl">contracts · the deployment this page reads (Arbitrum One)</span><span class="end">¬</span></div>
         <table class="status-table doc-table">
           <tbody>
-<tr><td>PlanetCore</td><td><code>0xCEcad784A6cEB1aF12c69639a5027D935651F946</code></td></tr>
-<tr><td>PLT token</td><td><code>0x1Cc00D99F81DBAAAa3734594377b1781f427d12B</code></td></tr>
-            <tr><td>Timelock</td><td><code>0xd71CD916A237aB294230D0056ef4BD240e232Cb5</code></td></tr>
-            <tr><td>PriceOracle</td><td><code>0x116Ca153eA8EdFFBf578C3D8452A3DDBC593eF70</code></td></tr>
+<tr><td>PlanetCore</td><td><code>0x61de052af7cb7dc957a07b1e6298152bb851cbbb</code></td></tr>
+<tr><td>PLT token</td><td><code>0xee270802969f0689e3085331d47679bdc5bf4512</code></td></tr>
+            <tr><td>Timelock (6h)</td><td><code>0xa1fdb9f95210af1d968872f6fc86f623a3e3017c</code></td></tr>
+            <tr><td>SignedPriceOracle (2-of-3)</td><td><code>0x0daf541ef7e41402070bc549f91475ab368d1824</code></td></tr>
           </tbody>
         </table>
-        <p class="disclaimer">Verify these on sepolia.arbiscan.io. Addresses may change before mainnet.</p>
+        <p class="disclaimer">Verify these on arbiscan.io. The Sepolia proof of concept (<code>0xCEcad784…51F946</code>) is still deployed and is what <code>/api/v1/status</code> reads if EVM_CORE points at it; the numbers above come from Arbitrum One.</p>
       </section>
 
       <!-- HOW WE COMPARE -->
@@ -269,14 +269,14 @@
             <tr><td>PAXG / XAUT</td><td>1 oz gold</td><td>custody + attestation</td><td>single asset — no weighting</td></tr>
           </tbody>
         </table>
-        <p class="disclaimer">Reflects public documentation at build time — verify independently. Planet is a testnet PoC, not an investment.</p>
+        <p class="disclaimer">Reflects public documentation at build time — verify independently. The index is index-only on Arbitrum One; not an investment.</p>
       </section>
     </main>
 
     <footer class="foot">
       <div class="foot-row">
         <span class="wordmark">Planet</span>
-        <span class="ver">[ v0.1 · Arbitrum Sepolia ]</span>
+        <span class="ver">[ Arbitrum One · index-only ]</span>
       </div>
       <nav class="foot-nav">
         <a href="https://ppppp.space/app">open app</a>

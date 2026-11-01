@@ -2,7 +2,7 @@
 //
 // GET /api/v1/status -> JSON snapshot of the on-chain basket + PPI + reserve/supply/fees.
 //
-// Chain: Arbitrum Sepolia (421614), PlanetCore 0x65362e…5080D. Reads are `eth_call` against the
+// Chain: Arbitrum One (42161), PlanetCore 0x61de052a…1cbbb. Reads are `eth_call` against the
 // contract's auto-generated getters, batched into ONE JSON-RPC round trip (~1-2s) instead of the
 // ~20s of sequential get-methods this used to do.
 //
@@ -22,11 +22,10 @@
 //   * `bond`      is ABSENT: PlanetBond is not part of this deployment (Core + Token + Timelock
 //                 only). The key is omitted rather than faked with zeros; consumers must treat it
 //                 as optional (the dashboard already does).
-//   * `signerThreshold` is 1 and `oracle.mode` is "single-relayer": the core authorises ONE relayer
-//                 EOA (`onlyRelayer`) AND accepts the separate SignedPriceOracle path
-//                 (`updatePriceSigned`, `oracle.signedPath`). The oracle IS deployed, but its signer
-//                 set is 1-of-1 with the same operator key, so reporting a threshold > 1 would be
-//                 false. Raising it is a setSigners() call, not a redeploy.
+//   * `signerThreshold` is read from SignedPriceOracle (2-of-3 on Arbitrum One). `oracle.mode` says
+//                 which price path is live: "signed-only" while Core.relayer is the zero address,
+//                 "relayer+signed" when both are up. Never infer the threshold from whether the
+//                 relayer is set — that is how a 1-of-1 claim gets printed for a 2-of-3 oracle.
 //   * `oldestAssetUpdate` is the timestamp `mint()` gates on — the stalest active asset. It is NOT
 //                 `lastOracleUpdate` (the most recent push), which could be seconds old while some
 //                 other input is a week old.
@@ -35,9 +34,11 @@ import {
   CHAIN,
   CORE,
   MAX_ORACLE_AGE,
+  NETWORK,
   SCALE,
   newRequestId,
   readAssets,
+  readOracleConfig,
   readScalarsAndAssets,
   sendJson,
   sendUpstreamError,
@@ -71,29 +72,32 @@ const ASSET_SLOTS = 16;
 async function readStatus() {
   const started = Date.now();
 
-  const { scalars: g, assets: slots } = await readScalarsAndAssets(
-    [
-      "assetCount",
-      "currentPpi",
-      "lastOracleUpdate",
-      "oldestActiveUpdate",
-      "totalSupply",
-      "totalReserve",
-      "riskFund",
-      "feesToBurn",
-      "feesToReserve",
-      "feesToStaking",
-      "relayer",
-      "paused",
-      "mintsPaused",
-      "redeemsPaused",
-      "isSolvent",
-      "mintCap",
-      "oracle",
-    ],
-    ASSET_SLOTS,
-    { timeoutMs: BUDGET_MS },
-  );
+  const [{ scalars: g, assets: slots }, oracleCfg] = await Promise.all([
+    readScalarsAndAssets(
+      [
+        "assetCount",
+        "currentPpi",
+        "lastOracleUpdate",
+        "oldestActiveUpdate",
+        "totalSupply",
+        "totalReserve",
+        "riskFund",
+        "feesToBurn",
+        "feesToReserve",
+        "feesToStaking",
+        "relayer",
+        "paused",
+        "mintsPaused",
+        "redeemsPaused",
+        "isSolvent",
+        "mintCap",
+        "oracle",
+      ],
+      ASSET_SLOTS,
+      { timeoutMs: BUDGET_MS },
+    ),
+    readOracleConfig({ timeoutMs: BUDGET_MS }),
+  ]);
 
   // currentPpi + lastOracleUpdate are the two values the product cannot be described without; if
   // either is missing the RPC is effectively down and a partial snapshot would be a lie.
@@ -141,21 +145,18 @@ async function readStatus() {
 
   return {
     data: {
-      network: "testnet",
+      network: NETWORK,
       chain: CHAIN,
       core: CORE,
       isCurrentDeployment: true,
-      // This endpoint reports the Sepolia proof of concept. The canonical, verified index lives on
-      // Arbitrum One and is served by /api/v1/ppi; answering without saying so is how a stale testnet
-      // number gets mistaken for the live one.
-      mainnetIndex: {
-        chain: "arbitrum-one",
-        chainId: 42161,
-        core: process.env.PPI_CORE || "0x61de052af7cb7dc957a07b1e6298152bb851cbbb",
-        oracle: process.env.PPI_ORACLE || "0x0daf541ef7e41402070bc549f91475ab368d1824",
-        api: "/api/v1/ppi",
-        page: "/ppi",
-        mintingEnabled: false,
+      // The Sepolia proof of concept is still deployed and still readable. It is advertised here
+      // rather than dropped, so nobody has to guess which of the two cores a number came from —
+      // point EVM_CORE + EVM_RPC at it to read that deployment instead of this one.
+      poc: {
+        chain: "arbitrum-sepolia",
+        chainId: 421614,
+        core: process.env.POC_CORE || "0xCEcad784A6cEB1aF12c69639a5027D935651F946",
+        token: process.env.POC_TOKEN || "0x1Cc00D99F81DBAAAa3734594377b1781f427d12B",
       },
       readMs: Date.now() - started,
       partial,
@@ -178,13 +179,13 @@ async function readStatus() {
       // The counter is a claim, the balance is a fact. This is the contract answering for itself.
       solvent: g.isSolvent == null ? null : g.isSolvent !== 0n,
       mintCap: toNum(g.mintCap),
-      // See the schema note above: 1-of-1 by construction, not a multi-signer threshold.
-      signerThreshold: relayerSet ? 1 : 0,
+      signerThreshold: oracleCfg.threshold ?? 0,
       oracle: {
-        mode: relayerSet ? "single-relayer" : "unset",
+        mode: relayerSet ? "relayer+signed" : oracleSet ? "signed-only" : "unset",
         relayer,
-        threshold: relayerSet ? 1 : 0,
-        multiSig: false,
+        threshold: oracleCfg.threshold,
+        signerCount: oracleCfg.signerCount,
+        multiSig: (oracleCfg.threshold ?? 0) > 1,
         address: oracleAddr,
         signedPath: !!oracleSet,
       },
@@ -230,7 +231,7 @@ export default async function handler(req, res) {
     );
   }
 
-  // The oracle pushes hourly (see .github/workflows/evm-push.yml), so a 15-minute edge window never
-  // serves a basket older than the next push cycle.
-  return sendJson(req, res, requestId, out.data, { maxAge: 900, volatile: ["readMs"] });
+  // This is the number the dashboard calls "live". A 15-minute edge window would let the page show a
+  // PPI that is three push cycles old, so the cache is one dashboard refresh long.
+  return sendJson(req, res, requestId, out.data, { maxAge: 60, volatile: ["readMs"] });
 }

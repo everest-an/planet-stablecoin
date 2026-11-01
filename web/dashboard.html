@@ -6,7 +6,7 @@
     <title>Planet — live basket dashboard</title>
     <meta
       name="description"
-      content="Live on-chain commodity basket: per-asset weights, prices and index for Planet (PLT) on Arbitrum Sepolia. Rendered from our read API and re-verified against the chain in your browser. PoC, not a stablecoin."
+      content="Live on-chain commodity basket: per-asset weights, prices and index for Planet (PLT) on Arbitrum One. Rendered from our read API and re-verified against the chain in your browser. Index-only; not a stablecoin."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -22,12 +22,12 @@
     <meta property="og:title" content="Planet — live commodity basket dashboard (Arbitrum)" />
     <meta
       property="og:description"
-      content="Live on-chain weights and prices for all 14 commodities in the Planet basket, re-verified against PlanetCore on Arbitrum Sepolia in your browser."
+      content="Live on-chain weights and prices for all 14 commodities in the Planet basket, re-verified against PlanetCore on Arbitrum One in your browser."
     />
     <meta property="og:image" content="https://ppppp.space/icon.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Planet — live commodity basket dashboard" />
-    <meta name="twitter:description" content="14 commodities, live on-chain weights and prices. Arbitrum Sepolia PoC." />
+    <meta name="twitter:description" content="14 commodities, live on-chain weights and prices. Arbitrum One." />
     <meta name="twitter:image" content="https://ppppp.space/icon.png" />
     <link rel="stylesheet" href="/styles.css" />
     <style>
@@ -74,7 +74,7 @@
   </head>
   <body>
     <div id="deployment-banner" style="background:#0f0f0f;color:#f08c00;font-family:'DM Mono',monospace;font-size:11px;line-height:1.5;padding:8px 14px;text-align:center;border-bottom:1px solid #2f9e44">
-This page documents the <b>Sepolia proof of concept</b>. The live index is on <b>Arbitrum One</b> →
+Live: <b>Arbitrum One</b> · index-only, minting disabled · the Sepolia proof of concept is still deployed →
 <a href="/ppi" style="color:#2f9e44">/ppi</a> ·
 <a href="/methodology" style="color:#2f9e44">methodology</a> ·
 <a href="/lp" style="color:#2f9e44">for LPs</a>
@@ -97,7 +97,7 @@ This page documents the <b>Sepolia proof of concept</b>. The live index is on <b
       </p>
       <h1>Live basket dashboard</h1>
       <p class="sub">
-        Rendered from our cached read API, then <b>re-verified against PlanetCore on Arbitrum Sepolia in your
+        Rendered from our cached read API, then <b>re-verified against PlanetCore on Arbitrum One in your
         browser</b> — the index you see is recomputed here from the same rows, and compared with the
         chain's own value. 2 RPC calls instead of ~21, so the public endpoint stops rate-limiting.
       </p>
@@ -143,13 +143,13 @@ This page documents the <b>Sepolia proof of concept</b>. The live index is on <b
 
     <script>
       // ---- constants ----------------------------------------------------------------
-      const CORE = "0xCEcad784A6cEB1aF12c69639a5027D935651F946";
+      const CORE = "0x61de052af7cb7dc957a07b1e6298152bb851cbbb";
       const NAMES = [
         "WTI Crude", "Brent Crude", "Natural Gas", "Gold", "Silver", "Copper",
         "Wheat", "Corn", "Soybean", "Coffee", "Lumber (ETF)", "Lithium (ETF)",
         "Water (ETF)", "Carbon (ETF)",
       ];
-      const RPC = "https://sepolia-rollup.arbitrum.io/rpc";
+      const RPC = "https://arb1.arbitrum.io/rpc";
       // keccak256(signature)[0:4] — constants, so the browser needs no hashing library.
       const SEL = { currentPpi: "0x3070b56b", lastOracleUpdate: "0xb609d0e6" };
       const SCALE = 1e6;
@@ -301,11 +301,12 @@ This page documents the <b>Sepolia proof of concept</b>. The live index is on <b
           const c4 = document.getElementById("c4");
           c4.textContent = ageText(stamp);
           c4.style.color = ageSec !== null && ageSec > 21600 ? "var(--signal, #c2401c)" : "";
-          // The EVM core authorises ONE relayer EOA (onlyRelayer); SignedPriceOracle (M-of-N) is not
-          // deployed. Show that truthfully instead of printing a "1" that reads like a threshold.
-          document.getElementById("c5").textContent = s.oracle?.multiSig
-            ? String(s.signerThreshold)
-            : "1 (single EOA)";
+          const o = s.oracle || {};
+          document.getElementById("c5").textContent = o.multiSig
+            ? o.threshold + "-of-" + o.signerCount
+            : o.mode === "unset" || !o.mode
+              ? "none"
+              : "1 (single EOA)";
           document.getElementById("c6").textContent = "$" + fmt(Number(s.riskFund) / 1e6, 2);
           if (s.bond) {
             document.getElementById("c7").textContent = s.bond.open ? "open" : "closed";

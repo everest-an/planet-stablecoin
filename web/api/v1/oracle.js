@@ -21,19 +21,23 @@
 //   while one dead input keeps minting closed. This was the masking bug the per-asset upgrade fixed.
 //
 // ORACLE TRUST LEVEL (be explicit — graders and auditors read this field):
-//   mode "single-relayer": both price paths run on ONE operator key. Core.updatePrice is
-//   `onlyRelayer`, and SignedPriceOracle is deployed and wired (`updatePriceSigned` works) but its
-//   signer set is 1-of-1 with that same key, because one operator holds all the keys today.
-//   `oracle.signedPath` reports whether the signed path is available; `signers` never claims a
-//   threshold the deployment does not enforce.
+//   Both fields are read from the deployment, never assumed. One path exists, and which one depends on
+//   the chain: on Arbitrum One Core.relayer is the zero address, so the live path is SignedPriceOracle
+//   (2-of-3, threshold read from the contract); on Sepolia both the relayer path and the signed path
+//   are up. `signers` therefore reports the oracle contract's own threshold and signer count, and
+//   `mode` reports which path is actually usable — printing "1" because a relayer is set is how a
+//   2-of-3 deployment gets described as a single key.
+//
 
 import {
   CHAIN,
   CORE,
   MAX_ORACLE_AGE,
+  NETWORK,
   SCALE,
   newRequestId,
   readAssets,
+  readOracleConfig,
   readScalars,
   sendJson,
   sendUpstreamError,
@@ -46,21 +50,24 @@ const BUDGET_MS = 8000;
 const ZERO_ADDR = "0x" + "0".repeat(40);
 
 async function readOracle(full) {
-  const g = await readScalars(
-    [
-      "assetCount",
-      "currentPpi",
-      "lastOracleUpdate",
-      "oldestActiveUpdate",
-      "baseLocked",
-      "relayer",
-      "owner",
-      "paused",
-      "weightSum",
-      "oracle",
-    ],
-    { timeoutMs: BUDGET_MS },
-  );
+  const [g, policy] = await Promise.all([
+    readScalars(
+      [
+        "assetCount",
+        "currentPpi",
+        "lastOracleUpdate",
+        "oldestActiveUpdate",
+        "baseLocked",
+        "relayer",
+        "owner",
+        "paused",
+        "weightSum",
+        "oracle",
+      ],
+      { timeoutMs: BUDGET_MS },
+    ),
+    readOracleConfig({ timeoutMs: BUDGET_MS }),
+  ]);
 
   const assetCount = toNum(g.assetCount);
   const lastOracleUpdate = toNum(g.lastOracleUpdate);
@@ -73,6 +80,10 @@ async function readOracle(full) {
   const oracleAddr = toAddress(g.oracle);
   const relayerConfigured = !!relayer && relayer !== ZERO_ADDR;
   const oracleSet = !!oracleAddr && oracleAddr !== ZERO_ADDR;
+  const threshold = policy.threshold;
+  const signerCount = policy.signerCount;
+  const multiSig = (threshold ?? 0) > 1;
+  const pricePath = oracleSet ? (relayerConfigured ? "relayer+signed" : "signed-only") : relayerConfigured ? "relayer" : "none";
   const baseLocked = g.baseLocked != null && g.baseLocked !== 0n;
   const paused = g.paused != null && g.paused !== 0n;
 
@@ -85,14 +96,14 @@ async function readOracle(full) {
   if (lastOracleUpdate === 0) reasons.push("oracle_never_pushed");
   else if (oldestUpdate === 0) reasons.push("some_assets_never_updated");
   else if (ageSeconds > MAX_ORACLE_AGE) reasons.push(`oracle_price_stale:${ageSeconds}s`);
-  if (!relayerConfigured) reasons.push("no_relayer_configured");
+  if (!relayerConfigured && !oracleSet) reasons.push("no_price_path_configured");
   if (paused) reasons.push("core_paused");
   if (!baseLocked) warnings.push("base_prices_not_locked");
   if (!assetCount) warnings.push("empty_basket");
 
   const data = {
     rev: "evm-2",
-    network: "testnet",
+    network: NETWORK,
     chain: CHAIN,
     core: CORE,
     isCurrentDeployment: true,
@@ -104,13 +115,13 @@ async function readOracle(full) {
     fresh: oldestUpdate > 0 && ageSeconds <= MAX_ORACLE_AGE,
     ppi,
     signers: {
-      count: relayerConfigured ? 1 : 0,
-      threshold: relayerConfigured ? 1 : 0,
-      configured: relayerConfigured,
-      mode: "single-relayer",
-      multiSig: false,
+      count: signerCount ?? 0,
+      threshold: threshold ?? 0,
+      configured: oracleSet,
+      mode: pricePath,
+      multiSig,
     },
-    oracle: { address: oracleAddr, signedPath: oracleSet, relayer, owner, mode: "single-relayer", multiSig: false },
+    oracle: { address: oracleAddr, signedPath: oracleSet, relayer, owner, mode: pricePath, multiSig, threshold, signerCount },
     baseLocked,
     paused,
     assetCount,
