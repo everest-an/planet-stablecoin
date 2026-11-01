@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Planet — Gold Token Desk · 2026-11</title>
-<meta name="description" content="Planet 伙伴简报：五个代币、五条链、两个价格、一个链上商品指数。给你的黄金客户，一个真正的柜台。" />
+<title>Planet — PPI 指数永续 · 交易商合作简报 · 2026-11</title>
+<meta name="description" content="Planet 伙伴简报：核心产品是 PPI 指数永续合约；LP 池做对手盘；Arbitrum One 已部署；/metals 黄金柜台是获客与分销层。" />
 <meta name="robots" content="noindex,nofollow" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -82,9 +82,9 @@ main{max-width:1320px;margin:0 auto;padding:0 32px}
 .hero-main{min-width:0}
 .eyebrow{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;margin-bottom:22px}
 .eyebrow .sq{width:7px;height:7px;background:var(--acid);flex:0 0 auto}
-.hero h1{font-family:var(--disp);font-weight:500;font-size:clamp(40px,6.2vw,78px);line-height:.98;letter-spacing:-.035em;color:var(--text);margin-bottom:26px}
+.hero h1{font-family:var(--disp);font-weight:500;font-size:clamp(36px,4.6vw,58px);line-height:1.05;letter-spacing:-.02em;color:var(--text);margin-bottom:20px}
 .hero h1 .acid-line{color:var(--acid);display:block;margin-top:6px}
-.acid-underline{display:block;width:64px;height:2px;background:var(--acid);margin-top:22px}
+.acid-underline{display:block;width:64px;height:2px;background:var(--acid);margin-top:18px}
 .lede{max-width:52ch;font-size:15px;line-height:1.75;color:var(--text)}
 .lede p{margin-bottom:12px}
 .cta-row{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:26px 0 18px}
@@ -93,6 +93,24 @@ main{max-width:1320px;margin:0 auto;padding:0 32px}
 .link-dim:hover{color:var(--acid);border-color:var(--acid)}
 .meta-row{font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--dim);display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .meta-row .sep{color:var(--line-2)}
+
+/* cover additions (PPI perp brief) */
+.cover-boxes{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:20px 0}
+.status-strip{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0 8px;font-family:var(--mono);font-size:11px;letter-spacing:.05em;color:var(--text)}
+.status-strip .dot{width:7px;height:7px;border-radius:50%;background:var(--acid);box-shadow:0 0 12px rgba(200,255,77,.55);flex:0 0 auto}
+.status-strip .st-live{color:var(--acid);font-weight:500}
+.status-strip .st-beta{color:var(--amber)}
+.slogan{font-size:14px;color:var(--muted);border-left:2px solid var(--acid);padding:4px 0 4px 14px;margin:12px 0}
+.p-body{font-size:13px;line-height:1.8;color:var(--muted)}
+.p-body b{color:var(--text);font-weight:500}
+.link-acid{color:var(--acid);text-decoration:none;border-bottom:1px solid rgba(200,255,77,.4)}
+.link-acid:hover{color:#d7ff6a;border-color:#d7ff6a}
+.earn-list{list-style:none}
+.earn-list li{padding:7px 0;border-bottom:1px solid var(--line);font-size:13px;color:var(--muted);line-height:1.7}
+.earn-list li:last-child{border-bottom:none}
+.earn-list b{color:var(--text);font-weight:500;margin-right:4px}
+.gloss{color:var(--dim)}
+.gloss b{color:var(--text);font-weight:500}
 
 /* snapshot */
 .snapshot{position:relative;background:var(--panel);border:1px solid var(--line);padding:20px 20px 18px}
@@ -112,19 +130,6 @@ main{max-width:1320px;margin:0 auto;padding:0 32px}
 .rc.rc-acid{color:var(--acid);border-color:rgba(200,255,77,.35)}
 .rc.rc-amber{color:var(--amber);border-color:rgba(255,182,72,.35)}
 .rc.rc-dim{color:var(--dim)}
-
-/* ticker */
-.ticker{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--bg-2);overflow:hidden;position:relative;padding:9px 0}
-.ticker .ticker-inner{display:flex;width:max-content;animation:tick 60s linear infinite}
-.ticker:hover .ticker-inner{animation-play-state:paused}
-.ticker .prefix{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--acid);padding:0 16px;white-space:nowrap}
-.ticker .tk-item{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--muted);padding:0 16px;white-space:nowrap;border-left:1px solid var(--line)}
-.ticker .tk-item .nm{color:var(--text);text-transform:uppercase}
-.ticker .tk-item .px{color:var(--text)}
-.ticker .tk-item .up{color:var(--acid)}
-.ticker .tk-item .dn{color:var(--red)}
-@keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-@media (prefers-reduced-motion:reduce){.ticker .ticker-inner{animation:none}}
 
 /* sections */
 section{padding:56px 0;border-top:1px solid var(--line);scroll-margin-top:96px}
@@ -177,26 +182,11 @@ th.strong{color:var(--acid)}
 .chip-med{color:var(--amber);border-color:rgba(255,182,72,.4)}
 .chip-low{color:var(--dim);border-color:var(--line-2)}
 
-/* stat cards */
-.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:16px 0}
-.stat-card{background:var(--panel);border:1px solid var(--line);padding:18px}
-.stat-card .stat-label{font-family:var(--mono);font-size:8.5px;letter-spacing:.16em;color:var(--dim);text-transform:uppercase;margin-bottom:10px}
-.stat-card .stat-value{font-family:var(--mono);font-size:32px;line-height:1;font-weight:500;color:var(--text)}
-.stat-card .stat-value.acid{color:var(--acid)}
-.stat-card .stat-sub{font-family:var(--mono);font-size:10px;color:var(--dim);margin-top:10px}
-
 /* columns */
 .cols{display:grid;grid-template-columns:2fr 1fr;gap:32px;align-items:start}
 .cols p{margin-bottom:12px}
 .pull{border-left:2px solid var(--acid);padding:6px 0 6px 16px;margin:22px 0;font-family:var(--mono);font-size:13px;color:var(--acid);line-height:1.7}
 .note{font-family:var(--mono);font-size:11px;color:var(--dim);line-height:1.7;margin-top:12px}
-
-/* four questions */
-.fq-list{list-style:none;margin-top:8px}
-.fq-list li{display:flex;gap:14px;align-items:baseline;padding:13px 0;border-bottom:1px solid var(--line)}
-.fq-list li:last-child{border-bottom:none}
-.fq-list li .fq-no{font-family:var(--mono);font-size:10px;color:var(--acid)}
-.fq-list li .fq-t{font-size:14px;color:var(--text)}
 
 /* playbook cards */
 .card-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin:16px 0}
@@ -207,23 +197,6 @@ th.strong{color:var(--acid)}
 .card .card-body{font-size:13px;line-height:1.75;color:var(--muted)}
 .card .card-why{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-family:var(--mono);font-size:10.5px;color:var(--acid);line-height:1.6}
 .card .card-why .lbl{color:var(--dim);letter-spacing:.12em;margin-right:6px}
-
-/* layers */
-.layers{display:flex;flex-direction:column;margin:16px 0}
-.layer{background:var(--panel);border:1px solid var(--line);padding:18px 20px;position:relative}
-.layer + .layer{border-top:none}
-.layer .l-label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--acid);margin-bottom:8px}
-.layer .l-desc{font-family:var(--mono);font-size:11.5px;color:var(--dim);line-height:1.7}
-.layer .l-desc .em{color:var(--muted)}
-.layer::before{content:"";position:absolute;left:26px;top:-12px;width:1px;height:12px;background:var(--line-2)}
-.layer:first-child::before{display:none}
-
-/* controls */
-.controls{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:16px 0}
-.control{background:var(--panel);border:1px solid var(--line);padding:16px;text-align:center}
-.control .c-v{font-family:var(--mono);font-size:26px;font-weight:500;color:var(--text);line-height:1.1}
-.control .c-v.acid{color:var(--acid)}
-.control .c-l{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--dim);text-transform:uppercase;margin-top:8px}
 
 /* terms */
 .term-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:16px 0}
@@ -240,13 +213,6 @@ th.strong{color:var(--acid)}
 .tstep .t-day{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--acid);text-transform:uppercase;margin-bottom:8px}
 .tstep .t-title{font-size:14px;font-weight:500;color:var(--text);margin-bottom:6px}
 .tstep .t-body{font-size:12px;line-height:1.7;color:var(--muted)}
-
-/* action cols */
-.action-cols{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin:22px 0}
-.action-col h4{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;margin-bottom:12px}
-.action-col ul{list-style:none}
-.action-col li{padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px;color:var(--muted)}
-.action-col li::before{content:"— ";color:var(--acid)}
 
 /* contact */
 .contact{background:var(--panel);border:1px solid var(--acid);position:relative;padding:26px;display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:space-between;margin-top:8px}
@@ -295,8 +261,6 @@ th.strong{color:var(--acid)}
   .rail{display:none}
   .shell{margin-left:0}
   .hero{grid-template-columns:1fr;gap:24px}
-  .stat-grid{grid-template-columns:repeat(2,1fr)}
-  .controls{grid-template-columns:repeat(2,1fr)}
   .term-grid{grid-template-columns:1fr}
   .timeline{grid-template-columns:repeat(2,1fr)}
 }
@@ -305,17 +269,16 @@ th.strong{color:var(--acid)}
   .topbar{padding:0 12px}
   .top-actions{display:none}
   main{padding:0 16px}
-  .hero h1{font-size:40px}
+  .hero h1{font-size:34px}
   .cols{grid-template-columns:1fr}
   .card-grid{grid-template-columns:1fr}
+  .cover-boxes{grid-template-columns:1fr}
 }
 @media (max-width:560px){
   .nav-short{gap:9px}
   .nav-short a{font-size:8.5px}
-  .nav-short a[href='#playbook']{display:none}
   .stat-grid{grid-template-columns:1fr 1fr}
   .stat-card .stat-value{font-size:24px}
-  .controls{grid-template-columns:1fr 1fr}
   .timeline{grid-template-columns:1fr}
   .action-cols{grid-template-columns:1fr}
   .snap-row{grid-template-columns:70px 1fr auto;gap:6px}
@@ -333,7 +296,11 @@ th.strong{color:var(--acid)}
   .shell{display:block;max-width:none;margin:0;padding-top:0}
   main{max-width:none;padding:0}
   .hero{display:block;padding:16mm 12mm 0}
-  .hero .snapshot{margin-top:14mm;max-width:180mm}
+  .hero .snapshot{margin-top:8mm;max-width:180mm}
+  .cover-boxes{grid-template-columns:repeat(3,1fr);gap:8px}
+  .term-grid{grid-template-columns:repeat(3,1fr);gap:8px}
+  .term-grid .term{padding:12px}
+  .cover-boxes .term{padding:12px}
   .hero .hero-main .lede,.hero .hero-main .meta-row{display:block}
   .print-brand{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.24em;color:var(--acid);text-transform:uppercase;border-bottom:1px solid var(--line-2);padding-bottom:4mm;margin-bottom:12mm}
   .cta-row a,.cta-row{display:none}
@@ -350,6 +317,56 @@ th.strong{color:var(--acid)}
   .print-foot{display:flex;position:fixed;bottom:0;left:0;right:0;justify-content:space-between;font-family:var(--mono);font-size:8px;letter-spacing:.06em;color:var(--dim);border-top:1px solid var(--line);padding:3mm 12mm;background:#050708}
   .pagefoot{padding:8mm 12mm 10mm}.pagefoot .bottom-line{display:none}.pagefoot .disclaimer{font-size:8.5px;line-height:1.5}
 }
+/* print compaction — ensure 5 pages, no spill */
+@media print{
+  section{padding:9mm 12mm 10mm}
+  .hero{padding:14mm 12mm 0}
+  .hero h1{font-size:34px;margin-bottom:14px;line-height:1.08}
+  .eyebrow{margin-bottom:14px}
+  .acid-underline{margin-top:12px}
+  .lede{font-size:13.5px}
+  .cover-boxes{gap:10px;margin:14px 0}
+  .cover-boxes .term{padding:13px}
+  .cover-boxes .term h3{font-size:14px;margin-bottom:6px}
+  .cover-boxes .term .t-body{font-size:11px;line-height:1.55}
+  .status-strip{margin:12px 0 6px;font-size:10px}
+  .slogan{font-size:12.5px;margin:8px 0}
+  .meta-row{font-size:9px}
+  .snapshot{margin-top:10mm;padding:14px 14px 12px}
+  .snap-row{padding:6px 0}
+  .snap-row .v{font-size:16px}
+  .sec-head{margin-bottom:16px}
+  .sec-head h2{font-size:26px}
+  .intro{font-size:13px;line-height:1.7;margin-bottom:16px}
+  .term-grid{gap:10px;margin:12px 0}
+  .term{padding:14px}
+  .term .t-idx{font-size:10px;margin-bottom:5px}
+  .term h3{font-size:15px;margin-bottom:7px}
+  .term .t-body{font-size:11px;line-height:1.6}
+  .card-grid{gap:10px;margin:12px 0}
+  .card{padding:14px}
+  .card h3{font-size:15px;margin-bottom:7px}
+  .card .card-body{font-size:11.5px;line-height:1.6}
+  .card .card-why{font-size:10px;margin-top:10px;padding-top:9px}
+  .panel{padding:14px}
+  .panel-title{font-size:9px;margin:14px 0 8px;padding-bottom:7px}
+  .p-body{font-size:11.5px;line-height:1.6}
+  .earn-list li{padding:5px 0;font-size:11.5px;line-height:1.55}
+  .timeline{gap:10px;margin:12px 0}
+  .tstep{padding:12px}
+  .tstep .t-title{font-size:13px}
+  .tstep .t-body{font-size:11px;line-height:1.5}
+  .tablewrap{margin:10px 0}
+  table td{font-size:11px;padding:6px 10px}
+  table th{font-size:8.5px;padding:7px 10px}
+  .contact{padding:16px}
+  .contact .c-lines{font-size:11px;line-height:1.7}
+  .earn-list.cols2{column-count:2;column-gap:26px}
+  .earn-list.cols2 li{break-inside:avoid}
+  .pagefoot{padding:4mm 12mm 4mm;margin-top:12px}
+  .pagefoot .f-top{display:none}
+  .pagefoot .disclaimer{font-size:7px;line-height:1.35;margin:6px 0}
+}
 </style>
 </head>
 <body>
@@ -357,7 +374,7 @@ th.strong{color:var(--acid)}
 
 <div class="classbar">
   <span class="c-left">PLANET // INTELLIGENCE</span>
-  <span class="c-center">PARTNER BRIEF · GOLD TOKEN DESK · 2026-11</span>
+  <span class="c-center">PARTNER BRIEF · PPI 指数永续 · 2026-11</span>
   <span class="c-right">
     <span class="utc" id="utc-clock">UTC 07:12:00</span>
     <span class="sep">·</span>
@@ -371,66 +388,83 @@ th.strong{color:var(--acid)}
     <b>PLANET</b>
   </a>
   <nav class="topnav" aria-label="主导航">
-    <a href="#brief">BRIEF</a>
-    <a href="#market">MARKET</a>
-    <a href="#capability">CAPABILITY</a>
-    <a href="#signal">SIGNAL</a>
-    <a href="#playbook">PLAYBOOK</a>
-    <a href="#infra">INFRA</a>
-    <a href="#risk">RISK</a>
-    <a href="#terms">TERMS</a>
-    <a href="#action">ACTION</a>
+    <a href="#what">WHAT</a>
+    <a href="#use">USE</a>
+    <a href="#contract">CONTRACT</a>
+    <a href="#partner">PARTNER</a>
   </nav>
   <nav class="nav-short" aria-label="快捷导航">
-    <a href="#brief">BRIEF</a>
-    <a href="#signal">SIGNAL</a>
-    <a href="#playbook">PLAYBOOK</a>
-    <a href="#risk">RISK</a>
-    <a href="#action">ACTION</a>
+    <a href="#what">WHAT</a>
+    <a href="#use">USE</a>
+    <a href="#contract">CONTRACT</a>
+    <a href="#partner">PARTNER</a>
   </nav>
   <div class="top-actions">
     <a class="btn" href="planet-gold-desk-2026-11.pdf" download>PDF</a>
-    <a class="btn btn-acid" href="https://ppppp.space/metals" target="_blank" rel="noopener">OPEN COUNTER <span aria-hidden="true">↗</span></a>
+    <a class="btn btn-acid" href="https://ppppp.space/perps" target="_blank" rel="noopener">打开永续页 <span aria-hidden="true">↗</span></a>
   </div>
 </header>
 
 <nav class="rail" aria-label="章节目录">
   <div class="rail-title">SECTIONS</div>
   <ol>
-    <li><a href="#brief"><span class="idx">00</span>BRIEF</a></li>
-    <li><a href="#market"><span class="idx">01</span>MARKET</a></li>
-    <li><a href="#capability"><span class="idx">02</span>CAPABILITY</a></li>
-    <li><a href="#signal"><span class="idx">03</span>SIGNAL</a></li>
-    <li><a href="#playbook"><span class="idx">04</span>PLAYBOOK</a></li>
-    <li><a href="#infra"><span class="idx">05</span>INFRA</a></li>
-    <li><a href="#risk"><span class="idx">06</span>RISK</a></li>
-    <li><a href="#terms"><span class="idx">07</span>TERMS</a></li>
-    <li><a href="#action"><span class="idx">08</span>ACTION</a></li>
+    <li><a href="#what"><span class="idx">01</span>WHAT</a></li>
+    <li><a href="#use"><span class="idx">02</span>USE</a></li>
+    <li><a href="#contract"><span class="idx">03</span>CONTRACT</a></li>
+    <li><a href="#partner"><span class="idx">04</span>PARTNER</a></li>
   </ol>
 </nav>
 
 <div class="shell">
   <main>
-
-    <header class="hero">
+<header class="hero">
       <div class="print-brand">PLANET // INTELLIGENCE · PARTNER BRIEF</div>
       <div class="hero-main">
-        <div class="eyebrow"><span class="sq" aria-hidden="true"></span>[ 2026-11 · PARTNER INTELLIGENCE · GOLD TOKEN DESK ]</div>
-        <h1>给你的黄金客户，<span class="acid-line">一个真正的柜台。</span></h1>
+        <div class="eyebrow"><span class="sq" aria-hidden="true"></span>[ 2026-11 · PLANET · 黄金代币交易商合作简报 ]</div>
+        <h1>Planet 上线了<span class="acid-line">PPI 指数永续合约。</span></h1>
         <div class="acid-underline" aria-hidden="true"></div>
         <div class="lede">
-          <p>五个代币、五条链、两个价格、一个链上商品指数。</p>
-          <p>挂你的名字，客户还是你的。我们不托管、不碰 KYC、不碰你的客户关系。</p>
+          <p>标的是 14 种大宗商品组成的链上指数；LP 池做对手盘；Arbitrum One 已部署。</p>
         </div>
+
+        <div class="cover-boxes">
+          <div class="term">
+            <div class="t-idx num">01 标的</div>
+            <h3>链上指数 PPI</h3>
+            <p class="t-body">14 种大宗商品（能源、金属、农产品）组成的链上指数 PPI。</p>
+          </div>
+          <div class="term">
+            <div class="t-idx num">02 合约</div>
+            <h3>PPIPerp v2</h3>
+            <p class="t-body">LP 池对手盘；10 bps 开平仓；3x 杠杆 / 10% 维持保证金；OI ≤ 2× 池。</p>
+          </div>
+          <div class="term">
+            <div class="t-idx num">03 前台</div>
+            <h3>/metals 黄金柜台</h3>
+            <p class="t-body">五个黄金代币、五条链，作为获客与分销层。</p>
+          </div>
+        </div>
+
+        <div class="status-strip">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="st-live">已上线</span>
+          <span class="sep" style="color:var(--line-2)">·</span>
+          <span class="chip chip-beta">beta</span>
+          <span class="sep" style="color:var(--line-2)">·</span>
+          <span class="st-beta">LP 池等待首笔资金</span>
+        </div>
+
+        <p class="slogan">不发行黄金 · 不托管 · 不做 KYC · 不碰你的客户关系。</p>
+
         <div class="cta-row no-print">
-          <a class="btn btn-acid" href="https://ppppp.space/metals" target="_blank" rel="noopener">打开实时柜台 <span aria-hidden="true">↗</span></a>
-          <a class="btn" href="https://ppppp.space/ppi" target="_blank" rel="noopener">看链上指数 <span aria-hidden="true">↗</span></a>
+          <a class="btn btn-acid" href="https://ppppp.space/perps" target="_blank" rel="noopener">打开永续页 <span aria-hidden="true">↗</span></a>
+          <a class="btn" href="https://ppppp.space/metals" target="_blank" rel="noopener">打开黄金柜台 <span aria-hidden="true">↗</span></a>
           <a class="link-dim" href="planet-gold-desk-2026-11.pdf" download>下载 PDF</a>
         </div>
+
         <div class="meta-row">
           <span>DATA SNAPSHOT 2026-11-01 15:17 UTC</span><span class="sep">·</span>
           <span>ARBITRUM ONE + ETHEREUM MAINNET</span><span class="sep">·</span>
-          <span>ZERO CUSTODY</span><span class="sep">·</span>
           <span>NOT EXTERNALLY AUDITED</span>
         </div>
       </div>
@@ -452,7 +486,7 @@ th.strong{color:var(--acid)}
           <span class="k">CUSTODY</span><span class="v num">$0</span><span class="n num">read-only · no keys</span>
         </div>
         <div class="snap-row">
-          <span class="k">PERP POOL</span><span class="v num">$0</span><span class="n num">beta · empty pool</span>
+          <span class="k">PERP POOL</span><span class="v num">$0</span><span class="n num">beta · awaiting first LP</span>
         </div>
         <div class="risk-counters">
           <div class="rc-label">ASSET RISK STATES</div>
@@ -464,245 +498,133 @@ th.strong{color:var(--acid)}
         </div>
       </div>
     </header>
-
-    <div class="ticker" aria-hidden="true">
-      <div class="ticker-inner" id="ticker">
-        <span class="prefix">PPI BASKET //</span>
-        <span class="tk-item"><span class="nm">WTI</span> <span class="px num">104.12</span> <span class="up num">+3.34%</span></span>
-        <span class="tk-item"><span class="nm">BRENT</span> <span class="px num">113.43</span> <span class="up num">+3.31%</span></span>
-        <span class="tk-item"><span class="nm">GAS</span> <span class="px num">2.898</span> <span class="dn num">−1.50%</span></span>
-        <span class="tk-item"><span class="nm">GOLD</span> <span class="px num">3,898.90</span> <span class="dn num">−3.38%</span></span>
-        <span class="tk-item"><span class="nm">SILVER</span> <span class="px num">49.276</span> <span class="dn num">−6.21%</span></span>
-        <span class="tk-item"><span class="nm">COPPER</span> <span class="px num">6.482</span> <span class="dn num">−1.58%</span></span>
-        <span class="tk-item"><span class="nm">WHEAT</span> <span class="px num">603.50</span> <span class="up num">+0.88%</span></span>
-        <span class="tk-item"><span class="nm">CORN</span> <span class="px num">447.75</span> <span class="dn num">−0.56%</span></span>
-        <span class="tk-item"><span class="nm">SOY</span> <span class="px num">1,234.25</span> <span class="up num">+0.22%</span></span>
-        <span class="tk-item"><span class="nm">COFFEE</span> <span class="px num">287.15</span> <span class="up num">+2.01%</span></span>
-        <span class="tk-item"><span class="nm">LUMBER</span> <span class="px num">65.259</span> <span class="up num">+0.68%</span></span>
-        <span class="tk-item"><span class="nm">LITHIUM</span> <span class="px num">59.81</span> <span class="dn num">−4.59%</span></span>
-        <span class="tk-item"><span class="nm">WATER</span> <span class="px num">73.76</span> <span class="up num">+1.82%</span></span>
-        <span class="tk-item"><span class="nm">CARBON</span> <span class="px num">35.001</span> <span class="up num">+0.26%</span></span>
-      </div>
-    </div>
-    <section id="brief" class="reveal" aria-labelledby="h-brief">
+<section id="what" class="reveal" aria-labelledby="h-what">
       <div class="sec-head">
-        <span class="no">[00]</span><h2 id="h-brief">BRIEF</h2><span class="rule" aria-hidden="true"></span><span class="meta">READ 3 MIN</span>
+        <span class="no">[01]</span><h2 id="h-what">WHAT</h2><span class="rule" aria-hidden="true"></span><span class="meta">READ 2 MIN</span>
       </div>
-      <div class="cols">
-        <div>
-          <p style="color:var(--text);font-weight:500">黄金代币的持有者，已经在你的群里。</p>
-          <p>XAUT 约 $2.5B、PAXG 约 $1.9B，合计约 $4.4B 的代币化黄金。需求最集中的地方，是那些能 P2P 买到 USDT、却开不了国际券商账户的人——土耳其、阿根廷、尼日利亚，以及中国的出境资金。</p>
-          <p>他们买完之后有四个问题，今天没人替他们回答：</p>
-          <p>Planet 把这四个问题做成了一个页面。它不发行黄金、不托管、不碰 KYC；它只读链上余额、比较五条链的报价、把发行方风险写在页面上。你可以挂自己的 ref、自己的品牌——客户还是你的。</p>
-          <div class="pull">我们不是交易所，不是发行方，不是托管方。我们是你的技术供应商。</div>
+      <p class="intro">Planet 的核心产品是指数永续合约。它把 14 种大宗商品的价格做成链上指数 PPI，再让交易者用永续合约交易这个指数；<span class="hl">LP 池做对手盘</span>。</p>
+
+      <div class="term-grid">
+        <div class="term">
+          <div class="t-idx num">01 · 核心产品：PPI 永续</div>
+          <h3>PPIPerp v2</h3>
+          <p class="t-body">
+            标的：PPI 指数（14 商品，权重和 1,000,000）<br>
+            合约：PPIPerp v2 · Arbitrum One · 0x99e6…<br>
+            参数：10 bps 开平仓；3x 杠杆 / 10% 维持保证金；OI ≤ 2× 池；TWAP 清算门；guardian 单向暂停<br>
+            状态：<b>已上线</b>；beta；LP 池等待首笔资金<br><br>
+            <span class="gloss"><b>白话：</b>永续 = 没有到期日、价格跟随指数的合约；LP = 流动性提供者，池子里的钱当你的对手盘；OI = 全市场未平仓总量；TWAP = 用一段时间平均价判清算，防单点插针。</span>
+          </p>
         </div>
-        <div class="panel">
-          <div class="panel-title">THE FOUR QUESTIONS</div>
-          <ol class="fq-list">
-            <li><span class="fq-no num">01</span><span class="fq-t">我到底有多少盎司？</span></li>
-            <li><span class="fq-no num">02</span><span class="fq-t">这枚币是真的吗？</span></li>
-            <li><span class="fq-no num">03</span><span class="fq-t">现货价和链上成交价差多少？</span></li>
-            <li><span class="fq-no num">04</span><span class="fq-t">从哪条链买最便宜？</span></li>
-          </ol>
+        <div class="term">
+          <div class="t-idx num">02 · 标的：PPI 指数</div>
+          <h3>PPI</h3>
+          <p class="t-body">
+            14 种商品（能源、金属、农产品），2-of-3 拉取式预言机，每个资产带 normal / caution / frozen 状态。<br><br>
+            <span class="gloss"><b>白话：</b>PPI = 购买力指数，把 14 种商品价格合成一个数；2-of-3 = 三个喂价方至少两个签名一致才更新。</span><br><br>
+            <b>黄金 12% / 白银 7%：它是商品 beta，不是纯金。</b>
+          </p>
         </div>
+        <div class="term">
+          <div class="t-idx num">03 · 前台/分销：/metals</div>
+          <h3>黄金柜台</h3>
+          <p class="t-body">
+            五个黄金代币、四个发行方、五条链；跨钱包按盎司汇总；发行方/辖区/MiCA；现货 vs 链上市场价；五链报价。<br><br>
+            <b>这是获客与分销层，不是主产品。</b>
+          </p>
+        </div>
+      </div>
+
+      <div class="panel" style="margin:14px 0">
+        <div class="panel-title">它不做什么</div>
+        <p class="p-body">不是稳定币；没有商品储备；不是黄金发行方；不是托管方；不是现货交易所或订单簿；不承诺收益。</p>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">今天就能打开</div>
+        <p style="font-family:var(--mono);font-size:12px;color:var(--text);line-height:1.9">
+          <a class="link-acid" href="https://ppppp.space/perps" target="_blank" rel="noopener">/perps</a>（永续，beta） ·
+          <a class="link-acid" href="https://ppppp.space/metals" target="_blank" rel="noopener">/metals</a>（黄金柜台） ·
+          <a class="link-acid" href="https://ppppp.space/ppi" target="_blank" rel="noopener">/ppi</a>（链上指数） ·
+          <a class="link-acid" href="https://ppppp.space/api/v1/ppi" target="_blank" rel="noopener">/api/v1/ppi</a>（公开 API）
+        </p>
       </div>
     </section>
 
-    <section id="market" class="reveal" aria-labelledby="h-market">
+    <section id="use" class="reveal" aria-labelledby="h-use">
       <div class="sec-head">
-        <span class="no">[01]</span><h2 id="h-market">MARKET</h2><span class="rule" aria-hidden="true"></span><span class="meta">READ 4 MIN</span>
+        <span class="no">[02]</span><h2 id="h-use">USE</h2><span class="rule" aria-hidden="true"></span><span class="meta">READ 3 MIN</span>
       </div>
-      <p class="intro">黄金代币的竞争，不在“谁有黄金”，在“谁能让客户看见自己有多少、值多少、风险在哪”。大多数柜台只给一个成交价；客户离开你的页面之后，就会去别处比价。</p>
-
-      <div class="stat-grid">
-        <div class="stat-card">
-          <div class="stat-label">tokenised gold</div>
-          <div class="stat-value num">$4.4B</div>
-          <div class="stat-sub num">XAUT ~$2.5B + PAXG ~$1.9B</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">tokens covered</div>
-          <div class="stat-value acid num">5</div>
-          <div class="stat-sub">PAXG · XAUT · KAG · VNXAU · KAU</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">chains quoted</div>
-          <div class="stat-value acid num">5</div>
-          <div class="stat-sub">Arbitrum · Base · Optimism · Polygon · Ethereum</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">prices shown</div>
-          <div class="stat-value acid num">2</div>
-          <div class="stat-sub">spot vs on-chain market, gap flagged &gt;5%</div>
-        </div>
-      </div>
-
-      <div class="panel-title" id="where-table">WHERE THE COUNTER SITS</div>
-      <div class="tablewrap">
-        <table aria-labelledby="where-table">
-          <caption class="sr-only">Planet 柜台与传统 OTC 柜台、中心化交易所对比</caption>
-          <thead>
-            <tr><th style="text-align:left">&nbsp;</th><th>传统 OTC 柜台</th><th>中心化交易所</th><th class="strong">Planet 柜台</th></tr>
-          </thead>
-          <tbody>
-            <tr><td class="dim">客户关系</td><td>你的</td><td>平台的</td><td class="strong">你的</td></tr>
-            <tr><td class="dim">托管</td><td>你或托管方</td><td>平台</td><td class="strong">无（只读）</td></tr>
-            <tr><td class="dim">KYC</td><td>你的流程</td><td>平台</td><td class="strong">不做；你的流程仍是你的</td></tr>
-            <tr><td class="dim">多链比价</td><td>手工 / 口头</td><td>单平台</td><td class="strong">五链一屏，标步骤</td></tr>
-            <tr><td class="dim">发行方风险</td><td>靠解释</td><td>通常不披露</td><td class="strong">发行方 / 辖区 / MiCA / 赎回门槛</td></tr>
-            <tr><td class="dim">价格</td><td>单一报价</td><td>单一成交价</td><td class="strong">现货 vs 链上市场价</td></tr>
-            <tr><td class="dim">收入</td><td>价差</td><td>返佣</td><td class="strong">ref 归因 + Rango affiliate</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p class="note">Planet 不抢客户关系，也不接托管。它补的是你柜台后面缺的那一层：读数、比价、风险披露。</p>
-    </section>
-
-    <section id="capability" class="reveal" aria-labelledby="h-capability">
-      <div class="sec-head">
-        <span class="no">[02]</span><h2 id="h-capability">CAPABILITY</h2><span class="rule" aria-hidden="true"></span><span class="meta">READ 5 MIN</span>
-      </div>
-      <p class="intro">下面这些不是路线图，是今天就能打开的页面和 API。状态只有三种：<span class="hl">LIVE、BETA、OPEN</span>。</p>
-
-      <div class="tablewrap">
-        <table aria-labelledby="cap-title">
-          <caption class="sr-only">Planet 当前能力清单</caption>
-          <thead>
-            <tr><th id="cap-title">#</th><th>能力</th><th>它替你做什么</th><th>状态</th><th>证据</th></tr>
-          </thead>
-          <tbody>
-            <tr><td class="dim num">1</td><td class="strong">多钱包黄金柜台</td><td>粘贴任意地址，五个代币按盎司汇总；只读，不签名</td><td><span class="chip chip-live">LIVE</span></td><td><a href="https://ppppp.space/metals" target="_blank" rel="noopener">/metals</a></td></tr>
-            <tr><td class="dim num">2</td><td class="strong">双价格</td><td>现货 vs 链上市场参考价；偏离 &gt;5% 自动标注</td><td><span class="chip chip-live">LIVE</span></td><td><a href="https://ppppp.space/metals" target="_blank" rel="noopener">/metals</a></td></tr>
-            <tr><td class="dim num">3</td><td class="strong">五链比价</td><td>Arbitrum / Base / Optimism / Polygon / Ethereum 一屏报价，标出步骤与桥接</td><td><span class="chip chip-live">LIVE</span></td><td><a href="https://ppppp.space/api/quote?symbol=PAXG&amp;from=ARBITRUM&amp;amount=100" target="_blank" rel="noopener">/api/quote</a></td></tr>
-            <tr><td class="dim num">4</td><td class="strong">断点续传</td><td>两步路由保存进度；刷新页面继续，不用重开一笔</td><td><span class="chip chip-live">LIVE</span></td><td><a href="https://ppppp.space/metals" target="_blank" rel="noopener">/metals</a></td></tr>
-            <tr><td class="dim num">5</td><td class="strong">发行方风险层</td><td>Paxos / TG / KMS / VNX 的辖区、MiCA、赎回门槛、代理升级</td><td><span class="chip chip-live">LIVE</span></td><td><a href="https://ppppp.space/metals" target="_blank" rel="noopener">/metals</a></td></tr>
-            <tr><td class="dim num">6</td><td class="strong">中文界面</td><td>zh/en 切换；MiCA 与赎回门槛写在页面上</td><td><span class="chip chip-live">LIVE</span></td><td><a href="https://ppppp.space/metals?lang=zh" target="_blank" rel="noopener">/metals?lang=zh</a></td></tr>
-            <tr><td class="dim num">7</td><td class="strong">14 商品 PPI</td><td>Arbitrum One 链上计算；权重和 1,000,000；单资产 ≤15%</td><td><span class="chip chip-live">LIVE</span></td><td><a href="https://ppppp.space/ppi" target="_blank" rel="noopener">/ppi</a></td></tr>
-            <tr><td class="dim num">8</td><td class="strong">数据质量状态</td><td>normal / caution / frozen；每个资产自己的 lastUpdate</td><td><span class="chip chip-live">LIVE</span></td><td><a href="https://ppppp.space/api/v1/ppi" target="_blank" rel="noopener">/api/v1/ppi</a></td></tr>
-            <tr><td class="dim num">9</td><td class="strong">2-of-3 拉取式预言机</td><td>交易时提交签名喂价；entry 永远新鲜</td><td><span class="chip chip-live">LIVE</span></td><td><a href="https://ppppp.space/api/v1/price-signed" target="_blank" rel="noopener">/api/v1/price-signed</a></td></tr>
-            <tr><td class="dim num">10</td><td class="strong">公开读 API</td><td>PPI / perp / metals / quote；30 次/分</td><td><span class="chip chip-live">LIVE</span></td><td><a href="https://ppppp.space/api/v1/ppi" target="_blank" rel="noopener">/api/v1/ppi</a></td></tr>
-            <tr><td class="dim num">11</td><td class="strong">PPI 永续 v2</td><td>LP 池做对手盘；10 bps；OI ≤ 2× 池；TWAP 清算门；guardian 单向暂停</td><td><span class="chip chip-beta">BETA</span></td><td><a href="https://ppppp.space/perps" target="_blank" rel="noopener">/perps</a></td></tr>
-            <tr><td class="dim num">12</td><td class="strong">外部审计</td><td>尚未；自审 + 70 个 Foundry 测试 + 900 步不变量</td><td><span class="chip chip-open">OPEN</span></td><td><a href="https://ppppp.space/docs" target="_blank" rel="noopener">/docs</a></td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p class="note">状态为 LIVE 的项，今天就可以在 ppppp.space 打开。BETA 项不要对客户承诺流动性。OPEN 项在签约前必须知道。</p>
-      <div class="panel" style="margin:18px 0;border-color:var(--line-2)">
-        <div class="panel-title">EXAMPLE QUOTE // <span class="t-acid">NOT A GUARANTEE</span></div>
-        <div style="font-family:var(--mono);font-size:12px;line-height:1.8;color:var(--muted)">
-          100 USDC on Arbitrum → <span style="color:var(--acid)" class="num">0.025631</span> PAXG · <span class="num">2</span> steps · <span class="num">1,605 s</span> estimated · route: Cctp V2 Economy Aggregator → OKX ETH DEX Aggregator
-        </div>
-      </div>    </section>
-    <section id="signal" class="reveal" aria-labelledby="h-signal">
-      <div class="sec-head">
-        <span class="no">[03]</span><h2 id="h-signal">SIGNAL</h2><span class="rule" aria-hidden="true"></span><span class="meta">READ 4 MIN</span>
-      </div>
-      <p class="intro">同一枚 KAG，现货 $49.67，链上市场参考价 $19.12——折价 61.5%。<br>同一枚 VNXAU，现货 $3,947.03，链上 $6,330.40——溢价 60.4%。<br>这不是 bug。这是薄流动性、赎回摩擦和发行方风险的价格。</p>
-
-      <div class="panel-title" id="tp-title">TWO PRICES // 2026-11-01 15:17 UTC</div>
-      <div class="tablewrap">
-        <table aria-labelledby="tp-title">
-          <caption class="sr-only">五个代币的现货价与链上市场参考价对比</caption>
-          <thead>
-            <tr><th>TOKEN</th><th>METAL</th><th class="num">SPOT</th><th class="num">ON-CHAIN MARKET</th><th class="num">GAP</th><th>READ</th></tr>
-          </thead>
-          <tbody>
-            <tr><td class="strong">PAXG</td><td class="dim">gold</td><td class="num">$3,895.30</td><td class="num dim">—</td><td class="num dim">—</td><td class="dim">no DEX print</td></tr>
-            <tr><td class="strong">XAUT</td><td class="dim">gold</td><td class="num">$3,872.95</td><td class="num dim">—</td><td class="num dim">—</td><td class="dim">no DEX print</td></tr>
-            <tr><td class="strong">KAG</td><td class="dim">silver</td><td class="num">$49.67</td><td class="num">$19.12</td><td class="num red">−61.5%</td><td class="dim">wrapper discount</td></tr>
-            <tr><td class="strong">VNXAU</td><td class="dim">gold</td><td class="num">$3,947.03</td><td class="num">$6,330.40</td><td class="num amber">+60.4%</td><td class="dim">thin-float premium</td></tr>
-            <tr><td class="strong">KAU</td><td class="dim">gold</td><td class="num">$3,895.30</td><td class="num dim">—</td><td class="num dim">—</td><td class="dim">read-only</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p class="note">价差不是套利建议。薄市场的价格可能失真；它的价值是让你和客户看见风险，而不是鼓励交易。页面在偏离超过 5% 时标注，不替客户下单。</p>
-
-
-
-      <h3 style="font-size:16px;font-weight:500;margin:30px 0 4px;color:var(--text)">ISSUER RISK <span style="color:var(--dim);font-family:var(--mono);font-size:11px">// 客户真正承担的，不是“黄金”两个字</span></h3>
-      <div class="tablewrap">
-        <table aria-labelledby="issuer-title">
-          <caption class="sr-only">发行方风险对比表</caption>
-          <thead>
-            <tr><th id="issuer-title">TOKEN</th><th>ISSUER</th><th>JURISDICTION</th><th>UNIT</th><th>ON-CHAIN LIQUIDITY</th><th>MUST TELL THE CLIENT</th></tr>
-          </thead>
-          <tbody>
-            <tr><td class="strong">PAXG</td><td>Paxos Trust Company, N.A.</td><td class="dim">US · OCC</td><td class="num">1 oz</td><td class="cyan">deep</td><td class="dim">MiCA: 欧盟居民不可用</td></tr>
-            <tr><td class="strong">XAUT</td><td>TG Commodities Limited</td><td class="dim">BVI · Swiss vaults</td><td class="num">1 oz</td><td class="cyan">deep</td><td class="dim">离岸发行；托管在瑞士</td></tr>
-            <tr><td class="strong">VNXAU</td><td>VNX Commodities AG</td><td class="dim">Liechtenstein · FMA</td><td class="num">1 g</td><td class="amber">thin</td><td class="dim">按克计价；页面已换算盎司</td></tr>
-            <tr><td class="strong">KAG</td><td>KMS Labs S.A.</td><td class="dim">Panama</td><td class="num">1 oz</td><td class="amber">thin</td><td class="dim">可升级代理；赎回需合规开户</td></tr>
-            <tr><td class="strong">KAU</td><td>KMS Labs S.A.</td><td class="dim">Panama</td><td class="num">1 oz</td><td class="red">very thin</td><td class="dim">能读不能买（无聚合路由）</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p class="note">这五个代币的差异，不是白皮书里的形容词，是客户真金白银的对手方风险。把这张表给客户看，比说“我们家的币最安全”有用。</p>
-    </section>
-
-    <section id="playbook" class="reveal" aria-labelledby="h-playbook">
-      <div class="sec-head">
-        <span class="no">[04]</span><h2 id="h-playbook">PLAYBOOK</h2><span class="rule" aria-hidden="true"></span><span class="meta">READ 6 MIN</span>
-      </div>
-      <p class="intro">五种用法，按你现在的业务选一个。不要一次全上。</p>
+      <p class="intro">你作为黄金代币交易商，具体怎么用：</p>
 
       <div class="card-grid">
         <div class="card">
-          <div class="card-top"><span class="card-idx num">01</span><span class="chip chip-text">TODAY</span></div>
-          <h3>客户柜台</h3>
+          <div class="card-top"><span class="card-idx num">01</span><span class="chip chip-beta">BETA</span></div>
+          <h3>库存对冲（beta）</h3>
+          <p class="card-body">PPI 永续做空可以对冲商品 beta。注意：黄金只占指数 12%，它不是纯金对冲；首笔 LP 之前没有对手盘，不能承诺“随时对冲”。</p>
+          <p class="card-why"><span class="lbl">NOTE</span>不是纯金对冲；池子空之前不能当卖点。</p>
+        </div>
+        <div class="card">
+          <div class="card-top"><span class="card-idx num">02</span><span class="chip chip-text">TODAY</span></div>
+          <h3>客户柜台（留存）</h3>
           <p class="card-body">把 ppppp.space/metals?ref=你的名字 放进群公告、客服话术、内容页。客户粘任意地址，五个代币按盎司汇总；不用连接、不用签名、不用注册。</p>
           <p class="card-why"><span class="lbl">WHY</span>客户每次想知道“我有多少”，都会回到你的链接。</p>
         </div>
         <div class="card">
-          <div class="card-top"><span class="card-idx num">02</span><span class="chip chip-text">TODAY</span></div>
-          <h3>报价台</h3>
-          <p class="card-body">客户用 USDC 从任意链付，一屏看到五条链的报价、步骤数和是否桥接；两步路线可断点续传。</p>
-          <p class="card-why"><span class="lbl">WHY</span>你不再手工比价，也不会把客户推给别家。</p>
-        </div>
-        <div class="card">
           <div class="card-top"><span class="card-idx num">03</span><span class="chip chip-text">TODAY</span></div>
-          <h3>风险披露</h3>
-          <p class="card-body">发行方、辖区、MiCA、赎回门槛、双价格，一页讲清。</p>
-          <p class="card-why"><span class="lbl">WHY</span>客户问“这币安全吗”，你有一个可验证的页面，而不是一句“我们家的最安全”。</p>
+          <h3>报价台（成交）</h3>
+          <p class="card-body">客户用 USDC 从任意链付，一屏看到五条链的报价、步骤数和是否桥接；两步路线可断点续传。示例：100 USDC on Arbitrum → <span class="num">0.025631</span> PAXG · 2 steps · 1,605 s。</p>
+          <p class="card-why"><span class="lbl">WHY</span>不再手工比价，也不把客户推给别家。</p>
         </div>
         <div class="card">
-          <div class="card-top"><span class="card-idx num">04</span><span class="chip chip-beta">BETA</span></div>
-          <h3>库存对冲</h3>
-          <p class="card-body">PPI 永续可以做空商品 beta。注意：黄金只占指数 12%，它不是纯金对冲；当前池子为空、参数在 timelock 队列，属于 beta。</p>
-          <p class="card-why"><span class="lbl">WHY</span>当你有库存敞口，这是唯一不需要卖现货的链上对冲路径。</p>
-        </div>
-        <div class="card">
-          <div class="card-top"><span class="card-idx num">05</span><span class="chip chip-text">SCOPE</span></div>
-          <h3>自有场所</h3>
-          <p class="card-body">把 2-of-3 签名喂价接进你的定价、保证金或 NAV。riskState 可以直接驱动保证金档位。</p>
-          <p class="card-why"><span class="lbl">WHY</span>你不需要自己养一个预言机团队。</p>
+          <div class="card-top"><span class="card-idx num">04</span><span class="chip chip-text">TODAY</span></div>
+          <h3>风险披露（信任）</h3>
+          <p class="card-body">发行方、辖区、MiCA、赎回门槛、双价格，一页讲清。示例：KAG 现货 $49.67 vs 链上 $19.12（−61.5%）；VNXAU 现货 $3,947.03 vs 链上 $6,330.40（+60.4%）。</p>
+          <p class="card-why"><span class="lbl">WHY</span>客户问“这币安全吗”，你有一个可验证的页面。</p>
         </div>
       </div>
-      <p class="note">04 的关键词是 beta。今天不要向客户承诺“随时可以对冲”；池子有第一笔 LP 之后，这句话才成立。</p>
+
+      <div class="panel">
+        <div class="panel-title">你赚什么</div>
+        <ul class="earn-list">
+          <li><b>推荐柜台</b>：ref 归因 + Rango affiliate（用户侧 0.1%，页面明示）</li>
+          <li><b>深度集成</b>：白标页面 + quote/execute API，按范围报价</li>
+          <li><b>数据 / 场所</b>：签名喂价 + PPI，月费或指数授权</li>
+        </ul>
+      </div>
+      <p class="note">不托管、不碰 KYC、不抢客户关系。</p>
     </section>
-
-    <section id="infra" class="reveal" aria-labelledby="h-infra">
+<section id="contract" class="reveal" aria-labelledby="h-contract">
       <div class="sec-head">
-        <span class="no">[05]</span><h2 id="h-infra">INFRA</h2><span class="rule" aria-hidden="true"></span><span class="meta">READ 5 MIN</span>
-      </div>
-      <p class="intro">三层：价格从四个渠道进来，2-of-3 签名后拉到链上；产品层只有一个指数、一个永续、一个路由页；控制层是 timelock、guardian 和逐资产风控。</p>
-
-      <div class="layers">
-        <div class="layer">
-          <div class="l-label">L1 · DATA</div>
-          <div class="l-desc">4 channels → 0.5% confirmation → 2-of-3 sign → <span class="em">pull oracle</span><br>14 assets · weights sum 1,000,000 · base locked</div>
-        </div>
-        <div class="layer">
-          <div class="l-label">L2 · PRODUCT</div>
-          <div class="l-desc">PPI index · PPIPerp v2 · metals router · public API</div>
-        </div>
-        <div class="layer">
-          <div class="l-label">L3 · CONTROL</div>
-          <div class="l-desc">6h timelock · guardian one-way pause · per-asset riskState · rate limits</div>
-        </div>
+        <span class="no">[03]</span><h2 id="h-contract">CONTRACT</h2><span class="rule" aria-hidden="true"></span><span class="meta">READ 3 MIN</span>
       </div>
 
-      <div class="panel-title" id="contract-title">CONTRACTS // ARBITRUM ONE · chainId 42161</div>
+      <div class="panel" style="border-color:var(--acid)">
+        <span class="br br-tl" aria-hidden="true"></span><span class="br br-tr" aria-hidden="true"></span>
+        <span class="br br-bl" aria-hidden="true"></span><span class="br br-br" aria-hidden="true"></span>
+        <div class="panel-title"><span class="t-acid">已上线：PPIPerp v2</span></div>
+        <p style="font-family:var(--mono);font-size:13px;color:var(--acid);line-height:1.8;overflow-wrap:anywhere;word-break:break-all">Arbitrum One · 0x99e6ba49d2dff95e69b671d6f0945daee544ac8c</p>
+      </div>
+
+      <div class="card-grid">
+        <div class="panel">
+          <div class="panel-title">参数</div>
+          <p class="p-body">LP 池做对手盘；10 bps 开平仓费；3x 杠杆 / 10% 维持保证金；OI ≤ 2× 池；TWAP 清算门；guardian 单向暂停。</p>
+        </div>
+        <div class="panel">
+          <div class="panel-title">状态</div>
+          <p class="p-body">现在：<b>beta</b>；poolAssets = 0；riskLevel = 1（caution）。<br>首笔 LP 之前没有对手盘；今天不能把“可对冲”当卖点。</p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">没有：现货黄金代币交易合约</div>
+        <p class="p-body">客户买 PAXG / XAUT 等，走 /metals 的 <b>Rango 路由</b>到外部场所；Planet 不托管、不撮合、不做订单簿。</p>
+      </div>
+
+      <div class="panel-title" id="ct-title">CONTRACTS // ARBITRUM ONE · 7 个</div>
       <div class="tablewrap">
-        <table aria-labelledby="contract-title">
+        <table aria-labelledby="ct-title">
           <caption class="sr-only">合约地址清单</caption>
           <thead>
             <tr><th>CONTRACT</th><th>ADDRESS</th><th>LINK</th></tr>
@@ -718,143 +640,80 @@ th.strong{color:var(--acid)}
           </tbody>
         </table>
       </div>
-      <p class="note">核心合约源码已在 Arbiscan 验证（2026-10-29）。永续是 beta，先读 /perps 与 /lp 的风险披露。</p>
 
-      <div class="panel-title" id="basket-title">PPI BASKET // 14 ASSETS</div>
-      <div class="tablewrap">
-        <table aria-labelledby="basket-title">
-          <caption class="sr-only">PPI 指数 14 个商品成分表</caption>
-          <thead>
-            <tr><th>#</th><th>ASSET</th><th class="num">WEIGHT</th><th class="num">PRICE</th><th class="num">VS BASE</th><th>STATE</th></tr>
-          </thead>
-          <tbody>
-            <tr><td class="dim num">0</td><td>WTI Crude</td><td class="num">14%</td><td class="num">104.12</td><td class="num acid">+3.34%</td><td><span class="chip chip-med">CAUTION</span></td></tr>
-            <tr><td class="dim num">1</td><td>Brent Crude</td><td class="num">11%</td><td class="num">113.43</td><td class="num acid">+3.31%</td><td><span class="chip chip-live">NORMAL</span></td></tr>
-            <tr><td class="dim num">2</td><td>Natural Gas</td><td class="num">8%</td><td class="num">2.898</td><td class="num red">−1.50%</td><td><span class="chip chip-med">CAUTION</span></td></tr>
-            <tr><td class="dim num">3</td><td>Gold</td><td class="num">12%</td><td class="num">3,898.90</td><td class="num red">−3.38%</td><td><span class="chip chip-live">NORMAL</span></td></tr>
-            <tr><td class="dim num">4</td><td>Silver</td><td class="num">7%</td><td class="num">49.276</td><td class="num red">−6.21%</td><td><span class="chip chip-live">NORMAL</span></td></tr>
-            <tr><td class="dim num">5</td><td>Copper</td><td class="num">6%</td><td class="num">6.482</td><td class="num red">−1.58%</td><td><span class="chip chip-live">NORMAL</span></td></tr>
-            <tr><td class="dim num">6</td><td>Wheat</td><td class="num">9%</td><td class="num">603.50</td><td class="num acid">+0.88%</td><td><span class="chip chip-live">NORMAL</span></td></tr>
-            <tr><td class="dim num">7</td><td>Corn</td><td class="num">7%</td><td class="num">447.75</td><td class="num red">−0.56%</td><td><span class="chip chip-live">NORMAL</span></td></tr>
-            <tr><td class="dim num">8</td><td>Soybean</td><td class="num">6%</td><td class="num">1,234.25</td><td class="num acid">+0.22%</td><td><span class="chip chip-live">NORMAL</span></td></tr>
-            <tr><td class="dim num">9</td><td>Coffee</td><td class="num">4%</td><td class="num">287.15</td><td class="num acid">+2.01%</td><td><span class="chip chip-live">NORMAL</span></td></tr>
-            <tr><td class="dim num">10</td><td>Lumber</td><td class="num">4%</td><td class="num">65.259</td><td class="num acid">+0.68%</td><td><span class="chip chip-live">NORMAL</span></td></tr>
-            <tr><td class="dim num">11</td><td>Lithium</td><td class="num">3%</td><td class="num">59.81</td><td class="num red">−4.59%</td><td><span class="chip chip-live">NORMAL</span></td></tr>
-            <tr><td class="dim num">12</td><td>Water</td><td class="num">5%</td><td class="num">73.76</td><td class="num acid">+1.82%</td><td><span class="chip chip-live">NORMAL</span></td></tr>
-            <tr><td class="dim num">13</td><td>Carbon</td><td class="num">4%</td><td class="num">35.001</td><td class="num acid">+0.26%</td><td><span class="chip chip-live">NORMAL</span></td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p class="note">PPI 使用期货/ETF 参考价（GC=F、SI=F、WOOD 等），与 /metals 的现货报价不同源；不要把两张表混用。PPI 不是稳定币，不是足额抵押，也不是黄金 ETF。</p>
-
-      <div class="controls">
-        <div class="control"><div class="c-v num">70</div><div class="c-l">Foundry tests</div></div>
-        <div class="control"><div class="c-v num">900</div><div class="c-l">fuzz steps · 4 invariants</div></div>
-        <div class="control"><div class="c-v num">2-of-3</div><div class="c-l">oracle signatures</div></div>
-        <div class="control"><div class="c-v num acid">8 / 30</div><div class="c-l">signed / read req per min</div></div>
+      <div class="panel">
+        <div class="panel-title">凭什么信</div>
+        <ul class="earn-list">
+          <li>14 商品 PPI，2-of-3 拉取式预言机；主网单钥路径已禁用</li>
+          <li>70 个 Foundry 测试，900 步不变量</li>
+          <li>6 小时 timelock；guardian 只能暂停、不能解禁</li>
+          <li>核心合约源码已在 Arbiscan 验证（2026-10-29）</li>
+          <li>没有第三方审计：只能说“自审公开”，不能说“已审计”</li>
+        </ul>
       </div>
     </section>
-    <section id="risk" class="reveal" aria-labelledby="h-risk">
+
+    <section id="partner" class="reveal" aria-labelledby="h-partner">
       <div class="sec-head">
-        <span class="no">[06]</span><h2 id="h-risk">RISK</h2><span class="rule" aria-hidden="true"></span><span class="meta">READ 4 MIN</span>
+        <span class="no">[04]</span><h2 id="h-partner">PARTNER</h2><span class="rule" aria-hidden="true"></span><span class="meta">READ 2 MIN</span>
       </div>
-      <p class="intro">这份报告如果只讲优点，就是广告。下面是你在签约前必须知道的八件事。</p>
 
-      <div class="tablewrap">
-        <table aria-labelledby="risk-title">
-          <caption class="sr-only">签约前必须知道的八项风险</caption>
-          <thead>
-            <tr><th id="risk-title">SEVERITY</th><th>ITEM</th><th>WHAT IT MEANS</th><th>OUR POSITION</th><th>STATUS</th></tr>
-          </thead>
-          <tbody>
-            <tr><td><span class="chip chip-high">HIGH</span></td><td class="strong">未外部审计</td><td>智能合约没有第三方审计；自审、70 个 Foundry 测试、900 步不变量不等于审计。</td><td class="dim">不能对外说“已审计”；只能说“自审公开”。</td><td><span class="chip chip-open">OPEN</span></td></tr>
-            <tr><td><span class="chip chip-high">HIGH</span></td><td class="strong">永续是 beta，池子为空</td><td>poolAssets = 0，riskLevel = 1（caution）；今天不能承诺对冲流动性。</td><td class="dim">OI 上限 2×池；先柜台、后对冲。</td><td><span class="chip chip-beta">BETA</span></td></tr>
-            <tr><td><span class="chip chip-med">MED</span></td><td class="strong">拉取式预言机</td><td>没有消费者提交，指数就会变旧；超过 6 小时，永续只允许减仓。</td><td class="dim">页面显示 age；交易时提交新价；riskState 驱动保证金。</td><td><span class="chip chip-text">BY DESIGN</span></td></tr>
-            <tr><td><span class="chip chip-med">MED</span></td><td class="strong">两步路由可能桥接</td><td>100 USDC 示例是 2 步、预估 1,605 秒；客户需要保持页面打开。</td><td class="dim">步骤数明示；断点续传；Rango requestId 可查。</td><td><span class="chip chip-disc">DISCLOSED</span></td></tr>
-            <tr><td><span class="chip chip-med">MED</span></td><td class="strong">PAXG 在欧盟不可用</td><td>MiCA 限制；欧盟客户不能推荐 PAXG。</td><td class="dim">页面已写；按辖区推荐 XAUT / VNXAU。</td><td><span class="chip chip-disc">DISCLOSED</span></td></tr>
-            <tr><td><span class="chip chip-med">MED</span></td><td class="strong">KAG / VNXAU 流动性薄</td><td>市场价可能大幅偏离现货；不要把价差当套利。</td><td class="dim">双价格 + 偏离标注；不构成建议。</td><td><span class="chip chip-disc">DISCLOSED</span></td></tr>
-            <tr><td><span class="chip chip-low">LOW</span></td><td class="strong">KAU 只读</td><td>没有聚合路由，能读不能买。</td><td class="dim">页面标注。</td><td><span class="chip chip-disc">DISCLOSED</span></td></tr>
-            <tr><td><span class="chip chip-low">LOW</span></td><td class="strong">分成比例未实测</td><td>Rango affiliate 的实际到账比例还没有历史。</td><td class="dim">首笔到账后再对外报比例。</td><td><span class="chip chip-open">OPEN</span></td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p class="note">我们的立场：先说限制，再谈合作。你不能拿去对客户承诺我们没做到的事。</p>
-    </section>
-
-    <section id="terms" class="reveal" aria-labelledby="h-terms">
-      <div class="sec-head">
-        <span class="no">[07]</span><h2 id="h-terms">TERMS</h2><span class="rule" aria-hidden="true"></span><span class="meta">READ 4 MIN</span>
-      </div>
-      <p class="intro">三种合作方式。按你现在的业务选一个；首单先跑 14 天试点，用数据决定要不要签。</p>
-
+      <div class="panel-title">三种合作方式</div>
       <div class="term-grid">
         <div class="term">
-          <div class="t-idx num">A // 推荐柜台</div>
+          <div class="t-idx num">A · 推荐柜台</div>
           <h3>REFERRAL</h3>
-          <p class="t-body">你出流量，我们出页面。ref 链接归因；兑换走 Rango affiliate（用户侧 0.1%，页面明示）。无独家、无最低量、无托管、无我们的 KYC。<br><br><b>适合：</b>社群、内容站、OTC 客服台。<br><b>起步：</b><span class="dim">0 集成费</span>。</p>
+          <p class="t-body">0 集成费；ref 归因 + Rango affiliate；无独家、无最低量、无托管、无我们的 KYC。</p>
         </div>
         <div class="term">
-          <div class="t-idx num">B // 深度集成</div>
+          <div class="t-idx num">B · 深度集成</div>
           <h3>DESK</h3>
-          <p class="t-body">你的品牌、你的发行方列表、你的客服话术；quote / execute API、事件回调、白标页面。<br><br><b>适合：</b>有自有客户池和合规流程的交易商。<br><b>参考区间：</b><span class="dim">集成 20–80k USD；平台 3–15k USD/月（按范围报价，不是公开价目表）。</span></p>
+          <p class="t-body">你的品牌、发行方列表、客服话术；quote/execute API；参考区间 20–80k USD + 3–15k USD/月（按范围报价）。</p>
         </div>
         <div class="term">
-          <div class="t-idx num">C // 数据 / 场所</div>
+          <div class="t-idx num">C · 数据 / 场所</div>
           <h3>VENUE</h3>
-          <p class="t-body">把签名喂价接进你的定价、保证金、NAV；或把 PPI 做成你场所的一个市场。<br><br><b>参考区间：</b><span class="dim">Starter 500 USD/月；Growth 2,000 USD/月；指数授权 3–5 bps AUM；链上交付 setup + 月费。</span><br><span class="dim">以上为 B2B 页的指示性区间，未签约、未公开报价。</span></p>
+          <p class="t-body">签名喂价 + PPI；Starter 500 USD/月，Growth 2,000 USD/月，指数授权 3–5 bps AUM；指示性，未签约。</p>
         </div>
       </div>
-      <p class="note">分成比例以 Rango affiliate 实际结算为准；第一笔到账之前，我们不对外报固定比例。</p>
-    </section>
 
-    <section id="action" class="reveal" aria-labelledby="h-action">
-      <div class="sec-head">
-        <span class="no">[08]</span><h2 id="h-action">ACTION</h2><span class="rule" aria-hidden="true"></span><span class="meta">READ 2 MIN</span>
+      <div class="panel">
+        <div class="panel-title">风险（先看再签）</div>
+        <ul class="earn-list cols2">
+          <li>合约已上线，但 LP 池为空；首笔 LP 之前没有对手盘</li>
+          <li>未外部审计</li>
+          <li>拉取式预言机可能变旧（超过 6 小时，永续只允许减仓）</li>
+          <li>PAXG 在欧盟受 MiCA 限制</li>
+          <li>KAG / VNXAU 流动性薄</li>
+          <li>分成比例未实测</li>
+        </ul>
       </div>
-      <p class="intro">四个节点，从通话到签约。每一步都有明确产出。</p>
 
+      <div class="panel-title">14 天试点</div>
       <div class="timeline">
         <div class="tstep">
           <div class="t-day">DAY 0</div>
           <div class="t-title">30 分钟通话</div>
-          <div class="t-body">选一个入口：柜台 / 数据 / 场所</div>
+          <div class="t-body">选一个入口（永续 / 柜台 / 数据）</div>
         </div>
         <div class="tstep">
           <div class="t-day">DAY 1–3</div>
           <div class="t-title">白标链接</div>
-          <div class="t-body">带 ref 的页面 + 对比表 + 风险披露文案</div>
+          <div class="t-body">带 ref 的白标链接 + 对比表 + 风险披露文案</div>
         </div>
         <div class="tstep">
           <div class="t-day">DAY 4–14</div>
           <div class="t-title">试点</div>
-          <div class="t-body">看三个数：访问 → 报价 → 兑换；独立钱包；30 天复购</div>
+          <div class="t-body">看访问 → 报价 → 兑换、独立钱包、30 天复购</div>
         </div>
         <div class="tstep">
           <div class="t-day">DAY 15</div>
           <div class="t-title">复盘</div>
-          <div class="t-body">有效就签；无效就停，不拖</div>
+          <div class="t-body">有效就签，无效就停</div>
         </div>
       </div>
 
-      <div class="action-cols">
-        <div class="action-col">
-          <h4>我们需要你</h4>
-          <ul>
-            <li>客户入口</li>
-            <li>交易台流程</li>
-            <li>辖区</li>
-            <li>你实际卖的代币</li>
-          </ul>
-        </div>
-        <div class="action-col">
-          <h4>我们不需要</h4>
-          <ul>
-            <li>托管</li>
-            <li>KYC</li>
-            <li>独家</li>
-          </ul>
-        </div>
-      </div>
+      <p class="note"><span style="color:var(--text)">我们需要：</span>客户入口 · 交易台流程 · 辖区 · 你实际卖的代币 &nbsp; <span style="color:var(--text)">不需要：</span>托管 · KYC · 独家</p>
 
       <div class="contact">
         <span class="br br-tl" aria-hidden="true"></span><span class="br br-tr" aria-hidden="true"></span>
@@ -866,7 +725,7 @@ th.strong{color:var(--acid)}
         </div>
         <div class="c-actions no-print">
           <a class="btn btn-acid" href="mailto:e@ppppp.space">发邮件</a>
-          <a class="btn" href="https://ppppp.space/metals" target="_blank" rel="noopener">打开柜台 <span aria-hidden="true">↗</span></a>
+          <a class="btn" href="https://ppppp.space/perps" target="_blank" rel="noopener">打开永续页 <span aria-hidden="true">↗</span></a>
         </div>
       </div>
     </section>
@@ -875,12 +734,12 @@ th.strong{color:var(--acid)}
       <div class="f-top">
         <div>
           <div class="f-brand">PLANET // INTELLIGENCE</div>
-          <div class="f-sub">PARTNER BRIEF · GOLD TOKEN DESK · 2026-11</div>
+          <div class="f-sub">PARTNER BRIEF · PPI 指数永续 · 2026-11</div>
         </div>
         <div class="f-links">
+          <a href="https://ppppp.space/perps" target="_blank" rel="noopener">/perps</a>
           <a href="https://ppppp.space/metals" target="_blank" rel="noopener">/metals</a>
           <a href="https://ppppp.space/ppi" target="_blank" rel="noopener">/ppi</a>
-          <a href="https://ppppp.space/perps" target="_blank" rel="noopener">/perps</a>
           <a href="https://ppppp.space/lp" target="_blank" rel="noopener">/lp</a>
           <a href="https://ppppp.space/methodology" target="_blank" rel="noopener">/methodology</a>
           <a href="https://ppppp.space/docs" target="_blank" rel="noopener">/docs</a>
@@ -894,8 +753,8 @@ th.strong{color:var(--acid)}
 </div>
 
 <div class="print-foot">
-  <span>PLANET // INTELLIGENCE · GOLD TOKEN DESK · 2026-11</span>
-  <span>ppppp.space/metals</span>
+  <span>PLANET // INTELLIGENCE · PPI 指数永续 · 2026-11</span>
+  <span>ppppp.space/perps</span>
 </div>
 
 <script>
@@ -906,8 +765,7 @@ th.strong{color:var(--acid)}
   var clock = document.getElementById("utc-clock");
   function tick() {
     var t = new Date();
-    var iso = t.toISOString();
-    if (clock) { clock.textContent = "UTC " + iso.slice(11, 19); }
+    if (clock) { clock.textContent = "UTC " + t.toISOString().slice(11, 19); }
   }
   tick();
   setInterval(tick, 1000);
@@ -944,9 +802,6 @@ th.strong{color:var(--acid)}
       }
     });
   });
-
-  var tk = document.getElementById("ticker");
-  if (tk) { tk.innerHTML += tk.innerHTML; }
 
   var sections = document.querySelectorAll("main section[id]");
   var navLinks = document.querySelectorAll(".rail a, .topnav a, .nav-short a");
