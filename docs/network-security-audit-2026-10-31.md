@@ -62,10 +62,9 @@ guardian split showed the pattern that works; the signer split needs a co-signin
 endpoint must produce both signatures, so one vendor must hold both — accept this and compensate
 with monitoring, or build the split signer). Accepted for the beta, documented.
 
-### N4 — 2 high advisories in the relayer tree (LOW for this project)
-The remaining advisories sit in the `@ton/*` test/legacy tree (zod chain), which the Arbitrum
-prod paths do not execute. Lockfile updated by `npm audit fix`; the no-fix one is monitored.
-Not exploitable against the live system, but it will keep flagging CI if we add a scanner.
+### N4 — relayer dependencies (resolved)
+
+The relayer dependency tree is viem-only; the lockfile is present and audited.
 
 ## Bottom line
 

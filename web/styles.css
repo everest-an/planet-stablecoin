@@ -1,4 +1,4 @@
-/* Planet — landing site. Same design system as app-tg (see app-tg/DESIGN.md):
+﻿/* Planet — landing site. Same design system as the rest of the site:
    monochrome on-chain ledger / technical terminal, DM Mono + Space Grotesk, radius 0. */
 :root {
   --paper: #ffffff;

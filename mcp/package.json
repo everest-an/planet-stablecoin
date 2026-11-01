@@ -1,0 +1,16 @@
+{
+  "name": "planet-ppi-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for the Planet PPI on-chain commodity index (Arbitrum One). Read-only.",
+  "type": "module",
+  "bin": { "planet-ppi-mcp": "./index.mjs" },
+  "files": ["index.mjs", "README.md"],
+  "license": "MIT",
+  "homepage": "https://ppppp.space/ppi",
+  "repository": { "type": "git", "url": "https://github.com/everest-an/planet-stablecoin" },
+  "keywords": ["mcp", "commodities", "index", "defi", "arbitrum", "price-oracle"],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.23.8"
+  }
+}

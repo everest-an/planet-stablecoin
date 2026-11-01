@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Planet — monthly basket reports</title>
-    <meta name="description" content="Monthly reports on Planet's on-chain commodity basket: index level, weights and per-commodity moves, with the methodology behind them." />
+    <title>Planet — reports</title>
+    <meta name="description" content="Planet reports: the gold desk partner brief for tokenized-metal dealers, plus periodic notes from the on-chain commodity index." />
     <link rel="canonical" href="https://ppppp.space/reports" />
     <meta property="og:type" content="article" />
     <meta property="og:site_name" content="Planet" />
     <meta property="og:url" content="https://ppppp.space/reports" />
-    <meta property="og:title" content="Planet — monthly basket reports" />
-    <meta property="og:description" content="Monthly reports on Planet's on-chain commodity basket: index level, weights and per-commodity moves, with the methodology behind them." />
+    <meta property="og:title" content="Planet — reports" />
+    <meta property="og:description" content="The gold desk partner brief for tokenized-metal dealers, plus periodic notes from the on-chain commodity index." />
     <meta property="og:image" content="https://ppppp.space/icon.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href="/icon.png" />
@@ -23,16 +23,9 @@
       .doc h1 { font-family: "Space Grotesk", sans-serif; font-size: 28px; margin: 24px 0 6px; }
       .doc .sub { color: var(--muted, #8a8a8a); font-family: "DM Mono", monospace; font-size: 12px; margin-bottom: 20px; }
       .doc h2 { font-family: "Space Grotesk", sans-serif; font-size: 18px; margin: 30px 0 10px; }
-      .doc p { line-height: 1.7; }
-      .doc .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 18px 0 24px; }
-      .doc .card { border: 1px solid var(--muted, #2a2a2a); padding: 12px 14px; }
-      .doc .card .k { font-family: "DM Mono", monospace; font-size: 11px; text-transform: uppercase; color: var(--muted, #8a8a8a); }
-      .doc .card .v { font-family: "Space Grotesk", sans-serif; font-size: 22px; margin-top: 6px; }
       .doc table { width: 100%; border-collapse: collapse; font-family: "DM Mono", monospace; font-size: 12px; margin: 12px 0 18px; }
       .doc th, .doc td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--muted, #2a2a2a); }
       .doc th { color: var(--muted, #8a8a8a); font-weight: 400; text-transform: uppercase; letter-spacing: 0.05em; }
-      .doc td.n, .doc th.n { text-align: right; }
-      .doc .up { color: #2f9e44; } .doc .down { color: #e03131; }
       .doc a { color: inherit; }
       .doc .note { border-left: 2px solid var(--muted, #2a2a2a); padding-left: 12px; color: var(--muted, #8a8a8a); font-family: "DM Mono", monospace; font-size: 12px; }
     </style>
@@ -50,17 +43,25 @@
       </nav>
     </header>
     <main class="doc">
-      <p class="notice" style="font-family: 'DM Mono', monospace">[ monthly basket reports · TON testnet PoC ]</p>
-      <h1>Monthly basket reports</h1>
-      <p class="sub">one snapshot per month, generated from the chain and committed by CI — nothing hand-edited</p>
+      <p class="notice" style="font-family: 'DM Mono', monospace">[ reports · Arbitrum One ]</p>
+      <h1>Reports</h1>
+      <p class="sub">a partner brief for tokenized-metal dealers, plus periodic notes from the on-chain commodity index</p>
+
+      <h2>Partner brief</h2>
+      <p class="sub">2026-11 · five tokens, five chains, two prices, one on-chain commodity index — written for gold-token dealers and OTC desks</p>
       <table>
-        <thead><tr><th>month</th><th class="n">PPI</th><th class="n">commodities</th><th>generated</th></tr></thead>
+        <thead><tr><th>brief</th><th>audience</th><th>format</th></tr></thead>
         <tbody>
-<tr><td><a href="/reports/2026-11">2026-11</a></td><td class="n">0.987977</td><td class="n">14</td><td>2026-11-01</td></tr>
-<tr><td><a href="/reports/2026-10">2026-10</a></td><td class="n">1.001311</td><td class="n">14</td><td>2026-10-06</td></tr>
+          <tr>
+            <td><a href="/reports/gold-desk-2026-11">Gold desk partner brief</a></td>
+            <td>gold-token dealers / OTC desks</td>
+            <td><a href="/reports/gold-desk-2026-11">web</a> · <a href="/reports/planet-gold-desk-2026-11.pdf">pdf</a></td>
+          </tr>
         </tbody>
       </table>
+      <p class="note">The partner brief is a point-in-time intelligence snapshot. On-chain state changes; read the live API at /api/v1/ppi and /api/v1/perp before quoting.</p>
+
       <p><a href="/methodology">Methodology →</a> · <a href="/dashboard">Live dashboard →</a></p>
-        </main>
+    </main>
   </body>
 </html>
