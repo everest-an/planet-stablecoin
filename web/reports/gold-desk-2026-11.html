@@ -1,0 +1,985 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Planet — Gold Token Desk · 2026-11</title>
+<meta name="description" content="Planet 伙伴简报：五个代币、五条链、两个价格、一个链上商品指数。给你的黄金客户，一个真正的柜台。" />
+<meta name="robots" content="noindex,nofollow" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#050708;--bg-2:#080b0c;--panel:#0a0e0f;--panel-2:#0d1213;
+  --line:#1a2123;--line-2:#283234;--text:#e7ece8;--muted:#8a9691;
+  --dim:#55615d;--acid:#c8ff4d;--acid-2:#9ed62f;--cyan:#5fe3d4;
+  --amber:#ffb648;--red:#ff6262;--violet:#b7a6ff;
+  --mono:"JetBrains Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+  --disp:"Space Grotesk","PingFang SC","Microsoft YaHei",sans-serif;
+  --body:"Space Grotesk","PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-print-color-adjust:exact;print-color-adjust:exact;-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:14px;line-height:1.75;overflow-x:hidden}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
+body::before{content:"";position:fixed;inset:0;z-index:-3;background:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:32px 32px}
+body::after{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;background:radial-gradient(1100px 560px at -6% -4%,rgba(200,255,77,.05),transparent 60%)}
+.scanlines{position:fixed;inset:0;z-index:200;pointer-events:none;opacity:.02;background:repeating-linear-gradient(0deg,#fff 0 1px,transparent 1px 3px)}
+a{color:inherit}
+a:hover{color:var(--acid)}
+:focus-visible{outline:1px solid var(--acid);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+
+/* classification bar */
+.classbar{position:fixed;top:0;left:0;right:0;height:28px;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:0 16px;gap:12px;background:var(--bg-2);border-bottom:1px solid var(--line);font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase}
+.classbar .c-left{color:var(--acid);white-space:nowrap}
+.classbar .c-center{color:var(--dim);white-space:nowrap}
+.classbar .c-right{white-space:nowrap;display:flex;gap:6px;align-items:center}
+.classbar .c-right .utc{color:var(--muted)}
+.classbar .c-right .net{color:var(--cyan)}
+.classbar .sep{color:var(--line-2)}
+
+/* topbar */
+.topbar{position:fixed;top:28px;left:0;right:0;height:56px;z-index:49;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 20px;background:rgba(5,7,8,.86);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.wordmark{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--text);flex:0 0 auto}
+.wordmark .glyph{display:grid;grid-template-columns:5px 5px;grid-template-rows:5px 5px;gap:2px}
+.wordmark .glyph i{background:var(--acid)}
+.wordmark .glyph i:nth-child(1){opacity:.45}.wordmark .glyph i:nth-child(2){opacity:.9}
+.wordmark .glyph i:nth-child(3){opacity:.9}.wordmark .glyph i:nth-child(4){opacity:.45}
+.wordmark b{font-size:15px;font-weight:500;letter-spacing:.18em}
+.topnav{display:flex;gap:18px;align-items:center}
+.topnav a{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--muted);text-decoration:none;text-transform:uppercase}
+.topnav a:hover{color:var(--acid)}
+.topnav a.active{color:var(--acid)}
+.top-actions{display:flex;gap:10px;align-items:center;flex:0 0 auto}
+.btn{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:7px 13px;border:1px solid var(--line-2);border-radius:2px;color:var(--text);text-decoration:none;cursor:pointer;background:transparent;white-space:nowrap}
+.btn:hover{border-color:var(--acid);color:var(--acid)}
+.btn.btn-acid{border-color:var(--acid);color:#0a0d06;background:var(--acid)}
+.btn.btn-acid:hover{background:#d7ff6a;border-color:#d7ff6a;color:#0a0d06;box-shadow:0 0 18px rgba(200,255,77,.18)}
+.nav-short{display:none}
+
+/* rail */
+.rail{position:fixed;top:104px;left:0;bottom:0;width:200px;z-index:40;padding:22px 0 22px 22px;border-right:1px solid var(--line);background:var(--bg)}
+.rail .rail-title{font-family:var(--mono);font-size:9px;letter-spacing:.18em;color:var(--dim);text-transform:uppercase;margin-bottom:18px}
+.rail ol{list-style:none;position:relative}
+.rail ol::before{content:"";position:absolute;left:4px;top:4px;bottom:4px;width:1px;background:var(--line)}
+.rail li{position:relative;padding-left:16px;margin-bottom:2px}
+.rail li::before{content:"";position:absolute;left:0;top:9px;width:7px;height:1px;background:var(--line-2)}
+.rail a{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--dim);text-decoration:none;text-transform:uppercase;padding:5px 6px}
+.rail a .idx{color:var(--dim);margin-right:7px}
+.rail a:hover{color:var(--muted)}
+.rail li.active a{color:var(--acid);border-left:1px solid var(--acid);padding-left:5px}
+.rail li.active::before{background:var(--acid)}
+
+/* shell */
+.shell{margin-left:200px;padding-top:84px}
+main{max-width:1320px;margin:0 auto;padding:0 32px}
+
+/* hero */
+.hero{padding:56px 0 20px;display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:40px;align-items:start}
+.hero-main{min-width:0}
+.eyebrow{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;margin-bottom:22px}
+.eyebrow .sq{width:7px;height:7px;background:var(--acid);flex:0 0 auto}
+.hero h1{font-family:var(--disp);font-weight:500;font-size:clamp(40px,6.2vw,78px);line-height:.98;letter-spacing:-.035em;color:var(--text);margin-bottom:26px}
+.hero h1 .acid-line{color:var(--acid);display:block;margin-top:6px}
+.acid-underline{display:block;width:64px;height:2px;background:var(--acid);margin-top:22px}
+.lede{max-width:52ch;font-size:15px;line-height:1.75;color:var(--text)}
+.lede p{margin-bottom:12px}
+.cta-row{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:26px 0 18px}
+.cta-row .btn{font-size:11px;padding:10px 16px}
+.link-dim{font-family:var(--mono);font-size:11px;color:var(--muted);text-decoration:none;border-bottom:1px solid var(--line-2)}
+.link-dim:hover{color:var(--acid);border-color:var(--acid)}
+.meta-row{font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--dim);display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.meta-row .sep{color:var(--line-2)}
+
+/* snapshot */
+.snapshot{position:relative;background:var(--panel);border:1px solid var(--line);padding:20px 20px 18px}
+.snapshot .snap-title{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;padding-bottom:12px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.snapshot .snap-title .tag{color:var(--acid)}
+.snap-row{display:grid;grid-template-columns:86px 1fr auto;gap:10px;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--line)}
+.snap-row:last-of-type{border-bottom:none}
+.snap-row .k{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+.snap-row .v{font-family:var(--mono);font-size:20px;font-weight:500;color:var(--text);text-align:right}
+.snap-row .n{font-family:var(--mono);font-size:10px;color:var(--dim);text-align:right}
+.snap-row .v.acid{color:var(--acid)}
+.risk-counters{margin-top:14px;padding-top:14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.risk-counters .rc-label{font-family:var(--mono);font-size:8.5px;letter-spacing:.18em;color:var(--dim);text-transform:uppercase}
+.risk-counters .rc-row{display:flex;gap:8px;flex-wrap:wrap}
+.rc{font-family:var(--mono);font-size:10px;letter-spacing:.04em;padding:4px 9px;border:1px solid var(--line-2);border-radius:2px;display:inline-flex;gap:7px;align-items:center}
+.rc b{font-size:12px;font-weight:500}
+.rc.rc-acid{color:var(--acid);border-color:rgba(200,255,77,.35)}
+.rc.rc-amber{color:var(--amber);border-color:rgba(255,182,72,.35)}
+.rc.rc-dim{color:var(--dim)}
+
+/* ticker */
+.ticker{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--bg-2);overflow:hidden;position:relative;padding:9px 0}
+.ticker .ticker-inner{display:flex;width:max-content;animation:tick 60s linear infinite}
+.ticker:hover .ticker-inner{animation-play-state:paused}
+.ticker .prefix{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--acid);padding:0 16px;white-space:nowrap}
+.ticker .tk-item{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--muted);padding:0 16px;white-space:nowrap;border-left:1px solid var(--line)}
+.ticker .tk-item .nm{color:var(--text);text-transform:uppercase}
+.ticker .tk-item .px{color:var(--text)}
+.ticker .tk-item .up{color:var(--acid)}
+.ticker .tk-item .dn{color:var(--red)}
+@keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.ticker .ticker-inner{animation:none}}
+
+/* sections */
+section{padding:56px 0;border-top:1px solid var(--line);scroll-margin-top:96px}
+.sec-head{display:flex;align-items:baseline;gap:16px;margin-bottom:26px}
+.sec-head .no{font-family:var(--mono);font-size:12px;color:var(--acid);letter-spacing:.08em;flex:0 0 auto}
+.sec-head h2{font-family:var(--mono);font-size:clamp(24px,3vw,36px);line-height:1.08;letter-spacing:-.02em;font-weight:500;text-transform:uppercase;color:var(--text);flex:0 0 auto}
+.sec-head .rule{flex:1 1 auto;height:1px;background:var(--line);min-width:20px}
+.sec-head .meta{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;flex:0 0 auto}
+.intro{max-width:68ch;font-size:14.5px;line-height:1.8;color:var(--muted);margin-bottom:26px}
+.intro .hl{color:var(--acid)}
+
+/* panels & cards */
+.panel{background:var(--panel);border:1px solid var(--line);padding:22px;position:relative}
+.panel-title{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin:24px 0 12px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.panel-title .t-acid{color:var(--acid)}
+.panel .panel-title{margin-top:0}
+
+/* corner brackets */
+.br{position:absolute;width:8px;height:8px;pointer-events:none}
+.br-tl{top:-1px;left:-1px;border-top:1px solid var(--acid);border-left:1px solid var(--acid)}
+.br-tr{top:-1px;right:-1px;border-top:1px solid var(--acid);border-right:1px solid var(--acid)}
+.br-bl{bottom:-1px;left:-1px;border-bottom:1px solid var(--acid);border-left:1px solid var(--acid)}
+.br-br{bottom:-1px;right:-1px;border-bottom:1px solid var(--acid);border-right:1px solid var(--acid)}
+
+/* tables */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);margin:14px 0;background:var(--panel)}
+table{width:100%;border-collapse:collapse;min-width:640px}
+thead th{font-family:var(--mono);font-size:9.5px;font-weight:400;letter-spacing:.1em;color:var(--dim);text-transform:uppercase;text-align:left;padding:10px 12px;border-bottom:1px solid var(--line-2);background:var(--panel-2);white-space:nowrap}
+tbody td{font-family:var(--mono);font-size:12.5px;line-height:1.6;color:var(--text);padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:rgba(200,255,77,.035)}
+td.num,th.num{text-align:right;white-space:nowrap}
+td.dim{color:var(--dim)}
+td.acid{color:var(--acid)}
+td.red{color:var(--red)}
+td.amber{color:var(--amber)}
+td.cyan{color:var(--cyan)}
+td.strong{color:var(--acid);font-weight:500}
+th.strong{color:var(--acid)}
+
+/* chips */
+.chip{display:inline-block;font-family:var(--mono);font-size:9px;letter-spacing:.08em;padding:2px 8px;border:1px solid var(--line-2);border-radius:2px;text-transform:uppercase;white-space:nowrap;line-height:1.5}
+.chip-live{color:var(--acid);border-color:rgba(200,255,77,.4)}
+.chip-beta{color:var(--amber);border-color:rgba(255,182,72,.4)}
+.chip-open{color:var(--red);border-color:rgba(255,98,98,.4)}
+.chip-disc{color:var(--cyan);border-color:rgba(95,227,212,.35)}
+.chip-dim{color:var(--dim)}
+.chip-text{color:var(--muted);border-color:var(--line-2)}
+.chip-high{color:var(--red);border-color:rgba(255,98,98,.45)}
+.chip-med{color:var(--amber);border-color:rgba(255,182,72,.4)}
+.chip-low{color:var(--dim);border-color:var(--line-2)}
+
+/* stat cards */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:16px 0}
+.stat-card{background:var(--panel);border:1px solid var(--line);padding:18px}
+.stat-card .stat-label{font-family:var(--mono);font-size:8.5px;letter-spacing:.16em;color:var(--dim);text-transform:uppercase;margin-bottom:10px}
+.stat-card .stat-value{font-family:var(--mono);font-size:32px;line-height:1;font-weight:500;color:var(--text)}
+.stat-card .stat-value.acid{color:var(--acid)}
+.stat-card .stat-sub{font-family:var(--mono);font-size:10px;color:var(--dim);margin-top:10px}
+
+/* columns */
+.cols{display:grid;grid-template-columns:2fr 1fr;gap:32px;align-items:start}
+.cols p{margin-bottom:12px}
+.pull{border-left:2px solid var(--acid);padding:6px 0 6px 16px;margin:22px 0;font-family:var(--mono);font-size:13px;color:var(--acid);line-height:1.7}
+.note{font-family:var(--mono);font-size:11px;color:var(--dim);line-height:1.7;margin-top:12px}
+
+/* four questions */
+.fq-list{list-style:none;margin-top:8px}
+.fq-list li{display:flex;gap:14px;align-items:baseline;padding:13px 0;border-bottom:1px solid var(--line)}
+.fq-list li:last-child{border-bottom:none}
+.fq-list li .fq-no{font-family:var(--mono);font-size:10px;color:var(--acid)}
+.fq-list li .fq-t{font-size:14px;color:var(--text)}
+
+/* playbook cards */
+.card-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin:16px 0}
+.card{background:var(--panel);border:1px solid var(--line);padding:20px}
+.card .card-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.card .card-idx{font-family:var(--mono);font-size:11px;color:var(--acid)}
+.card h3{font-size:17px;font-weight:500;margin-bottom:10px;color:var(--text)}
+.card .card-body{font-size:13px;line-height:1.75;color:var(--muted)}
+.card .card-why{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-family:var(--mono);font-size:10.5px;color:var(--acid);line-height:1.6}
+.card .card-why .lbl{color:var(--dim);letter-spacing:.12em;margin-right:6px}
+
+/* layers */
+.layers{display:flex;flex-direction:column;margin:16px 0}
+.layer{background:var(--panel);border:1px solid var(--line);padding:18px 20px;position:relative}
+.layer + .layer{border-top:none}
+.layer .l-label{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--acid);margin-bottom:8px}
+.layer .l-desc{font-family:var(--mono);font-size:11.5px;color:var(--dim);line-height:1.7}
+.layer .l-desc .em{color:var(--muted)}
+.layer::before{content:"";position:absolute;left:26px;top:-12px;width:1px;height:12px;background:var(--line-2)}
+.layer:first-child::before{display:none}
+
+/* controls */
+.controls{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:16px 0}
+.control{background:var(--panel);border:1px solid var(--line);padding:16px;text-align:center}
+.control .c-v{font-family:var(--mono);font-size:26px;font-weight:500;color:var(--text);line-height:1.1}
+.control .c-v.acid{color:var(--acid)}
+.control .c-l{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--dim);text-transform:uppercase;margin-top:8px}
+
+/* terms */
+.term-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:16px 0}
+.term{background:var(--panel);border:1px solid var(--line);padding:20px}
+.term .t-idx{font-family:var(--mono);font-size:11px;color:var(--acid);margin-bottom:8px}
+.term h3{font-size:16px;font-weight:500;color:var(--text);margin-bottom:10px}
+.term .t-body{font-size:12.5px;line-height:1.75;color:var(--muted)}
+.term .t-body b{color:var(--text);font-weight:500}
+.term .t-body .dim{color:var(--dim)}
+
+/* timeline */
+.timeline{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:16px 0}
+.tstep{background:var(--panel);border:1px solid var(--line);padding:16px}
+.tstep .t-day{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--acid);text-transform:uppercase;margin-bottom:8px}
+.tstep .t-title{font-size:14px;font-weight:500;color:var(--text);margin-bottom:6px}
+.tstep .t-body{font-size:12px;line-height:1.7;color:var(--muted)}
+
+/* action cols */
+.action-cols{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin:22px 0}
+.action-col h4{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;margin-bottom:12px}
+.action-col ul{list-style:none}
+.action-col li{padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px;color:var(--muted)}
+.action-col li::before{content:"— ";color:var(--acid)}
+
+/* contact */
+.contact{background:var(--panel);border:1px solid var(--acid);position:relative;padding:26px;display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:space-between;margin-top:8px}
+.contact .c-lines{font-family:var(--mono);font-size:12px;line-height:1.9;color:var(--text)}
+.contact .c-lines a{color:var(--acid);text-decoration:none;border-bottom:1px solid rgba(200,255,77,.4)}
+.contact .c-lines .c-mut{color:var(--muted)}
+.contact .c-actions{display:flex;gap:12px;flex-wrap:wrap}
+
+/* copy buttons + addresses */
+.copy-btn{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border:1px solid var(--line-2);border-radius:2px;background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap}
+.copy-btn:hover{border-color:var(--acid);color:var(--acid)}
+.copy-btn.copied{color:var(--acid);border-color:var(--acid)}
+.addr-a{color:var(--text);text-decoration:none;border-bottom:1px solid var(--line-2)}
+.addr-a:hover{color:var(--acid);border-color:var(--acid)}
+.addr{overflow-wrap:anywhere;word-break:break-all}
+
+/* footer */
+.pagefoot{border-top:1px solid var(--line);padding:40px 0 64px;margin-top:40px}
+.pagefoot .f-top{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:20px}
+.pagefoot .f-brand{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--acid);text-transform:uppercase}
+.pagefoot .f-sub{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--dim);margin-top:6px}
+.pagefoot .f-links{display:flex;gap:16px;flex-wrap:wrap}
+.pagefoot .f-links a{font-family:var(--mono);font-size:10px;color:var(--muted);text-decoration:none}
+.pagefoot .f-links a:hover{color:var(--acid)}
+.pagefoot .f-snap{font-family:var(--mono);font-size:9.5px;color:var(--dim)}
+.disclaimer{max-width:88ch;font-size:11px;line-height:1.8;color:var(--dim);margin:20px 0}
+.bottom-line{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--dim);border-top:1px solid var(--line);padding-top:16px}
+
+/* reveal */
+.js .reveal{opacity:0;transform:translateY(8px);transition:opacity .2s ease,transform .2s ease}
+.js .reveal.in{opacity:1;transform:none}
+
+/* print-only */
+.print-brand{display:none}
+.print-foot{display:none}
+
+/* responsive */
+@media (max-width:1100px){
+  .topnav{display:none}
+  .nav-short{display:flex;overflow-x:auto;gap:14px;align-items:center;max-width:100%;scrollbar-width:none}
+  .nav-short::-webkit-scrollbar{display:none}
+  .nav-short a{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--muted);text-decoration:none;text-transform:uppercase;white-space:nowrap}
+  .nav-short a:hover,.nav-short a.active{color:var(--acid)}
+}
+@media (max-width:1024px){
+  .rail{display:none}
+  .shell{margin-left:0}
+  .hero{grid-template-columns:1fr;gap:24px}
+  .stat-grid{grid-template-columns:repeat(2,1fr)}
+  .controls{grid-template-columns:repeat(2,1fr)}
+  .term-grid{grid-template-columns:1fr}
+  .timeline{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:760px){
+  .classbar .c-center{display:none}
+  .topbar{padding:0 12px}
+  .top-actions{display:none}
+  main{padding:0 16px}
+  .hero h1{font-size:40px}
+  .cols{grid-template-columns:1fr}
+  .card-grid{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  .nav-short{gap:9px}
+  .nav-short a{font-size:8.5px}
+  .nav-short a[href='#playbook']{display:none}
+  .stat-grid{grid-template-columns:1fr 1fr}
+  .stat-card .stat-value{font-size:24px}
+  .controls{grid-template-columns:1fr 1fr}
+  .timeline{grid-template-columns:1fr}
+  .action-cols{grid-template-columns:1fr}
+  .snap-row{grid-template-columns:70px 1fr auto;gap:6px}
+  .snap-row .v{font-size:16px}
+  .snap-row .n{font-size:9px}
+  .hero{padding-top:40px}
+  .cta-row .btn{width:100%;justify-content:center}
+}
+
+/* PRINT */
+@media print{
+  @page{size:A4;margin:0}
+  html,body{background:#050708 !important}
+  body::before,body::after,.scanlines,.classbar,.topbar,.rail,.ticker,.no-print,.copy-btn,.nav-short{display:none !important}
+  .shell{display:block;max-width:none;margin:0;padding-top:0}
+  main{max-width:none;padding:0}
+  .hero{display:block;padding:16mm 12mm 0}
+  .hero .snapshot{margin-top:14mm;max-width:180mm}
+  .hero .hero-main .lede,.hero .hero-main .meta-row{display:block}
+  .print-brand{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.24em;color:var(--acid);text-transform:uppercase;border-bottom:1px solid var(--line-2);padding-bottom:4mm;margin-bottom:12mm}
+  .cta-row a,.cta-row{display:none}
+  section{break-before:page;padding:13mm 12mm 14mm;border:0;border-top:none}
+  .sec-head,.panel-title{break-after:avoid}
+  h2,h3{break-after:avoid}
+  .card-grid{grid-template-columns:repeat(2,1fr)}.panel,.card,.stat-card,.term,.tstep,.contact,.layer,.control,.stat-grid{break-inside:avoid}
+  .tablewrap{overflow:visible;border:1px solid var(--line);break-inside:avoid}
+  table{min-width:0}
+  thead{display:table-header-group}
+  tr{break-inside:avoid}
+  a{color:inherit;text-decoration:none}
+  .reveal{opacity:1 !important;transform:none !important}
+  .print-foot{display:flex;position:fixed;bottom:0;left:0;right:0;justify-content:space-between;font-family:var(--mono);font-size:8px;letter-spacing:.06em;color:var(--dim);border-top:1px solid var(--line);padding:3mm 12mm;background:#050708}
+  .pagefoot{padding:8mm 12mm 10mm}.pagefoot .bottom-line{display:none}.pagefoot .disclaimer{font-size:8.5px;line-height:1.5}
+}
+</style>
+</head>
+<body>
+<div class="scanlines" aria-hidden="true"></div>
+
+<div class="classbar">
+  <span class="c-left">PLANET // INTELLIGENCE</span>
+  <span class="c-center">PARTNER BRIEF · GOLD TOKEN DESK · 2026-11</span>
+  <span class="c-right">
+    <span class="utc" id="utc-clock">UTC 07:12:00</span>
+    <span class="sep">·</span>
+    <span class="net">ARBITRUM ONE</span>
+  </span>
+</div>
+
+<header class="topbar">
+  <a class="wordmark" href="https://ppppp.space/" target="_blank" rel="noopener" aria-label="Planet">
+    <span class="glyph" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+    <b>PLANET</b>
+  </a>
+  <nav class="topnav" aria-label="主导航">
+    <a href="#brief">BRIEF</a>
+    <a href="#market">MARKET</a>
+    <a href="#capability">CAPABILITY</a>
+    <a href="#signal">SIGNAL</a>
+    <a href="#playbook">PLAYBOOK</a>
+    <a href="#infra">INFRA</a>
+    <a href="#risk">RISK</a>
+    <a href="#terms">TERMS</a>
+    <a href="#action">ACTION</a>
+  </nav>
+  <nav class="nav-short" aria-label="快捷导航">
+    <a href="#brief">BRIEF</a>
+    <a href="#signal">SIGNAL</a>
+    <a href="#playbook">PLAYBOOK</a>
+    <a href="#risk">RISK</a>
+    <a href="#action">ACTION</a>
+  </nav>
+  <div class="top-actions">
+    <a class="btn" href="planet-gold-desk-2026-11.pdf" download>PDF</a>
+    <a class="btn btn-acid" href="https://ppppp.space/metals" target="_blank" rel="noopener">OPEN COUNTER <span aria-hidden="true">↗</span></a>
+  </div>
+</header>
+
+<nav class="rail" aria-label="章节目录">
+  <div class="rail-title">SECTIONS</div>
+  <ol>
+    <li><a href="#brief"><span class="idx">00</span>BRIEF</a></li>
+    <li><a href="#market"><span class="idx">01</span>MARKET</a></li>
+    <li><a href="#capability"><span class="idx">02</span>CAPABILITY</a></li>
+    <li><a href="#signal"><span class="idx">03</span>SIGNAL</a></li>
+    <li><a href="#playbook"><span class="idx">04</span>PLAYBOOK</a></li>
+    <li><a href="#infra"><span class="idx">05</span>INFRA</a></li>
+    <li><a href="#risk"><span class="idx">06</span>RISK</a></li>
+    <li><a href="#terms"><span class="idx">07</span>TERMS</a></li>
+    <li><a href="#action"><span class="idx">08</span>ACTION</a></li>
+  </ol>
+</nav>
+
+<div class="shell">
+  <main>
+
+    <header class="hero">
+      <div class="print-brand">PLANET // INTELLIGENCE · PARTNER BRIEF</div>
+      <div class="hero-main">
+        <div class="eyebrow"><span class="sq" aria-hidden="true"></span>[ 2026-11 · PARTNER INTELLIGENCE · GOLD TOKEN DESK ]</div>
+        <h1>给你的黄金客户，<span class="acid-line">一个真正的柜台。</span></h1>
+        <div class="acid-underline" aria-hidden="true"></div>
+        <div class="lede">
+          <p>五个代币、五条链、两个价格、一个链上商品指数。</p>
+          <p>挂你的名字，客户还是你的。我们不托管、不碰 KYC、不碰你的客户关系。</p>
+        </div>
+        <div class="cta-row no-print">
+          <a class="btn btn-acid" href="https://ppppp.space/metals" target="_blank" rel="noopener">打开实时柜台 <span aria-hidden="true">↗</span></a>
+          <a class="btn" href="https://ppppp.space/ppi" target="_blank" rel="noopener">看链上指数 <span aria-hidden="true">↗</span></a>
+          <a class="link-dim" href="planet-gold-desk-2026-11.pdf" download>下载 PDF</a>
+        </div>
+        <div class="meta-row">
+          <span>DATA SNAPSHOT 2026-11-01 15:17 UTC</span><span class="sep">·</span>
+          <span>ARBITRUM ONE + ETHEREUM MAINNET</span><span class="sep">·</span>
+          <span>ZERO CUSTODY</span><span class="sep">·</span>
+          <span>NOT EXTERNALLY AUDITED</span>
+        </div>
+      </div>
+
+      <div class="snapshot">
+        <span class="br br-tl" aria-hidden="true"></span><span class="br br-tr" aria-hidden="true"></span>
+        <span class="br br-bl" aria-hidden="true"></span><span class="br br-br" aria-hidden="true"></span>
+        <div class="snap-title"><span>LIVE SNAPSHOT <span class="tag">// 2026-11-01 15:17 UTC</span></span></div>
+        <div class="snap-row">
+          <span class="k">PPI</span><span class="v num acid">0.999013</span><span class="n num">14 assets · −0.10% since inception</span>
+        </div>
+        <div class="snap-row">
+          <span class="k">ORACLE</span><span class="v num">2-of-3</span><span class="n num">pull · age 4.6 h</span>
+        </div>
+        <div class="snap-row">
+          <span class="k">METALS</span><span class="v num">5 tokens</span><span class="n num">4 buyable · 4 issuers</span>
+        </div>
+        <div class="snap-row">
+          <span class="k">CUSTODY</span><span class="v num">$0</span><span class="n num">read-only · no keys</span>
+        </div>
+        <div class="snap-row">
+          <span class="k">PERP POOL</span><span class="v num">$0</span><span class="n num">beta · empty pool</span>
+        </div>
+        <div class="risk-counters">
+          <div class="rc-label">ASSET RISK STATES</div>
+          <div class="rc-row">
+            <span class="rc rc-acid"><b class="num">12</b> NORMAL</span>
+            <span class="rc rc-amber"><b class="num">2</b> CAUTION</span>
+            <span class="rc rc-dim"><b class="num">0</b> FROZEN</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="ticker" aria-hidden="true">
+      <div class="ticker-inner" id="ticker">
+        <span class="prefix">PPI BASKET //</span>
+        <span class="tk-item"><span class="nm">WTI</span> <span class="px num">104.12</span> <span class="up num">+3.34%</span></span>
+        <span class="tk-item"><span class="nm">BRENT</span> <span class="px num">113.43</span> <span class="up num">+3.31%</span></span>
+        <span class="tk-item"><span class="nm">GAS</span> <span class="px num">2.898</span> <span class="dn num">−1.50%</span></span>
+        <span class="tk-item"><span class="nm">GOLD</span> <span class="px num">3,898.90</span> <span class="dn num">−3.38%</span></span>
+        <span class="tk-item"><span class="nm">SILVER</span> <span class="px num">49.276</span> <span class="dn num">−6.21%</span></span>
+        <span class="tk-item"><span class="nm">COPPER</span> <span class="px num">6.482</span> <span class="dn num">−1.58%</span></span>
+        <span class="tk-item"><span class="nm">WHEAT</span> <span class="px num">603.50</span> <span class="up num">+0.88%</span></span>
+        <span class="tk-item"><span class="nm">CORN</span> <span class="px num">447.75</span> <span class="dn num">−0.56%</span></span>
+        <span class="tk-item"><span class="nm">SOY</span> <span class="px num">1,234.25</span> <span class="up num">+0.22%</span></span>
+        <span class="tk-item"><span class="nm">COFFEE</span> <span class="px num">287.15</span> <span class="up num">+2.01%</span></span>
+        <span class="tk-item"><span class="nm">LUMBER</span> <span class="px num">65.259</span> <span class="up num">+0.68%</span></span>
+        <span class="tk-item"><span class="nm">LITHIUM</span> <span class="px num">59.81</span> <span class="dn num">−4.59%</span></span>
+        <span class="tk-item"><span class="nm">WATER</span> <span class="px num">73.76</span> <span class="up num">+1.82%</span></span>
+        <span class="tk-item"><span class="nm">CARBON</span> <span class="px num">35.001</span> <span class="up num">+0.26%</span></span>
+      </div>
+    </div>
+    <section id="brief" class="reveal" aria-labelledby="h-brief">
+      <div class="sec-head">
+        <span class="no">[00]</span><h2 id="h-brief">BRIEF</h2><span class="rule" aria-hidden="true"></span><span class="meta">READ 3 MIN</span>
+      </div>
+      <div class="cols">
+        <div>
+          <p style="color:var(--text);font-weight:500">黄金代币的持有者，已经在你的群里。</p>
+          <p>XAUT 约 $2.5B、PAXG 约 $1.9B，合计约 $4.4B 的代币化黄金。需求最集中的地方，是那些能 P2P 买到 USDT、却开不了国际券商账户的人——土耳其、阿根廷、尼日利亚，以及中国的出境资金。</p>
+          <p>他们买完之后有四个问题，今天没人替他们回答：</p>
+          <p>Planet 把这四个问题做成了一个页面。它不发行黄金、不托管、不碰 KYC；它只读链上余额、比较五条链的报价、把发行方风险写在页面上。你可以挂自己的 ref、自己的品牌——客户还是你的。</p>
+          <div class="pull">我们不是交易所，不是发行方，不是托管方。我们是你的技术供应商。</div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">THE FOUR QUESTIONS</div>
+          <ol class="fq-list">
+            <li><span class="fq-no num">01</span><span class="fq-t">我到底有多少盎司？</span></li>
+            <li><span class="fq-no num">02</span><span class="fq-t">这枚币是真的吗？</span></li>
+            <li><span class="fq-no num">03</span><span class="fq-t">现货价和链上成交价差多少？</span></li>
+            <li><span class="fq-no num">04</span><span class="fq-t">从哪条链买最便宜？</span></li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <section id="market" class="reveal" aria-labelledby="h-market">
+      <div class="sec-head">
+        <span class="no">[01]</span><h2 id="h-market">MARKET</h2><span class="rule" aria-hidden="true"></span><span class="meta">READ 4 MIN</span>
+      </div>
+      <p class="intro">黄金代币的竞争，不在“谁有黄金”，在“谁能让客户看见自己有多少、值多少、风险在哪”。大多数柜台只给一个成交价；客户离开你的页面之后，就会去别处比价。</p>
+
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">tokenised gold</div>
+          <div class="stat-value num">$4.4B</div>
+          <div class="stat-sub num">XAUT ~$2.5B + PAXG ~$1.9B</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">tokens covered</div>
+          <div class="stat-value acid num">5</div>
+          <div class="stat-sub">PAXG · XAUT · KAG · VNXAU · KAU</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">chains quoted</div>
+          <div class="stat-value acid num">5</div>
+          <div class="stat-sub">Arbitrum · Base · Optimism · Polygon · Ethereum</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">prices shown</div>
+          <div class="stat-value acid num">2</div>
+          <div class="stat-sub">spot vs on-chain market, gap flagged &gt;5%</div>
+        </div>
+      </div>
+
+      <div class="panel-title" id="where-table">WHERE THE COUNTER SITS</div>
+      <div class="tablewrap">
+        <table aria-labelledby="where-table">
+          <caption class="sr-only">Planet 柜台与传统 OTC 柜台、中心化交易所对比</caption>
+          <thead>
+            <tr><th style="text-align:left">&nbsp;</th><th>传统 OTC 柜台</th><th>中心化交易所</th><th class="strong">Planet 柜台</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="dim">客户关系</td><td>你的</td><td>平台的</td><td class="strong">你的</td></tr>
+            <tr><td class="dim">托管</td><td>你或托管方</td><td>平台</td><td class="strong">无（只读）</td></tr>
+            <tr><td class="dim">KYC</td><td>你的流程</td><td>平台</td><td class="strong">不做；你的流程仍是你的</td></tr>
+            <tr><td class="dim">多链比价</td><td>手工 / 口头</td><td>单平台</td><td class="strong">五链一屏，标步骤</td></tr>
+            <tr><td class="dim">发行方风险</td><td>靠解释</td><td>通常不披露</td><td class="strong">发行方 / 辖区 / MiCA / 赎回门槛</td></tr>
+            <tr><td class="dim">价格</td><td>单一报价</td><td>单一成交价</td><td class="strong">现货 vs 链上市场价</td></tr>
+            <tr><td class="dim">收入</td><td>价差</td><td>返佣</td><td class="strong">ref 归因 + Rango affiliate</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">Planet 不抢客户关系，也不接托管。它补的是你柜台后面缺的那一层：读数、比价、风险披露。</p>
+    </section>
+
+    <section id="capability" class="reveal" aria-labelledby="h-capability">
+      <div class="sec-head">
+        <span class="no">[02]</span><h2 id="h-capability">CAPABILITY</h2><span class="rule" aria-hidden="true"></span><span class="meta">READ 5 MIN</span>
+      </div>
+      <p class="intro">下面这些不是路线图，是今天就能打开的页面和 API。状态只有三种：<span class="hl">LIVE、BETA、OPEN</span>。</p>
+
+      <div class="tablewrap">
+        <table aria-labelledby="cap-title">
+          <caption class="sr-only">Planet 当前能力清单</caption>
+          <thead>
+            <tr><th id="cap-title">#</th><th>能力</th><th>它替你做什么</th><th>状态</th><th>证据</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="dim num">1</td><td class="strong">多钱包黄金柜台</td><td>粘贴任意地址，五个代币按盎司汇总；只读，不签名</td><td><span class="chip chip-live">LIVE</span></td><td><a href="https://ppppp.space/metals" target="_blank" rel="noopener">/metals</a></td></tr>
+            <tr><td class="dim num">2</td><td class="strong">双价格</td><td>现货 vs 链上市场参考价；偏离 &gt;5% 自动标注</td><td><span class="chip chip-live">LIVE</span></td><td><a href="https://ppppp.space/metals" target="_blank" rel="noopener">/metals</a></td></tr>
+            <tr><td class="dim num">3</td><td class="strong">五链比价</td><td>Arbitrum / Base / Optimism / Polygon / Ethereum 一屏报价，标出步骤与桥接</td><td><span class="chip chip-live">LIVE</span></td><td><a href="https://ppppp.space/api/quote?symbol=PAXG&amp;from=ARBITRUM&amp;amount=100" target="_blank" rel="noopener">/api/quote</a></td></tr>
+            <tr><td class="dim num">4</td><td class="strong">断点续传</td><td>两步路由保存进度；刷新页面继续，不用重开一笔</td><td><span class="chip chip-live">LIVE</span></td><td><a href="https://ppppp.space/metals" target="_blank" rel="noopener">/metals</a></td></tr>
+            <tr><td class="dim num">5</td><td class="strong">发行方风险层</td><td>Paxos / TG / KMS / VNX 的辖区、MiCA、赎回门槛、代理升级</td><td><span class="chip chip-live">LIVE</span></td><td><a href="https://ppppp.space/metals" target="_blank" rel="noopener">/metals</a></td></tr>
+            <tr><td class="dim num">6</td><td class="strong">中文界面</td><td>zh/en 切换；MiCA 与赎回门槛写在页面上</td><td><span class="chip chip-live">LIVE</span></td><td><a href="https://ppppp.space/metals?lang=zh" target="_blank" rel="noopener">/metals?lang=zh</a></td></tr>
+            <tr><td class="dim num">7</td><td class="strong">14 商品 PPI</td><td>Arbitrum One 链上计算；权重和 1,000,000；单资产 ≤15%</td><td><span class="chip chip-live">LIVE</span></td><td><a href="https://ppppp.space/ppi" target="_blank" rel="noopener">/ppi</a></td></tr>
+            <tr><td class="dim num">8</td><td class="strong">数据质量状态</td><td>normal / caution / frozen；每个资产自己的 lastUpdate</td><td><span class="chip chip-live">LIVE</span></td><td><a href="https://ppppp.space/api/v1/ppi" target="_blank" rel="noopener">/api/v1/ppi</a></td></tr>
+            <tr><td class="dim num">9</td><td class="strong">2-of-3 拉取式预言机</td><td>交易时提交签名喂价；entry 永远新鲜</td><td><span class="chip chip-live">LIVE</span></td><td><a href="https://ppppp.space/api/v1/price-signed" target="_blank" rel="noopener">/api/v1/price-signed</a></td></tr>
+            <tr><td class="dim num">10</td><td class="strong">公开读 API</td><td>PPI / perp / metals / quote；30 次/分</td><td><span class="chip chip-live">LIVE</span></td><td><a href="https://ppppp.space/api/v1/ppi" target="_blank" rel="noopener">/api/v1/ppi</a></td></tr>
+            <tr><td class="dim num">11</td><td class="strong">PPI 永续 v2</td><td>LP 池做对手盘；10 bps；OI ≤ 2× 池；TWAP 清算门；guardian 单向暂停</td><td><span class="chip chip-beta">BETA</span></td><td><a href="https://ppppp.space/perps" target="_blank" rel="noopener">/perps</a></td></tr>
+            <tr><td class="dim num">12</td><td class="strong">外部审计</td><td>尚未；自审 + 70 个 Foundry 测试 + 900 步不变量</td><td><span class="chip chip-open">OPEN</span></td><td><a href="https://ppppp.space/docs" target="_blank" rel="noopener">/docs</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">状态为 LIVE 的项，今天就可以在 ppppp.space 打开。BETA 项不要对客户承诺流动性。OPEN 项在签约前必须知道。</p>
+      <div class="panel" style="margin:18px 0;border-color:var(--line-2)">
+        <div class="panel-title">EXAMPLE QUOTE // <span class="t-acid">NOT A GUARANTEE</span></div>
+        <div style="font-family:var(--mono);font-size:12px;line-height:1.8;color:var(--muted)">
+          100 USDC on Arbitrum → <span style="color:var(--acid)" class="num">0.025631</span> PAXG · <span class="num">2</span> steps · <span class="num">1,605 s</span> estimated · route: Cctp V2 Economy Aggregator → OKX ETH DEX Aggregator
+        </div>
+      </div>    </section>
+    <section id="signal" class="reveal" aria-labelledby="h-signal">
+      <div class="sec-head">
+        <span class="no">[03]</span><h2 id="h-signal">SIGNAL</h2><span class="rule" aria-hidden="true"></span><span class="meta">READ 4 MIN</span>
+      </div>
+      <p class="intro">同一枚 KAG，现货 $49.67，链上市场参考价 $19.12——折价 61.5%。<br>同一枚 VNXAU，现货 $3,947.03，链上 $6,330.40——溢价 60.4%。<br>这不是 bug。这是薄流动性、赎回摩擦和发行方风险的价格。</p>
+
+      <div class="panel-title" id="tp-title">TWO PRICES // 2026-11-01 15:17 UTC</div>
+      <div class="tablewrap">
+        <table aria-labelledby="tp-title">
+          <caption class="sr-only">五个代币的现货价与链上市场参考价对比</caption>
+          <thead>
+            <tr><th>TOKEN</th><th>METAL</th><th class="num">SPOT</th><th class="num">ON-CHAIN MARKET</th><th class="num">GAP</th><th>READ</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="strong">PAXG</td><td class="dim">gold</td><td class="num">$3,895.30</td><td class="num dim">—</td><td class="num dim">—</td><td class="dim">no DEX print</td></tr>
+            <tr><td class="strong">XAUT</td><td class="dim">gold</td><td class="num">$3,872.95</td><td class="num dim">—</td><td class="num dim">—</td><td class="dim">no DEX print</td></tr>
+            <tr><td class="strong">KAG</td><td class="dim">silver</td><td class="num">$49.67</td><td class="num">$19.12</td><td class="num red">−61.5%</td><td class="dim">wrapper discount</td></tr>
+            <tr><td class="strong">VNXAU</td><td class="dim">gold</td><td class="num">$3,947.03</td><td class="num">$6,330.40</td><td class="num amber">+60.4%</td><td class="dim">thin-float premium</td></tr>
+            <tr><td class="strong">KAU</td><td class="dim">gold</td><td class="num">$3,895.30</td><td class="num dim">—</td><td class="num dim">—</td><td class="dim">read-only</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">价差不是套利建议。薄市场的价格可能失真；它的价值是让你和客户看见风险，而不是鼓励交易。页面在偏离超过 5% 时标注，不替客户下单。</p>
+
+
+
+      <h3 style="font-size:16px;font-weight:500;margin:30px 0 4px;color:var(--text)">ISSUER RISK <span style="color:var(--dim);font-family:var(--mono);font-size:11px">// 客户真正承担的，不是“黄金”两个字</span></h3>
+      <div class="tablewrap">
+        <table aria-labelledby="issuer-title">
+          <caption class="sr-only">发行方风险对比表</caption>
+          <thead>
+            <tr><th id="issuer-title">TOKEN</th><th>ISSUER</th><th>JURISDICTION</th><th>UNIT</th><th>ON-CHAIN LIQUIDITY</th><th>MUST TELL THE CLIENT</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="strong">PAXG</td><td>Paxos Trust Company, N.A.</td><td class="dim">US · OCC</td><td class="num">1 oz</td><td class="cyan">deep</td><td class="dim">MiCA: 欧盟居民不可用</td></tr>
+            <tr><td class="strong">XAUT</td><td>TG Commodities Limited</td><td class="dim">BVI · Swiss vaults</td><td class="num">1 oz</td><td class="cyan">deep</td><td class="dim">离岸发行；托管在瑞士</td></tr>
+            <tr><td class="strong">VNXAU</td><td>VNX Commodities AG</td><td class="dim">Liechtenstein · FMA</td><td class="num">1 g</td><td class="amber">thin</td><td class="dim">按克计价；页面已换算盎司</td></tr>
+            <tr><td class="strong">KAG</td><td>KMS Labs S.A.</td><td class="dim">Panama</td><td class="num">1 oz</td><td class="amber">thin</td><td class="dim">可升级代理；赎回需合规开户</td></tr>
+            <tr><td class="strong">KAU</td><td>KMS Labs S.A.</td><td class="dim">Panama</td><td class="num">1 oz</td><td class="red">very thin</td><td class="dim">能读不能买（无聚合路由）</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">这五个代币的差异，不是白皮书里的形容词，是客户真金白银的对手方风险。把这张表给客户看，比说“我们家的币最安全”有用。</p>
+    </section>
+
+    <section id="playbook" class="reveal" aria-labelledby="h-playbook">
+      <div class="sec-head">
+        <span class="no">[04]</span><h2 id="h-playbook">PLAYBOOK</h2><span class="rule" aria-hidden="true"></span><span class="meta">READ 6 MIN</span>
+      </div>
+      <p class="intro">五种用法，按你现在的业务选一个。不要一次全上。</p>
+
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-top"><span class="card-idx num">01</span><span class="chip chip-text">TODAY</span></div>
+          <h3>客户柜台</h3>
+          <p class="card-body">把 ppppp.space/metals?ref=你的名字 放进群公告、客服话术、内容页。客户粘任意地址，五个代币按盎司汇总；不用连接、不用签名、不用注册。</p>
+          <p class="card-why"><span class="lbl">WHY</span>客户每次想知道“我有多少”，都会回到你的链接。</p>
+        </div>
+        <div class="card">
+          <div class="card-top"><span class="card-idx num">02</span><span class="chip chip-text">TODAY</span></div>
+          <h3>报价台</h3>
+          <p class="card-body">客户用 USDC 从任意链付，一屏看到五条链的报价、步骤数和是否桥接；两步路线可断点续传。</p>
+          <p class="card-why"><span class="lbl">WHY</span>你不再手工比价，也不会把客户推给别家。</p>
+        </div>
+        <div class="card">
+          <div class="card-top"><span class="card-idx num">03</span><span class="chip chip-text">TODAY</span></div>
+          <h3>风险披露</h3>
+          <p class="card-body">发行方、辖区、MiCA、赎回门槛、双价格，一页讲清。</p>
+          <p class="card-why"><span class="lbl">WHY</span>客户问“这币安全吗”，你有一个可验证的页面，而不是一句“我们家的最安全”。</p>
+        </div>
+        <div class="card">
+          <div class="card-top"><span class="card-idx num">04</span><span class="chip chip-beta">BETA</span></div>
+          <h3>库存对冲</h3>
+          <p class="card-body">PPI 永续可以做空商品 beta。注意：黄金只占指数 12%，它不是纯金对冲；当前池子为空、参数在 timelock 队列，属于 beta。</p>
+          <p class="card-why"><span class="lbl">WHY</span>当你有库存敞口，这是唯一不需要卖现货的链上对冲路径。</p>
+        </div>
+        <div class="card">
+          <div class="card-top"><span class="card-idx num">05</span><span class="chip chip-text">SCOPE</span></div>
+          <h3>自有场所</h3>
+          <p class="card-body">把 2-of-3 签名喂价接进你的定价、保证金或 NAV。riskState 可以直接驱动保证金档位。</p>
+          <p class="card-why"><span class="lbl">WHY</span>你不需要自己养一个预言机团队。</p>
+        </div>
+      </div>
+      <p class="note">04 的关键词是 beta。今天不要向客户承诺“随时可以对冲”；池子有第一笔 LP 之后，这句话才成立。</p>
+    </section>
+
+    <section id="infra" class="reveal" aria-labelledby="h-infra">
+      <div class="sec-head">
+        <span class="no">[05]</span><h2 id="h-infra">INFRA</h2><span class="rule" aria-hidden="true"></span><span class="meta">READ 5 MIN</span>
+      </div>
+      <p class="intro">三层：价格从四个渠道进来，2-of-3 签名后拉到链上；产品层只有一个指数、一个永续、一个路由页；控制层是 timelock、guardian 和逐资产风控。</p>
+
+      <div class="layers">
+        <div class="layer">
+          <div class="l-label">L1 · DATA</div>
+          <div class="l-desc">4 channels → 0.5% confirmation → 2-of-3 sign → <span class="em">pull oracle</span><br>14 assets · weights sum 1,000,000 · base locked</div>
+        </div>
+        <div class="layer">
+          <div class="l-label">L2 · PRODUCT</div>
+          <div class="l-desc">PPI index · PPIPerp v2 · metals router · public API</div>
+        </div>
+        <div class="layer">
+          <div class="l-label">L3 · CONTROL</div>
+          <div class="l-desc">6h timelock · guardian one-way pause · per-asset riskState · rate limits</div>
+        </div>
+      </div>
+
+      <div class="panel-title" id="contract-title">CONTRACTS // ARBITRUM ONE · chainId 42161</div>
+      <div class="tablewrap">
+        <table aria-labelledby="contract-title">
+          <caption class="sr-only">合约地址清单</caption>
+          <thead>
+            <tr><th>CONTRACT</th><th>ADDRESS</th><th>LINK</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="strong">PlanetCore</td><td class="addr"><a class="addr-a num" href="https://arbiscan.io/address/0x61de052af7cb7dc957a07b1e6298152bb851cbbb" target="_blank" rel="noopener">0x61de052af7cb7dc957a07b1e6298152bb851cbbb</a></td><td><button type="button" class="copy-btn" data-copy="0x61de052af7cb7dc957a07b1e6298152bb851cbbb" aria-label="复制 PlanetCore 地址">COPY</button></td></tr>
+            <tr><td class="strong">PlanetToken (PLT)</td><td class="addr"><a class="addr-a num" href="https://arbiscan.io/address/0xee270802969f0689e3085331d47679bdc5bf4512" target="_blank" rel="noopener">0xee270802969f0689e3085331d47679bdc5bf4512</a></td><td><button type="button" class="copy-btn" data-copy="0xee270802969f0689e3085331d47679bdc5bf4512" aria-label="复制 PlanetToken 地址">COPY</button></td></tr>
+            <tr><td class="strong">PPIPerp v2</td><td class="addr"><a class="addr-a num" href="https://arbiscan.io/address/0x99e6ba49d2dff95e69b671d6f0945daee544ac8c" target="_blank" rel="noopener">0x99e6ba49d2dff95e69b671d6f0945daee544ac8c</a></td><td><button type="button" class="copy-btn" data-copy="0x99e6ba49d2dff95e69b671d6f0945daee544ac8c" aria-label="复制 PPIPerp v2 地址">COPY</button></td></tr>
+            <tr><td class="strong">PPIPriceSource v2</td><td class="addr"><a class="addr-a num" href="https://arbiscan.io/address/0xbf8651b58afd832e1b72edbf9df368c0516dea9e" target="_blank" rel="noopener">0xbf8651b58afd832e1b72edbf9df368c0516dea9e</a></td><td><button type="button" class="copy-btn" data-copy="0xbf8651b58afd832e1b72edbf9df368c0516dea9e" aria-label="复制 PPIPriceSource v2 地址">COPY</button></td></tr>
+            <tr><td class="strong">SignedPriceOracle</td><td class="addr"><a class="addr-a num" href="https://arbiscan.io/address/0x0daf541ef7e41402070bc549f91475ab368d1824" target="_blank" rel="noopener">0x0daf541ef7e41402070bc549f91475ab368d1824</a></td><td><button type="button" class="copy-btn" data-copy="0x0daf541ef7e41402070bc549f91475ab368d1824" aria-label="复制 SignedPriceOracle 地址">COPY</button></td></tr>
+            <tr><td class="strong">PlanetTimelock</td><td class="addr"><a class="addr-a num" href="https://arbiscan.io/address/0xa1fdb9f95210af1d968872f6fc86f623a3e3017c" target="_blank" rel="noopener">0xa1fdb9f95210af1d968872f6fc86f623a3e3017c</a></td><td><button type="button" class="copy-btn" data-copy="0xa1fdb9f95210af1d968872f6fc86f623a3e3017c" aria-label="复制 PlanetTimelock 地址">COPY</button></td></tr>
+            <tr><td class="strong">USDC (native)</td><td class="addr"><a class="addr-a num" href="https://arbiscan.io/address/0xaf88d065e77c8cc2239327c5edb3a432268e5831" target="_blank" rel="noopener">0xaf88d065e77c8cc2239327c5edb3a432268e5831</a></td><td><button type="button" class="copy-btn" data-copy="0xaf88d065e77c8cc2239327c5edb3a432268e5831" aria-label="复制 USDC 地址">COPY</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">核心合约源码已在 Arbiscan 验证（2026-10-29）。永续是 beta，先读 /perps 与 /lp 的风险披露。</p>
+
+      <div class="panel-title" id="basket-title">PPI BASKET // 14 ASSETS</div>
+      <div class="tablewrap">
+        <table aria-labelledby="basket-title">
+          <caption class="sr-only">PPI 指数 14 个商品成分表</caption>
+          <thead>
+            <tr><th>#</th><th>ASSET</th><th class="num">WEIGHT</th><th class="num">PRICE</th><th class="num">VS BASE</th><th>STATE</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="dim num">0</td><td>WTI Crude</td><td class="num">14%</td><td class="num">104.12</td><td class="num acid">+3.34%</td><td><span class="chip chip-med">CAUTION</span></td></tr>
+            <tr><td class="dim num">1</td><td>Brent Crude</td><td class="num">11%</td><td class="num">113.43</td><td class="num acid">+3.31%</td><td><span class="chip chip-live">NORMAL</span></td></tr>
+            <tr><td class="dim num">2</td><td>Natural Gas</td><td class="num">8%</td><td class="num">2.898</td><td class="num red">−1.50%</td><td><span class="chip chip-med">CAUTION</span></td></tr>
+            <tr><td class="dim num">3</td><td>Gold</td><td class="num">12%</td><td class="num">3,898.90</td><td class="num red">−3.38%</td><td><span class="chip chip-live">NORMAL</span></td></tr>
+            <tr><td class="dim num">4</td><td>Silver</td><td class="num">7%</td><td class="num">49.276</td><td class="num red">−6.21%</td><td><span class="chip chip-live">NORMAL</span></td></tr>
+            <tr><td class="dim num">5</td><td>Copper</td><td class="num">6%</td><td class="num">6.482</td><td class="num red">−1.58%</td><td><span class="chip chip-live">NORMAL</span></td></tr>
+            <tr><td class="dim num">6</td><td>Wheat</td><td class="num">9%</td><td class="num">603.50</td><td class="num acid">+0.88%</td><td><span class="chip chip-live">NORMAL</span></td></tr>
+            <tr><td class="dim num">7</td><td>Corn</td><td class="num">7%</td><td class="num">447.75</td><td class="num red">−0.56%</td><td><span class="chip chip-live">NORMAL</span></td></tr>
+            <tr><td class="dim num">8</td><td>Soybean</td><td class="num">6%</td><td class="num">1,234.25</td><td class="num acid">+0.22%</td><td><span class="chip chip-live">NORMAL</span></td></tr>
+            <tr><td class="dim num">9</td><td>Coffee</td><td class="num">4%</td><td class="num">287.15</td><td class="num acid">+2.01%</td><td><span class="chip chip-live">NORMAL</span></td></tr>
+            <tr><td class="dim num">10</td><td>Lumber</td><td class="num">4%</td><td class="num">65.259</td><td class="num acid">+0.68%</td><td><span class="chip chip-live">NORMAL</span></td></tr>
+            <tr><td class="dim num">11</td><td>Lithium</td><td class="num">3%</td><td class="num">59.81</td><td class="num red">−4.59%</td><td><span class="chip chip-live">NORMAL</span></td></tr>
+            <tr><td class="dim num">12</td><td>Water</td><td class="num">5%</td><td class="num">73.76</td><td class="num acid">+1.82%</td><td><span class="chip chip-live">NORMAL</span></td></tr>
+            <tr><td class="dim num">13</td><td>Carbon</td><td class="num">4%</td><td class="num">35.001</td><td class="num acid">+0.26%</td><td><span class="chip chip-live">NORMAL</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">PPI 使用期货/ETF 参考价（GC=F、SI=F、WOOD 等），与 /metals 的现货报价不同源；不要把两张表混用。PPI 不是稳定币，不是足额抵押，也不是黄金 ETF。</p>
+
+      <div class="controls">
+        <div class="control"><div class="c-v num">70</div><div class="c-l">Foundry tests</div></div>
+        <div class="control"><div class="c-v num">900</div><div class="c-l">fuzz steps · 4 invariants</div></div>
+        <div class="control"><div class="c-v num">2-of-3</div><div class="c-l">oracle signatures</div></div>
+        <div class="control"><div class="c-v num acid">8 / 30</div><div class="c-l">signed / read req per min</div></div>
+      </div>
+    </section>
+    <section id="risk" class="reveal" aria-labelledby="h-risk">
+      <div class="sec-head">
+        <span class="no">[06]</span><h2 id="h-risk">RISK</h2><span class="rule" aria-hidden="true"></span><span class="meta">READ 4 MIN</span>
+      </div>
+      <p class="intro">这份报告如果只讲优点，就是广告。下面是你在签约前必须知道的八件事。</p>
+
+      <div class="tablewrap">
+        <table aria-labelledby="risk-title">
+          <caption class="sr-only">签约前必须知道的八项风险</caption>
+          <thead>
+            <tr><th id="risk-title">SEVERITY</th><th>ITEM</th><th>WHAT IT MEANS</th><th>OUR POSITION</th><th>STATUS</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="chip chip-high">HIGH</span></td><td class="strong">未外部审计</td><td>智能合约没有第三方审计；自审、70 个 Foundry 测试、900 步不变量不等于审计。</td><td class="dim">不能对外说“已审计”；只能说“自审公开”。</td><td><span class="chip chip-open">OPEN</span></td></tr>
+            <tr><td><span class="chip chip-high">HIGH</span></td><td class="strong">永续是 beta，池子为空</td><td>poolAssets = 0，riskLevel = 1（caution）；今天不能承诺对冲流动性。</td><td class="dim">OI 上限 2×池；先柜台、后对冲。</td><td><span class="chip chip-beta">BETA</span></td></tr>
+            <tr><td><span class="chip chip-med">MED</span></td><td class="strong">拉取式预言机</td><td>没有消费者提交，指数就会变旧；超过 6 小时，永续只允许减仓。</td><td class="dim">页面显示 age；交易时提交新价；riskState 驱动保证金。</td><td><span class="chip chip-text">BY DESIGN</span></td></tr>
+            <tr><td><span class="chip chip-med">MED</span></td><td class="strong">两步路由可能桥接</td><td>100 USDC 示例是 2 步、预估 1,605 秒；客户需要保持页面打开。</td><td class="dim">步骤数明示；断点续传；Rango requestId 可查。</td><td><span class="chip chip-disc">DISCLOSED</span></td></tr>
+            <tr><td><span class="chip chip-med">MED</span></td><td class="strong">PAXG 在欧盟不可用</td><td>MiCA 限制；欧盟客户不能推荐 PAXG。</td><td class="dim">页面已写；按辖区推荐 XAUT / VNXAU。</td><td><span class="chip chip-disc">DISCLOSED</span></td></tr>
+            <tr><td><span class="chip chip-med">MED</span></td><td class="strong">KAG / VNXAU 流动性薄</td><td>市场价可能大幅偏离现货；不要把价差当套利。</td><td class="dim">双价格 + 偏离标注；不构成建议。</td><td><span class="chip chip-disc">DISCLOSED</span></td></tr>
+            <tr><td><span class="chip chip-low">LOW</span></td><td class="strong">KAU 只读</td><td>没有聚合路由，能读不能买。</td><td class="dim">页面标注。</td><td><span class="chip chip-disc">DISCLOSED</span></td></tr>
+            <tr><td><span class="chip chip-low">LOW</span></td><td class="strong">分成比例未实测</td><td>Rango affiliate 的实际到账比例还没有历史。</td><td class="dim">首笔到账后再对外报比例。</td><td><span class="chip chip-open">OPEN</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">我们的立场：先说限制，再谈合作。你不能拿去对客户承诺我们没做到的事。</p>
+    </section>
+
+    <section id="terms" class="reveal" aria-labelledby="h-terms">
+      <div class="sec-head">
+        <span class="no">[07]</span><h2 id="h-terms">TERMS</h2><span class="rule" aria-hidden="true"></span><span class="meta">READ 4 MIN</span>
+      </div>
+      <p class="intro">三种合作方式。按你现在的业务选一个；首单先跑 14 天试点，用数据决定要不要签。</p>
+
+      <div class="term-grid">
+        <div class="term">
+          <div class="t-idx num">A // 推荐柜台</div>
+          <h3>REFERRAL</h3>
+          <p class="t-body">你出流量，我们出页面。ref 链接归因；兑换走 Rango affiliate（用户侧 0.1%，页面明示）。无独家、无最低量、无托管、无我们的 KYC。<br><br><b>适合：</b>社群、内容站、OTC 客服台。<br><b>起步：</b><span class="dim">0 集成费</span>。</p>
+        </div>
+        <div class="term">
+          <div class="t-idx num">B // 深度集成</div>
+          <h3>DESK</h3>
+          <p class="t-body">你的品牌、你的发行方列表、你的客服话术；quote / execute API、事件回调、白标页面。<br><br><b>适合：</b>有自有客户池和合规流程的交易商。<br><b>参考区间：</b><span class="dim">集成 20–80k USD；平台 3–15k USD/月（按范围报价，不是公开价目表）。</span></p>
+        </div>
+        <div class="term">
+          <div class="t-idx num">C // 数据 / 场所</div>
+          <h3>VENUE</h3>
+          <p class="t-body">把签名喂价接进你的定价、保证金、NAV；或把 PPI 做成你场所的一个市场。<br><br><b>参考区间：</b><span class="dim">Starter 500 USD/月；Growth 2,000 USD/月；指数授权 3–5 bps AUM；链上交付 setup + 月费。</span><br><span class="dim">以上为 B2B 页的指示性区间，未签约、未公开报价。</span></p>
+        </div>
+      </div>
+      <p class="note">分成比例以 Rango affiliate 实际结算为准；第一笔到账之前，我们不对外报固定比例。</p>
+    </section>
+
+    <section id="action" class="reveal" aria-labelledby="h-action">
+      <div class="sec-head">
+        <span class="no">[08]</span><h2 id="h-action">ACTION</h2><span class="rule" aria-hidden="true"></span><span class="meta">READ 2 MIN</span>
+      </div>
+      <p class="intro">四个节点，从通话到签约。每一步都有明确产出。</p>
+
+      <div class="timeline">
+        <div class="tstep">
+          <div class="t-day">DAY 0</div>
+          <div class="t-title">30 分钟通话</div>
+          <div class="t-body">选一个入口：柜台 / 数据 / 场所</div>
+        </div>
+        <div class="tstep">
+          <div class="t-day">DAY 1–3</div>
+          <div class="t-title">白标链接</div>
+          <div class="t-body">带 ref 的页面 + 对比表 + 风险披露文案</div>
+        </div>
+        <div class="tstep">
+          <div class="t-day">DAY 4–14</div>
+          <div class="t-title">试点</div>
+          <div class="t-body">看三个数：访问 → 报价 → 兑换；独立钱包；30 天复购</div>
+        </div>
+        <div class="tstep">
+          <div class="t-day">DAY 15</div>
+          <div class="t-title">复盘</div>
+          <div class="t-body">有效就签；无效就停，不拖</div>
+        </div>
+      </div>
+
+      <div class="action-cols">
+        <div class="action-col">
+          <h4>我们需要你</h4>
+          <ul>
+            <li>客户入口</li>
+            <li>交易台流程</li>
+            <li>辖区</li>
+            <li>你实际卖的代币</li>
+          </ul>
+        </div>
+        <div class="action-col">
+          <h4>我们不需要</h4>
+          <ul>
+            <li>托管</li>
+            <li>KYC</li>
+            <li>独家</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="contact">
+        <span class="br br-tl" aria-hidden="true"></span><span class="br br-tr" aria-hidden="true"></span>
+        <span class="br br-bl" aria-hidden="true"></span><span class="br br-br" aria-hidden="true"></span>
+        <div class="c-lines">
+          <a href="mailto:e@ppppp.space">e@ppppp.space</a><br>
+          <span class="c-mut">Telegram</span> @EverestAn<br>
+          <span class="c-mut">ppppp.space/metals?ref=YOURNAME</span>
+        </div>
+        <div class="c-actions no-print">
+          <a class="btn btn-acid" href="mailto:e@ppppp.space">发邮件</a>
+          <a class="btn" href="https://ppppp.space/metals" target="_blank" rel="noopener">打开柜台 <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+    </section>
+
+    <footer class="pagefoot">
+      <div class="f-top">
+        <div>
+          <div class="f-brand">PLANET // INTELLIGENCE</div>
+          <div class="f-sub">PARTNER BRIEF · GOLD TOKEN DESK · 2026-11</div>
+        </div>
+        <div class="f-links">
+          <a href="https://ppppp.space/metals" target="_blank" rel="noopener">/metals</a>
+          <a href="https://ppppp.space/ppi" target="_blank" rel="noopener">/ppi</a>
+          <a href="https://ppppp.space/perps" target="_blank" rel="noopener">/perps</a>
+          <a href="https://ppppp.space/lp" target="_blank" rel="noopener">/lp</a>
+          <a href="https://ppppp.space/methodology" target="_blank" rel="noopener">/methodology</a>
+          <a href="https://ppppp.space/docs" target="_blank" rel="noopener">/docs</a>
+        </div>
+        <div class="f-snap">DATA SNAPSHOT 2026-11-01 15:17 UTC</div>
+      </div>
+      <p class="disclaimer">本报告是技术合作说明，不构成投资建议、要约或招揽。Planet 不是托管方、不是发行方、不是交易所；不持有客户资金。代币化贵金属存在发行方、托管、司法辖区、流动性与赎回风险，价格可能下跌。永续市场为 beta，合约未经外部审计，池子可能为空。所有数字为 2026-11-01 15:17 UTC 快照，链上状态会变化；以 /api/v1/ppi、/api/v1/perp、/api/metals 实时读取为准。Rango affiliate 费率以 Rango 项目实际结算为准，未到账前不承诺固定分成比例。</p>
+      <div class="bottom-line">NOT INVESTMENT ADVICE · NOT AN OFFER · NOT AUDITED · COMMODITY PRICES CAN FALL</div>
+    </footer>
+  </main>
+</div>
+
+<div class="print-foot">
+  <span>PLANET // INTELLIGENCE · GOLD TOKEN DESK · 2026-11</span>
+  <span>ppppp.space/metals</span>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  document.documentElement.classList.add("js");
+
+  var clock = document.getElementById("utc-clock");
+  function tick() {
+    var t = new Date();
+    var iso = t.toISOString();
+    if (clock) { clock.textContent = "UTC " + iso.slice(11, 19); }
+  }
+  tick();
+  setInterval(tick, 1000);
+
+  function fallbackCopy(text) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  var copyBtns = document.querySelectorAll(".copy-btn");
+  Array.prototype.forEach.call(copyBtns, function (btn) {
+    btn.addEventListener("click", function () {
+      var addr = btn.getAttribute("data-copy");
+      function done() {
+        btn.textContent = "COPIED";
+        btn.classList.add("copied");
+        setTimeout(function () {
+          btn.textContent = "COPY";
+          btn.classList.remove("copied");
+        }, 1200);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(addr).then(done, function () { fallbackCopy(addr); done(); });
+      } else {
+        fallbackCopy(addr);
+        done();
+      }
+    });
+  });
+
+  var tk = document.getElementById("ticker");
+  if (tk) { tk.innerHTML += tk.innerHTML; }
+
+  var sections = document.querySelectorAll("main section[id]");
+  var navLinks = document.querySelectorAll(".rail a, .topnav a, .nav-short a");
+  function setActive(id) {
+    Array.prototype.forEach.call(navLinks, function (a) {
+      var on = a.getAttribute("href") === "#" + id;
+      a.classList.toggle("active", on);
+      var li = a.closest("li");
+      if (li) { li.classList.toggle("active", on); }
+    });
+  }
+  if ("IntersectionObserver" in window) {
+    var spy = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { setActive(e.target.id); }
+      });
+    }, { rootMargin: "-45% 0px -50% 0px", threshold: 0 });
+    Array.prototype.forEach.call(sections, function (s) { spy.observe(s); });
+  }
+
+  var reveals = document.querySelectorAll(".reveal");
+  var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if ("IntersectionObserver" in window && !reduced) {
+    var ro = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("in"); ro.unobserve(e.target); }
+      });
+    }, { rootMargin: "0px 0px -8% 0px", threshold: 0.04 });
+    Array.prototype.forEach.call(reveals, function (r) { ro.observe(r); });
+  } else {
+    Array.prototype.forEach.call(reveals, function (r) { r.classList.add("in"); });
+  }
+})();
+</script>
+</body>
+</html>
