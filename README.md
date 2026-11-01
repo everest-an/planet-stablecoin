@@ -1,75 +1,51 @@
-# Planet — 全球大宗商品购买力指数协议
+# Planet — 链上大宗商品指数与代币化金属
 
-> **当前部署：Arbitrum One（chainId 42161）** — PPI 指数 + PPI 永续 + 金属路由前端；Sepolia 仅保留为历史演示。
-> 唯一可信状态见 [`docs/HANDOFF.md`](docs/HANDOFF.md) §0；更早的实现已归档，不参与当前部署。
+> **当前部署：Arbitrum One（chainId 42161）** — 14 商品 PPI 指数、PPI 永续（beta）、金属路由前端。
+> 状态文档见 [`docs/HANDOFF.md`](docs/HANDOFF.md)。
 
-Planet（PLT）把一篮子全球大宗商品（能源/金属/农产品/工业原料）的真实价格聚合为链上**购买力指数 PPI**，
-以 ERC-20 代币 PLT 表达。`mint()` 拉取测试 USDC 作为抵押，`redeem()` 销毁 PLT 并从储备付回测试 USDC。
+Planet 把 14 个全球大宗商品（能源、贵金属、工业金属、农产品）的价格聚合为链上**购买力指数 PPI**，
+用 2-of-3 签名拉取式预言机更新；在指数之上运行一个 **LP 池做对手盘的永续市场**（beta），
+并提供 `/metals` 读取 PAXG / XAUT / KAG / VNXAU / KAU 的跨钱包余额、比较五条链的报价。
 
-> ⚠️ **版本声明**：这是**阶段一概念验证（PoC）**。抵押物是 **Circle Arbitrum Sepolia 测试 USDC**
-> （无价值），**没有真实大宗商品储备，不是足额抵押稳定币**。主网/1:1 RWA 版本需托管方 + 合规 + 审计。
+> **边界**：这是**未外部审计**的协议；指数本身不是稳定币、不是足额抵押、没有商品储备。
+> 主网 `mint/redeem` 已禁用（index-only）；永续是 beta，池子在首笔 LP 之前为空。
+> 不要使用无法承受损失的金额。
 
-## 线上地址（Arbitrum One）
+## 线上合约（Arbitrum One）
 
 | 合约 | 地址 |
 |---|---|
 | PlanetCore（PPI 指数） | `0x61de052af7cb7dc957a07b1e6298152bb851cbbb` |
-| PPIPerp（永续市场） | `0x9c2250914c457914af3bffb085ae44141667f5ac` |
-| PPIPriceSource（TWAP 价格源） | `0x5d767020ab6e830f5914fbe11401ad536b720d6c` |
-| SignedPriceOracle（2-of-3） | `0x0daf541Ef7e41402070BC549f91475ab368D1824` |
-| PlanetTimelock（6h） | `0xA1Fdb9F95210AF1d968872F6FC86F623A3e3017C` |
-| 抵押品（原生 USDC） | `0xaf88d065e77c8cC2239327C5EDb3A432268e5831` |
+| PlanetToken（PLT） | `0xee270802969f0689e3085331d47679bdc5bf4512` |
+| PPIPerp v2（永续） | `0x99e6ba49d2dff95e69b671d6f0945daee544ac8c` |
+| PPIPriceSource v2（TWAP） | `0xbf8651b58afd832e1b72edbf9df368c0516dea9e` |
+| SignedPriceOracle（2-of-3） | `0x0daf541ef7e41402070bc549f91475ab368d1824` |
+| PlanetTimelock（6h） | `0xa1fdb9f95210af1d968872f6fc86f623a3e3017c` |
+| 抵押品（原生 USDC） | `0xaf88d065e77c8cc2239327c5edb3a432268e5831` |
 
-## 产品功能（2026-10-31）
+- 核心合约源码已在 Arbiscan 验证；owner 是 6 小时 timelock。
+- 预言机是 **2-of-3 签名拉取式**：消费者在自己的交易里提交签名喂价并支付 gas；主网单钥路径已禁用。
 
-- 14 商品 PPI 指数；2-of-3 签名拉取式预言机，主网单钥路径已禁用
-- 永续市场：LP 池做对手盘，真实 USDC，10bps 开平仓费，2x OI/池上限，3x 杠杆，10% 维持保证金
-- 风险分级保证金：数据质量驱动，冻结状态只允许减仓
-- TWAP 清算门：必须在现货与 30 分钟快照均值两侧都击穿才可强平
-- guardian 单向急停（只能暂停，不能解禁）
-- 交易时提交新价：开/平仓前由交易者提交签名喂价，entry 永远新鲜
-- 公开 API 限流：签名喂价 8 次/分，读取 30 次/分
-- 治理：6 小时 timelock，参数/keeper/treasury/guardian 全部排队执行
+## 现在能用的
 
-## 历史部署（Arbitrum/Ethereum Sepolia，仅作参考）
-
-| 合约 | 地址 |
-|---|---|
-| PlanetCore | `0xCEcad784A6cEB1aF12c69639a5027D935651F946` |
-| PLT token（ERC-20） | `0x1Cc00D99F81DBAAAa3734594377b1781f427d12B` |
-| PlanetTimelock | `0xd71CD916A237aB294230D0056ef4BD240e232Cb5` |
-| SignedPriceOracle | `0x116Ca153eA8EdFFBf578C3D8452A3DDBC593eF70` |
-| 抵押物（test USDC） | `0x75faf114…AA4d`（Circle，6 位小数） |
-
-- 篮子：14 资产，`weightSum = 1,000,000`，`baseLocked = true`，单资产 ≤15%。
-- PPI：约 `1.00383`（随每小时推价变化）。
-- 预言机：每小时 GitHub Actions → `updatePrice`（授权 relayer）；4 个独立渠道
-  （Yahoo 主源 + Sina/腾讯/东财确认，0.5% 容差，不取中位数）。`SignedPriceOracle` 已部署，
-  但签名集目前为 **1-of-1**；升到 2-of-3 只需 `setSigners([a,b,c],2)`，无需重新部署。
-
-## 产品架构（当前部署）
-
-```
-L3 稳定/风控   分档费 · 弹性曲线 · 套利返还 · 风险基金 · 暂停/偏离熔断      [已实现]
-L2 适配层      CAM（设计；核心已有 volatility/liquidity/riskState 字段）    [设计]
-L1 核心        PlanetCore：篮子 / 链上 PPI / 抵押铸赎 / 费率 / 预言机状态    [已实现]
-L4 基金        PlanetFund（设计，未部署）                                    [设计]
-L0 储备/RWA    实物/ETF 储备 + 托管 + 储备证明                               [未来]
-（不自建 DEX/AMM；交易走外部场所）
-```
+- **14 商品 PPI**：权重和 `1,000,000`，单资产 ≤15%，base 锁定；每个资产带 `riskState`（normal / caution / frozen）和自己的 `lastUpdate`。
+- **PPIPerp v2**：LP 池做对手盘，真实 USDC；10 bps 开平仓费；OI ≤ 2× 池；3x 杠杆 / 10% 维持保证金；TWAP 清算门；guardian 单向急停。
+- **`/metals`**：五个代币、四个发行方；只读、不托管；现货 vs 链上市场价；五链比价（Arbitrum / Base / Optimism / Polygon / Ethereum）；两步路由可断点续传。
+- **公开 API**：`/api/v1/ppi`、`/api/v1/perp`、`/api/v1/price-signed`、`/api/v1/sources`、`/api/metals`、`/api/quote`。
+- **安全控制**：2-of-3 oracle、6h timelock、guardian 单向暂停、签名喂价 8 次/分、读接口 30 次/分。
 
 ## 仓库结构
 
 ```
-monad/          Solidity 合约 + Foundry 测试（当前部署）
+monad/          Solidity 0.8.24 + Foundry（当前部署）
   src/          PlanetCore · PlanetToken · PlanetTimelock · SignedPriceOracle · PlanetBond
-  script/       Deploy.s.sol · ConfigureBasket.s.sol
   test/         70 个 Foundry 测试
-relayer/        EVM 推价（push-evm.mjs + sources.mjs）
-web/            官网 + /dashboard + /docs + /faq + /app + /api/v1/*
-docs/           HANDOFF（唯一可信状态）· 机制设计 · 审计准备 · 资助材料
-ton/            早期非 EVM 实现（归档，仅作参考，不参与当前部署）
-legacy-solana/  更早的 Solana/Anchor 实现（归档）
+relayer/        EVM 推价、签名、perp keeper、timelock 队列
+web/            官网 + /dashboard + /docs + /faq + /app + /metals + /api/v1/*
+docs/           状态/交接、机制、审计、资助材料
+scripts/        运维脚本
+tools/          报告生成工具
+legacy-solana/  更早的 Solana/Anchor 原型（归档，不参与当前部署）
 ```
 
 ## 构建与测试
@@ -81,23 +57,23 @@ cd monad && forge test -vv          # 70 tests
 # 推价（dry-run 不需要私钥）
 cd relayer && npm install && node push-evm.mjs --dry-run
 
-# 官网 / app（静态 + serverless；本地可用任意静态服务器）
+# 官网 / app（静态 + serverless；本地用任意静态服务器）
 cd web && python -m http.server 4174
 ```
 
-CI：`.github/workflows/monad-build.yml`（build + 70 tests）、`evm-push.yml`（每小时推价）、
-`oracle-monitor.yml`、`cache-warmer.yml`。
+CI：`.github/workflows/monad-build.yml`（build + 70 tests）、`evm-push.yml`、`oracle-monitor.yml`、
+`index-refresh-mainnet.yml`、`perp-keeper-mainnet.yml`、`cache-warmer.yml`。
 
 ## 文档
 
-- **状态/交接**：`docs/HANDOFF.md` §0（唯一可信状态）
-- **白皮书**：`web/whitepaper.html`（v2.0，EVM 参考实现）· `docs/WHITEPAPER.md`
-- **机制设计**：`docs/ppi-multiasset.md` · `commodity-cam.md` · `peg-stability.md` · `burn-linkage.md`
-- **审计/安全**：`docs/audit-prep.md` · `docs/security.md` · `docs/contract-review.md`
+- **状态/交接**：`docs/HANDOFF.md`
+- **白皮书**：`web/whitepaper.html`（v2.0）· `web/methodology.html`
+- **方法论**：`docs/ppi-methodology-v1.md`
+- **审计/安全**：`docs/audit-scope-2026-10.md` · `docs/self-audit-2026-10.md` · `docs/attack-matrix-2026-10-31.md` · `docs/network-security-audit-2026-10-31.md`
 - **资助**：`docs/grants/arbitrum-grant-application.md`
 
 ## 免责声明
 
-本协议为技术提案与概念验证，不构成投资建议，且**未经第三方审计**。PLT 是合成指数代币；
-抵押物为无价值的测试 USDC，没有实物商品兜底，市场价格可能大幅偏离理论 PPI。
-不要在无法承受损失的金额上使用。
+本协议未经第三方审计。PLT 是合成指数代币；主网没有商品储备，`mint/redeem` 已禁用。
+永续市场为 beta，池子可能为空。商品价格可能大幅下跌，任何代币化金属都存在发行方、托管、
+司法辖区、流动性与赎回风险。本仓库不构成投资建议、要约或招揽。

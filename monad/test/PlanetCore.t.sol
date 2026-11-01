@@ -7,7 +7,7 @@ import {PlanetToken} from "../src/PlanetToken.sol";
 import {SignedPriceOracle} from "../src/SignedPriceOracle.sol";
 import {MockERC20, ReentrantToken} from "./MockERC20.sol";
 
-/// These tests mirror the TON suite's economics cases one-for-one, so the migration can be judged
+/// These tests mirror the original economics cases one-for-one, so the migration can be judged
 /// on behaviour rather than on vibes. Each test name states the invariant it defends.
 contract PlanetCoreTest is Test {
     PlanetCore core;

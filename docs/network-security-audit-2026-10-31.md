@@ -8,7 +8,7 @@ secrets and workflows. Verdicts as in the contract audit.
 
 | Check | Result | Verdict |
 |---|---|---|
-| Workflow triggers | only `schedule`, `workflow_dispatch`, and one `pull_request` (ton-build) | SAFE |
+| Workflow triggers | only `schedule` and `workflow_dispatch` | SAFE |
 | pull_request_target / issue_comment / workflow_run | absent — no pwn-request surface on the public repo | SAFE |
 | Secrets echoed in workflow logs | zero matches | SAFE |
 | Repo write access | single account; an account compromise = workflows edited to exfiltrate all secrets | MITIGATED (unavoidable with Actions) |
@@ -37,7 +37,7 @@ secrets and workflows. Verdicts as in the contract audit.
 
 | Check | Result | Verdict |
 |---|---|---|
-| relayer deps | viem ^2.21.0, @ton/* — lockfile present | SAFE |
+| relayer deps | viem ^2.21.0 — lockfile present | SAFE |
 | npm audit | 3 high on first run; `npm audit fix` cleared one → 2 remain, one chain via zod with no fix | FINDING N4 (assessed below) |
 
 ## Findings

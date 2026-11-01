@@ -1,7 +1,6 @@
 name: Monad build + test
 
-# The Monad (EVM) port lives beside ton/ and does NOT touch the TON stack.
-# This job is the Monad-side equivalent of ton-build.yml: compile, test, and fail loudly.
+# The EVM implementation is the current stack. This job compiles, tests, and fails loudly.
 
 on:
   workflow_dispatch:

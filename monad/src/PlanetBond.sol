@@ -6,7 +6,7 @@ pragma solidity ^0.8.24;
  *
  *   BD-1  REDEMPTION IS REQUEST + OPERATOR SETTLEMENT. A holder's redeem() only flips `requested`;
  *         it can never mark a claim dead before anyone has paid. Only the operator (owner) can
- *         settle, and settling releases the face value from totalIssued. On the TON version this
+ *         settle, and settling releases the face value from totalIssued. In the original design this
  *         was the difference between a mis-click costing nothing and a mis-click losing the claim.
  *   BD-2  the premium is bounded to [0, BPS_DENOM] (100%).
  *   BD-3  settling asserts totalIssued >= face before subtracting, so an accounting slip cannot

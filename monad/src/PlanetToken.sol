@@ -12,7 +12,7 @@ pragma solidity ^0.8.24;
  *   - mint / burn callable ONLY by `minter` (the PlanetCore)
  *   - `minter` settable only by `owner` (wire the owner to the Timelock in production)
  *
- * EVM simplification worth noting: the TON version needed an asynchronous jetton mint plus a
+ * EVM simplification worth noting: the original design needed an asynchronous mint plus a
  * "burn mirror" notification back to the core to keep supply in sync. Here the Core calls
  * token.mint()/burn() synchronously, so supply and core accounting cannot drift by construction.
  * That removes an entire class of finding (the C-2 mirror asymmetry) rather than fixing it.

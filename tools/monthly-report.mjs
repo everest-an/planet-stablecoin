@@ -17,7 +17,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const WEB = join(HERE, "..", "web");
 const REPORTS = join(WEB, "reports");
 
-const CORES = [process.env.EVM_CORE || "0xCEcad784A6cEB1aF12c69639a5027D935651F946"];
+const CORES = [process.env.EVM_CORE || "0x61de052af7cb7dc957a07b1e6298152bb851cbbb"];
 const NAMES = [
   "WTI Crude", "Brent Crude", "Natural Gas", "Gold", "Silver", "Copper",
   "Wheat", "Corn", "Soybean", "Coffee", "Lumber (ETF)", "Lithium (ETF)",
@@ -28,7 +28,7 @@ const SECTORS = [
   "agriculture", "agriculture", "agriculture", "agriculture",
   "industrial", "industrial", "industrial", "industrial",
 ];
-const RPC = process.env.EVM_RPC || "https://sepolia-rollup.arbitrum.io/rpc";
+const RPC = process.env.EVM_RPC || "https://arb1.arbitrum.io/rpc";
 // Getters are addressed by 4-byte selector on EVM; these are constants, no hashing at runtime.
 const SEL = {
   assetCount: "0xeafe7a74",
@@ -235,7 +235,7 @@ function reportPage(snap, prev) {
       `https://ppppp.space/reports/${ym}`
     ) +
     `
-      <p class="notice" style="font-family: 'DM Mono', monospace">[ monthly basket report · TON testnet PoC · not a stablecoin ]</p>
+      <p class="notice" style="font-family: 'DM Mono', monospace">[ monthly basket report · Arbitrum One · not a stablecoin ]</p>
       <h1>Basket report — ${ym}</h1>
       <p class="sub">generated ${esc(snap.generatedAt)} UTC · core <code>${esc(snap.core)}</code>${prev ? ` · compared with ${esc(prev.month)}` : " · launch report (baseline)"}</p>
 
@@ -276,7 +276,7 @@ ${rows}
       <p><a href="/methodology">Methodology →</a> · <a href="/dashboard">Live dashboard →</a> · <a href="/reports">All reports →</a></p>
 
       <p class="note">
-        Planet is an unaudited proof of concept on the TON testnet. Nothing here is a price, a
+        Planet is an unaudited on-chain index on Arbitrum One. Nothing here is a price, a
         valuation, or investment advice; the report describes an on-chain measurement only.
       </p>
     ` +
@@ -299,7 +299,7 @@ function indexPage(snaps) {
       "https://ppppp.space/reports"
     ) +
     `
-      <p class="notice" style="font-family: 'DM Mono', monospace">[ monthly basket reports · TON testnet PoC ]</p>
+      <p class="notice" style="font-family: 'DM Mono', monospace">[ monthly basket reports · Arbitrum One ]</p>
       <h1>Monthly basket reports</h1>
       <p class="sub">one snapshot per month, generated from the chain and committed by CI — nothing hand-edited</p>
       <table>

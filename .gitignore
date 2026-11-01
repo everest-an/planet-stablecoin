@@ -12,8 +12,9 @@ app/node_modules/
 # Env / keys（切勿提交私钥）
 .env
 .env.local
-app-tg/.env.local
 *.json.key
+*.mnemonic
+*secret*.json
 id.json
 **/target/deploy/*-keypair.json
 
@@ -27,25 +28,10 @@ Thumbs.db
 # 其他项目误落文件（非 Planet 代码）
 awareness-growth/
 
-# Acton / Tolk 构建产物
-ton/build/
-ton/.acton/
-ton/contracts/wrappers/
-
 # Playwright MCP 会话记录（agent 工具产物，非项目代码）
 .playwright-mcp/
-
-# TON 钱包 / 私钥 —— 绝不提交
-ton/.secrets/
-wallets.toml
-global.wallets.toml
-*secret*.json
-*.mnemonic
 
 # relayer local config
 relayer/assets.json
 relayer/.env
-
-# vite dev log
-app-tg/dev.log
 relayer/_check.mjs

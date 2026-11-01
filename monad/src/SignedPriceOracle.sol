@@ -2,13 +2,13 @@
 pragma solidity ^0.8.24;
 
 /**
- * SignedPriceOracle (Monad / EVM port) — the M-of-N replacement for the TON ed25519 signer set.
+ * SignedPriceOracle (Monad / EVM port) — the M-of-N signed price oracle.
  *
  * DESIGN CHOICE: this contract is STATELESS. It verifies; it does not store. Replay protection
  * already lives where it belongs — the Core's strictly-increasing `lastOracleUpdate` — so giving
  * the oracle its own nonce would be a second source of truth and a second way to get it wrong.
  *
- * What it keeps from the TON version:
+ * Design notes:
  *   - a signer SET with a threshold, and **distinct** signers enforced (a signer who signs twice
  *     counts once) — implemented with a used-signer bitmap, exactly like `handleSignedPriceUpdateN`.
  *   - **domain separation**: the digest binds a domain tag, this contract's address, the chain id
@@ -69,7 +69,7 @@ contract SignedPriceOracle {
     }
 
     /// @notice Replace the whole signer set and the threshold. Owner action; wire it behind the
-    ///         timelock in production (the TON version rotated signers through the timelock too).
+    ///         timelock in production (signer rotation goes through the timelock).
     function setSigners(address[] calldata signers_, uint8 threshold_) external onlyOwner {
         _setSigners(signers_, threshold_);
     }

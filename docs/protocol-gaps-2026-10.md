@@ -95,7 +95,7 @@ whichever commodity just moved, changing the index both for existing holders and
 
 ### F-20 — LOW — no per-transaction or per-epoch mint cap
 
-The TON build had a per-tx cap; the EVM core has none. One transaction can mint against any amount of
+The earlier build had a per-tx cap; the EVM core has none. One transaction can mint against any amount of
 USDC the caller holds.
 
 ### F-21 — INFO — `assets` is unbounded and the index is O(n)

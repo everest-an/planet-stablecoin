@@ -2,8 +2,8 @@ name: EVM price push (Arbitrum Sepolia)
 
 # The oracle's heartbeat. PlanetCore closes minting 6h after the last push
 # (MAX_ORACLE_AGE = 6 hours), so an hourly cadence leaves ~5h of slack for a delayed
-# or skipped GitHub schedule — the previous TON cron was daily, which left minting
-# blocked 18h out of every 24.
+# or skipped GitHub schedule — a daily cadence would leave minting blocked 18h out of
+# every 24.
 #
 # Costs: 14 × updatePrice ≈ 0.00003 ETH per run on Arbitrum Sepolia, and the delta gate
 # skips assets that have not moved >0.1%, so a calm hour is usually 0–3 transactions.

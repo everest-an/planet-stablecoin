@@ -9,7 +9,7 @@ import {PlanetCore} from "../src/PlanetCore.sol";
  *
  * Weights are the ppm values from relayer/assets.example.json: they sum to exactly 1_000_000 and no
  * single weight exceeds the contract's 15% per-asset cap. Base prices are the same reference prices
- * used on the TON deployment, in 1e6 fixed point.
+ * used on the original deployment, in 1e6 fixed point.
  *
  * Run AFTER Deploy.s.sol. Re-running is safe for the basket (values are idempotent) but lockBasePrices
  * is one-way, so base prices can never be changed afterwards — that is the point.

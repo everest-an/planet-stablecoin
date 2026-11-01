@@ -1,15 +1,14 @@
-// Planet EVM price push — the oracle's write path for Arbitrum Sepolia.
+// Planet EVM price push — the oracle's write path for Arbitrum.
 //
-// Why a separate file from relayer.mjs: relayer.mjs is the TON implementation (TEP-74 / runGetMethod /
-// ed25519 signer set). The price SOURCES (Yahoo + Sina, median-of-sources, spread->caution) and the
-// push POLICY (delta gate + staleness ceiling) are the proven parts and are reproduced here verbatim in
-// behaviour; only the settlement layer changes, from `SignPriceUpdate` to `updatePrice` via viem.
+// The EVM relayer. The price SOURCES (Yahoo + Sina, median-of-sources, spread->caution) and the
+// push POLICY (delta gate + staleness ceiling) are the proven parts, reproduced here; the settlement
+// layer is `updatePrice` via viem.
 //
 // Three invariants this file exists to respect — each one is a real way to lose money or freeze minting:
 //
 //  1. `lastOracleUpdate` is GLOBAL and `updatePrice` requires `timestamp > lastOracleUpdate`, while every
 //     call SETS it. So a batch cannot share one timestamp: the second call would revert BadTimestamp.
-//     TON's relayer already solved this with `ts += 1` (relayer.mjs ~L511). Same here, and the base is
+//     The earlier relayer already solved this with `ts += 1`. Same here, and the base is
 //     max(now, lastOracleUpdate + 1) so a clock running behind the chain cannot wedge the push.
 //
 //  2. `priceJumpOk` rejects any single move > 50%, with NO bypass. If one asset gaps past that, the whole
@@ -46,7 +45,7 @@ const MIN_PUSH_DELTA = Number(process.env.MIN_PUSH_DELTA ?? "0.001");
 const MAX_PUSH_AGE_H = Number(process.env.MAX_PUSH_AGE_H ?? "6");
 const SCALE = 1_000_000;
 const DRY_RUN = process.argv.includes("--dry-run") || process.env.DRY_RUN === "1";
-// Same default as the TON relayer (relayer.mjs:71) — a deliberate carry-over, not a new policy.
+// Default 0.1% delta gate — a deliberate policy, not a new one.
 const MAX_SPREAD = Number(process.env.MAX_SOURCE_SPREAD ?? "0.02"); // 2%
 
 const ABI = parseAbi([

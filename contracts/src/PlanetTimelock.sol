@@ -5,21 +5,21 @@ pragma solidity ^0.8.24;
  * PlanetTimelock (Monad / EVM port) — step 2.
  *
  * The governance spine: every privileged action on the core must be proposed, wait out `delay`,
- * then execute. Ported from the TON version together with the three fixes the contract review
+ * then execute. Ported from the original design together with the three fixes the contract review
  * produced, so the EVM side does not have to rediscover them:
  *
  *   TL-1  setOwner() may ONLY be called by the timelock itself (i.e. through propose → delay →
  *         execute). A direct owner call is rejected, so a stolen owner key cannot hand over
  *         ownership without the delay window.
  *   TL-2  a failed inner call is RECORDED (lastBounced / lastBounceAt) instead of failing
- *         silently. The TON fix used a bouncing message; on EVM the equivalent is to check the
+ *         silently. The original design used a bouncing message; on EVM the equivalent is to check the
  *         call result and store it.
  *   TL-3  the delay can never be lowered back to 0 once it is non-zero (0 -> N is allowed so
  *         that demo/test timelocks can start at 0). Otherwise the owner could silently disarm
  *         the reaction window right before proposing something.
  *
  * EVM-specific discipline: state is cleared BEFORE the external call (checks-effects-
- * interactions). The TON version's "state before send" rule becomes this on the EVM, and the
+ * interactions). The original "state before send" rule becomes this on the EVM, and the
  * reentrancy tests below exist because of it.
  *
  * Not audited. Testnet only.

@@ -530,7 +530,7 @@ contract PlanetCore {
         emit FeesRouted(0, reserve, 0, risk);
     }
 
-    /// @notice Owner moves risk-fund money into the reserve (the TON CoverDeficit).
+    /// @notice Owner moves risk-fund money into the reserve.
     function coverDeficit(uint64 amount) external onlyOwner {
         if (amount == 0) revert ZeroAmount();
         if (riskFund < amount) revert Underflow();

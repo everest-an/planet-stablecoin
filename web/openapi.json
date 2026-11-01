@@ -3,12 +3,12 @@
   "info": {
     "title": "Planet public API",
     "version": "1.0.0",
-    "summary": "Read-only access to the Planet commodity purchasing-power index (PPI) on Arbitrum Sepolia.",
-    "description": "Planet is an on-chain commodity purchasing-power index on Arbitrum Sepolia (chain id 421614). This API exposes the live basket and index. It is READ-ONLY: minting and redemption happen on-chain, signed by the user's own wallet (Planet never holds keys). Phase 1 proof of concept — the index is a synthetic construction, not a stablecoin, and carries no monetary value.",
+    "summary": "Read-only access to the Planet commodity purchasing-power index (PPI) on Arbitrum One.",
+    "description": "Planet is an on-chain commodity purchasing-power index on Arbitrum One (chain id 42161). This API exposes the live basket, index, oracle state and price sources. It is READ-ONLY; mainnet mint/redeem are disabled. The index is not a stablecoin, has no commodity reserve, and is not externally audited.",
     "contact": { "url": "https://ppppp.space/faq" },
     "license": { "name": "Apache-2.0" }
   },
-  "servers": [{ "url": "https://ppppp.space", "description": "Production (Arbitrum Sepolia)" }],
+  "servers": [{ "url": "https://ppppp.space", "description": "Production (Arbitrum One)" }],
   "tags": [
     {
       "name": "status",
@@ -161,7 +161,7 @@
           "assetsReturned": { "type": "integer" },
           "lastOracleUpdate": { "type": "integer", "description": "Unix seconds of the last accepted oracle push." },
           "riskFund": { "type": "integer" },
-          "signerThreshold": { "type": "integer", "description": "1. The EVM core authorises a single relayer address (updatePrice is onlyRelayer); the M-of-N SignedPriceOracle is written but NOT deployed, so this is 1-of-1 by construction. See the `oracle` object for the mode." },
+          "signerThreshold": { "type": "integer", "description": "2. PlanetCore reads the 2-of-3 SignedPriceOracle; the single-key relayer path is disabled. See the `oracle` object for the mode." },
           "fees": {
             "type": "object",
             "properties": {
@@ -228,7 +228,7 @@
           "warnings": { "type": "array", "items": { "type": "string" }, "description": "Non-critical findings, e.g. `frozen_commodities:1`, `base_prices_not_locked`." },
           "signerKeys": {
             "type": "array",
-            "description": "Only with `full=1`. Registered ed25519 public keys, hex, index order.",
+            "description": "Only with `full=1`. Registered secp256k1 signer addresses, hex, index order.",
             "items": { "type": ["string", "null"] }
           },
           "basket": {
