@@ -1,0 +1,20 @@
+# Smithery configuration for planet-ppi-mcp (https://smithery.ai)
+# Submission: https://smithery.ai/new -> point it at https://github.com/everest-an/planet-stablecoin
+# and leave the "MCP server directory" as `mcp` (the repo is a monorepo).
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      PPI_BASE:
+        type: string
+        title: API base
+        description: Override the API base (defaults to https://ppppp.space)
+        default: https://ppppp.space
+    required: []
+  commandFunction: |-
+    (config) => ({
+      command: 'node',
+      args: ['index.mjs'],
+      env: config.PPI_BASE ? { PPI_BASE: config.PPI_BASE } : {}
+    })

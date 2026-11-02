@@ -4,11 +4,20 @@
     "title": "Planet public API",
     "version": "1.0.0",
     "summary": "Read-only access to the Planet commodity purchasing-power index (PPI) on Arbitrum One.",
-    "description": "Planet is an on-chain commodity purchasing-power index on Arbitrum One (chain id 42161). This API exposes the live basket, index, oracle state and price sources. It is READ-ONLY; mainnet mint/redeem are disabled. The index is not a stablecoin, has no commodity reserve, and is not externally audited.",
-    "contact": { "url": "https://ppppp.space/faq" },
-    "license": { "name": "Apache-2.0" }
+    "description": "Read-only JSON API for Planet: a 14-commodity purchasing-power index on Arbitrum One where every asset carries a machine-readable risk state (normal/caution/frozen), plus the perpetual market on that index. Any agent framework that imports OpenAPI can call these endpoints directly.",
+    "contact": {
+      "url": "https://ppppp.space/faq"
+    },
+    "license": {
+      "name": "Apache-2.0"
+    }
   },
-  "servers": [{ "url": "https://ppppp.space", "description": "Production (Arbitrum One)" }],
+  "servers": [
+    {
+      "url": "https://ppppp.space",
+      "description": "Production (Arbitrum One)"
+    }
+  ],
   "tags": [
     {
       "name": "status",
@@ -18,7 +27,9 @@
   "paths": {
     "/api/v1/status": {
       "get": {
-        "tags": ["status"],
+        "tags": [
+          "status"
+        ],
         "summary": "Live index + basket snapshot",
         "description": "Returns the current PPI, the full basket (weights, base and current prices, risk state) and core accounting. Read live from PlanetCore get-methods (ppi, assetCount, assetAt, supply, reserve, lastOracleUpdate, ...). Responses are CDN-cached for 120s and carry an ETag; send `If-None-Match` to revalidate and get a 304.",
         "operationId": "getStatus",
@@ -28,39 +39,81 @@
             "in": "header",
             "required": false,
             "description": "ETag from a previous response. If it still matches, the API replies 304 Not Modified with no body.",
-            "schema": { "type": "string" }
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "A live snapshot of the basket and index.",
             "headers": {
-              "ETag": { "description": "Weak validator; pass it back via If-None-Match.", "schema": { "type": "string" } },
-              "Cache-Control": { "description": "`public, s-maxage=120, stale-while-revalidate=600`.", "schema": { "type": "string" } },
-              "X-Request-Id": { "description": "Correlation id for support.", "schema": { "type": "string" } }
+              "ETag": {
+                "description": "Weak validator; pass it back via If-None-Match.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "`public, s-maxage=120, stale-while-revalidate=600`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "description": "Correlation id for support.",
+                "schema": {
+                  "type": "string"
+                }
+              }
             },
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Status" }
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
               }
             }
           },
-          "304": { "description": "Not Modified — the client's cached copy is still valid. No body." },
+          "304": {
+            "description": "Not Modified — the client's cached copy is still valid. No body."
+          },
           "405": {
             "description": "Method not allowed (only GET/HEAD/OPTIONS).",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "503": {
             "description": "The chain could not be read right now (public RPC rate-limited or unavailable). Retry after the `Retry-After` delay.",
-            "headers": { "Retry-After": { "description": "Seconds to wait before retrying.", "schema": { "type": "integer" } } },
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
     },
     "/api/v1/oracle": {
       "get": {
-        "tags": ["status"],
+        "tags": [
+          "status"
+        ],
         "summary": "Oracle and index health",
         "description": "Whether the price feed is alive and sane: the age of the last accepted oracle push measured against the 6-hour limit, the signer set and threshold, whether base prices are locked, and — with `full=1` — the basket weights check plus the frozen/caution commodities and the signer keys. The DEFAULT response is deliberately cheap (a handful of get-methods) so a monitor can poll it frequently; `full=1` adds a per-commodity scan. A 503 means the chain could not be read — this endpoint never reports `healthy` on a failed read.",
         "operationId": "getOracleHealth",
@@ -70,40 +123,86 @@
             "in": "query",
             "required": false,
             "description": "`1` to also scan every commodity (weights sum, frozen/caution lists, signer keys).",
-            "schema": { "type": "string", "enum": ["0", "1"], "default": "0" }
+            "schema": {
+              "type": "string",
+              "enum": [
+                "0",
+                "1"
+              ],
+              "default": "0"
+            }
           },
           {
             "name": "If-None-Match",
             "in": "header",
             "required": false,
-            "schema": { "type": "string" }
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "The oracle health reading.",
             "headers": {
-              "ETag": { "schema": { "type": "string" } },
-              "Cache-Control": { "description": "`public, s-maxage=30, stale-while-revalidate=120` (shorter than /status: freshness is the point).", "schema": { "type": "string" } }
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "`public, s-maxage=30, stale-while-revalidate=120` (shorter than /status: freshness is the point).",
+                "schema": {
+                  "type": "string"
+                }
+              }
             },
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OracleHealth" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OracleHealth"
+                }
+              }
+            }
           },
-          "304": { "description": "Not Modified — the client's cached copy is still valid." },
+          "304": {
+            "description": "Not Modified — the client's cached copy is still valid."
+          },
           "405": {
             "description": "Method not allowed.",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "503": {
             "description": "The chain could not be read right now. Retry after `Retry-After`.",
-            "headers": { "Retry-After": { "schema": { "type": "integer" } } },
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
     },
     "/api/v1/sources": {
       "get": {
-        "tags": ["status"],
+        "tags": [
+          "status"
+        ],
         "summary": "Every price channel, its reading and whether it confirmed the primary.",
         "description": "What the oracle is reading right now. The primary channel sets the price; another channel is a confirmation only if it lands within tolerancePct. A dissenting channel is reported as rejected with its distance and is never averaged in. riskState 1 means no channel confirmed the primary.",
         "operationId": "getSources",
@@ -114,19 +213,43 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["tolerancePct", "assets", "summary"],
+                  "required": [
+                    "tolerancePct",
+                    "assets",
+                    "summary"
+                  ],
                   "properties": {
-                    "tolerancePct": { "type": "number", "description": "Confirmation tolerance in percent (0.5)." },
-                    "rule": { "type": "string" },
-                    "assets": { "type": "array", "items": { "type": "object" } },
+                    "tolerancePct": {
+                      "type": "number",
+                      "description": "Confirmation tolerance in percent (0.5)."
+                    },
+                    "rule": {
+                      "type": "string"
+                    },
+                    "assets": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
                     "summary": {
                       "type": "object",
                       "properties": {
-                        "assets": { "type": "integer" },
-                        "withTwoOrMoreChannels": { "type": "integer" },
-                        "confirmed": { "type": "integer" },
-                        "caution": { "type": "integer" },
-                        "channelReads": { "type": "integer" }
+                        "assets": {
+                          "type": "integer"
+                        },
+                        "withTwoOrMoreChannels": {
+                          "type": "integer"
+                        },
+                        "confirmed": {
+                          "type": "integer"
+                        },
+                        "caution": {
+                          "type": "integer"
+                        },
+                        "channelReads": {
+                          "type": "integer"
+                        }
                       }
                     }
                   }
@@ -136,8 +259,71 @@
           },
           "503": {
             "description": "No price channel answered. This is an outage, not an empty basket.",
-            "headers": { "Retry-After": { "schema": { "type": "integer" } } },
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ppi": {
+      "get": {
+        "operationId": "getPpiIndex",
+        "summary": "Live index value, oracle state and all 14 assets",
+        "description": "Current PPI (1.0 = inception), lastOracleUpdate, oracleAgeSeconds, and assets[] with index, name, symbol, weightPpm, weightPct, basePrice, currentPrice (1e6 fixed point), changePct, riskState (0 normal / 1 caution / 2 frozen) and lastUpdate.",
+        "responses": {
+          "200": {
+            "description": "The live index"
+          },
+          "429": {
+            "description": "Rate limited (30/min per IP)"
+          },
+          "503": {
+            "description": "Upstream RPC unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/perp": {
+      "get": {
+        "operationId": "getPerpMarket",
+        "summary": "The perpetual market on the index",
+        "description": "Pool size, open interest, net exposure, price, risk label and parameters. poolAssets = 0 means the market cannot take positions (open interest is capped at 2x the pool).",
+        "responses": {
+          "200": {
+            "description": "Market state"
+          },
+          "429": {
+            "description": "Rate limited (30/min per IP)"
+          },
+          "503": {
+            "description": "Upstream RPC unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/price-signed": {
+      "get": {
+        "operationId": "getSignedPriceFeed",
+        "summary": "2-of-3 signed price payloads for on-chain submission",
+        "description": "Signed payloads consumable by PlanetCore.updatePriceSigned(payload, sig). The consumer submits them in its own transaction and pays the gas.",
+        "responses": {
+          "200": {
+            "description": "Signed payloads"
+          },
+          "429": {
+            "description": "Rate limited (8/min per IP)"
           }
         }
       }
@@ -147,116 +333,334 @@
     "schemas": {
       "Status": {
         "type": "object",
-        "required": ["ppi", "assetCount", "assets", "core", "network"],
+        "required": [
+          "ppi",
+          "assetCount",
+          "assets",
+          "core",
+          "network"
+        ],
         "properties": {
-          "network": { "type": "string", "examples": ["mainnet"] },
-          "core": { "type": "string", "description": "PlanetCore contract address this snapshot was read from." },
-          "isCurrentDeployment": { "type": "boolean", "description": "False when the snapshot comes from the previous deployment (kept serving during a redeploy)." },
-          "readMs": { "type": "integer", "description": "Wall-clock milliseconds the API spent reading the chain." },
-          "partial": { "type": "boolean", "description": "True when some values could not be read in the time budget (the response is still 200)." },
-          "ppi": { "type": "number", "description": "Purchasing-power index. 1.0 = the base date; 6 decimals on-chain.", "examples": [1.001311] },
-          "supply": { "type": "integer", "description": "PLT supply as tracked by PlanetCore (totalSupply()). The PLT token only lets the core mint, so the two agree." },
-          "reserve": { "type": "integer", "description": "Core-side reserve accounting units." },
-          "assetCount": { "type": "integer", "description": "Number of registered commodities." },
-          "assetsReturned": { "type": "integer" },
-          "lastOracleUpdate": { "type": "integer", "description": "Unix seconds of the last accepted oracle push." },
-          "riskFund": { "type": "integer" },
-          "signerThreshold": { "type": "integer", "description": "2. PlanetCore reads the 2-of-3 SignedPriceOracle; the single-key relayer path is disabled. See the `oracle` object for the mode." },
+          "network": {
+            "type": "string",
+            "examples": [
+              "mainnet"
+            ]
+          },
+          "core": {
+            "type": "string",
+            "description": "PlanetCore contract address this snapshot was read from."
+          },
+          "isCurrentDeployment": {
+            "type": "boolean",
+            "description": "False when the snapshot comes from the previous deployment (kept serving during a redeploy)."
+          },
+          "readMs": {
+            "type": "integer",
+            "description": "Wall-clock milliseconds the API spent reading the chain."
+          },
+          "partial": {
+            "type": "boolean",
+            "description": "True when some values could not be read in the time budget (the response is still 200)."
+          },
+          "ppi": {
+            "type": "number",
+            "description": "Purchasing-power index. 1.0 = the base date; 6 decimals on-chain.",
+            "examples": [
+              1.001311
+            ]
+          },
+          "supply": {
+            "type": "integer",
+            "description": "PLT supply as tracked by PlanetCore (totalSupply()). The PLT token only lets the core mint, so the two agree."
+          },
+          "reserve": {
+            "type": "integer",
+            "description": "Core-side reserve accounting units."
+          },
+          "assetCount": {
+            "type": "integer",
+            "description": "Number of registered commodities."
+          },
+          "assetsReturned": {
+            "type": "integer"
+          },
+          "lastOracleUpdate": {
+            "type": "integer",
+            "description": "Unix seconds of the last accepted oracle push."
+          },
+          "riskFund": {
+            "type": "integer"
+          },
+          "signerThreshold": {
+            "type": "integer",
+            "description": "2. PlanetCore reads the 2-of-3 SignedPriceOracle; the single-key relayer path is disabled. See the `oracle` object for the mode."
+          },
           "fees": {
             "type": "object",
             "properties": {
-              "burn": { "type": "integer" },
-              "reserve": { "type": "integer" },
-              "staking": { "type": "integer" }
+              "burn": {
+                "type": "integer"
+              },
+              "reserve": {
+                "type": "integer"
+              },
+              "staking": {
+                "type": "integer"
+              }
             }
           },
           "assets": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/Asset" }
+            "items": {
+              "$ref": "#/components/schemas/Asset"
+            }
           },
           "links": {
             "type": "object",
             "properties": {
-              "dashboard": { "type": "string", "format": "uri" },
-              "openapi": { "type": "string", "format": "uri" }
+              "dashboard": {
+                "type": "string",
+                "format": "uri"
+              },
+              "openapi": {
+                "type": "string",
+                "format": "uri"
+              }
             }
           }
         }
       },
       "Asset": {
         "type": "object",
-        "required": ["index", "weight", "basePrice", "currentPrice", "riskState"],
+        "required": [
+          "index",
+          "weight",
+          "basePrice",
+          "currentPrice",
+          "riskState"
+        ],
         "properties": {
-          "index": { "type": "integer", "description": "On-chain basket index (stable; never reordered)." },
-          "name": { "type": "string", "description": "Display name (not stored on-chain)." },
-          "weight": { "type": "integer", "description": "Weight in ppm; 1e6 = 100%. Sums to 1000000 across the basket." },
-          "weightPct": { "type": "number", "description": "Weight as a percentage." },
-          "basePrice": { "type": "number", "description": "Index base price (immutable once locked), 1e6 fixed point." },
-          "currentPrice": { "type": "number", "description": "Latest accepted price, 1e6 fixed point." },
-          "changePct": { "type": "number", "description": "Percentage change of currentPrice vs basePrice." },
-          "volatility": { "type": "integer", "description": "CAM volatility (1e6 fixed point; 0 = unset)." },
-          "liquidity": { "type": "integer", "description": "CAM liquidity (0..1e6; 0 = unset)." },
-          "riskState": { "type": "integer", "enum": [0, 1, 2], "description": "0 normal, 1 caution, 2 frozen (a frozen asset is excluded from the index and the rest renormalised)." }
+          "index": {
+            "type": "integer",
+            "description": "On-chain basket index (stable; never reordered)."
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name (not stored on-chain)."
+          },
+          "weight": {
+            "type": "integer",
+            "description": "Weight in ppm; 1e6 = 100%. Sums to 1000000 across the basket."
+          },
+          "weightPct": {
+            "type": "number",
+            "description": "Weight as a percentage."
+          },
+          "basePrice": {
+            "type": "number",
+            "description": "Index base price (immutable once locked), 1e6 fixed point."
+          },
+          "currentPrice": {
+            "type": "number",
+            "description": "Latest accepted price, 1e6 fixed point."
+          },
+          "changePct": {
+            "type": "number",
+            "description": "Percentage change of currentPrice vs basePrice."
+          },
+          "volatility": {
+            "type": "integer",
+            "description": "CAM volatility (1e6 fixed point; 0 = unset)."
+          },
+          "liquidity": {
+            "type": "integer",
+            "description": "CAM liquidity (0..1e6; 0 = unset)."
+          },
+          "riskState": {
+            "type": "integer",
+            "enum": [
+              0,
+              1,
+              2
+            ],
+            "description": "0 normal, 1 caution, 2 frozen (a frozen asset is excluded from the index and the rest renormalised)."
+          }
         }
       },
       "OracleHealth": {
         "type": "object",
-        "required": ["core", "lastOracleUpdate", "ageSeconds", "fresh", "healthy", "reasons"],
+        "required": [
+          "core",
+          "lastOracleUpdate",
+          "ageSeconds",
+          "fresh",
+          "healthy",
+          "reasons"
+        ],
         "properties": {
-          "rev": { "type": "string", "description": "Endpoint build marker (helps confirm which deployment answered)." },
-          "network": { "type": "string" },
-          "core": { "type": "string" },
-          "isCurrentDeployment": { "type": "boolean" },
-          "checkedAt": { "type": "integer", "description": "Unix seconds the reading was taken." },
-          "lastOracleUpdate": { "type": "integer", "description": "Unix seconds of the last accepted oracle push (0 = never)." },
-          "ageSeconds": { "type": "integer", "description": "How old the accepted price is right now." },
-          "maxAgeSeconds": { "type": "integer", "description": "The staleness limit the contract enforces on minting (21600 = 6h)." },
-          "fresh": { "type": "boolean", "description": "ageSeconds <= maxAgeSeconds. When false, minting is refused on-chain." },
-          "ppi": { "type": ["number", "null"] },
+          "rev": {
+            "type": "string",
+            "description": "Endpoint build marker (helps confirm which deployment answered)."
+          },
+          "network": {
+            "type": "string"
+          },
+          "core": {
+            "type": "string"
+          },
+          "isCurrentDeployment": {
+            "type": "boolean"
+          },
+          "checkedAt": {
+            "type": "integer",
+            "description": "Unix seconds the reading was taken."
+          },
+          "lastOracleUpdate": {
+            "type": "integer",
+            "description": "Unix seconds of the last accepted oracle push (0 = never)."
+          },
+          "ageSeconds": {
+            "type": "integer",
+            "description": "How old the accepted price is right now."
+          },
+          "maxAgeSeconds": {
+            "type": "integer",
+            "description": "The staleness limit the contract enforces on minting (21600 = 6h)."
+          },
+          "fresh": {
+            "type": "boolean",
+            "description": "ageSeconds <= maxAgeSeconds. When false, minting is refused on-chain."
+          },
+          "ppi": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
           "signers": {
             "type": "object",
             "properties": {
-              "count": { "type": ["integer", "null"] },
-              "threshold": { "type": ["integer", "null"] },
-              "configured": { "type": "boolean" }
+              "count": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "threshold": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "configured": {
+                "type": "boolean"
+              }
             }
           },
-          "baseLocked": { "type": "boolean", "description": "Base prices frozen (they can never be changed once locked)." },
-          "assetCount": { "type": "integer" },
-          "healthy": { "type": "boolean", "description": "No critical reason. Recommendations and degraded-but-working states appear in `warnings`." },
-          "reasons": { "type": "array", "items": { "type": "string" }, "description": "Critical findings, e.g. `oracle_price_stale:25000s`, `no_oracle_signer_configured`, `threshold_unsatisfiable:2of1`." },
-          "warnings": { "type": "array", "items": { "type": "string" }, "description": "Non-critical findings, e.g. `frozen_commodities:1`, `base_prices_not_locked`." },
+          "baseLocked": {
+            "type": "boolean",
+            "description": "Base prices frozen (they can never be changed once locked)."
+          },
+          "assetCount": {
+            "type": "integer"
+          },
+          "healthy": {
+            "type": "boolean",
+            "description": "No critical reason. Recommendations and degraded-but-working states appear in `warnings`."
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Critical findings, e.g. `oracle_price_stale:25000s`, `no_oracle_signer_configured`, `threshold_unsatisfiable:2of1`."
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Non-critical findings, e.g. `frozen_commodities:1`, `base_prices_not_locked`."
+          },
           "signerKeys": {
             "type": "array",
             "description": "Only with `full=1`. Registered secp256k1 signer addresses, hex, index order.",
-            "items": { "type": ["string", "null"] }
+            "items": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
           },
           "basket": {
             "type": "object",
             "description": "Only with `full=1`.",
             "properties": {
-              "weightsSum": { "type": "integer" },
-              "expectedSum": { "type": "integer" },
-              "complete": { "type": "boolean" },
-              "weightsValid": { "type": "boolean" },
-              "frozen": { "type": "array", "items": { "type": "integer" }, "description": "Indices excluded from the index." },
-              "caution": { "type": "array", "items": { "type": "integer" } }
+              "weightsSum": {
+                "type": "integer"
+              },
+              "expectedSum": {
+                "type": "integer"
+              },
+              "complete": {
+                "type": "boolean"
+              },
+              "weightsValid": {
+                "type": "boolean"
+              },
+              "frozen": {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                },
+                "description": "Indices excluded from the index."
+              },
+              "caution": {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                }
+              }
             }
           }
         }
       },
       "Error": {
         "type": "object",
-        "required": ["error"],
+        "required": [
+          "error"
+        ],
         "properties": {
           "error": {
             "type": "object",
-            "required": ["code", "message", "request_id"],
+            "required": [
+              "code",
+              "message",
+              "request_id"
+            ],
             "properties": {
-              "code": { "type": "string", "description": "Stable, machine-readable. Branch on this, not on the message.", "examples": ["chain_unavailable", "method_not_allowed"] },
-              "message": { "type": "string", "description": "Human-readable; wording may change." },
-              "request_id": { "type": "string", "description": "Correlate with server logs / support." },
-              "details": { "type": "array", "items": {}, "description": "Optional structured context." }
+              "code": {
+                "type": "string",
+                "description": "Stable, machine-readable. Branch on this, not on the message.",
+                "examples": [
+                  "chain_unavailable",
+                  "method_not_allowed"
+                ]
+              },
+              "message": {
+                "type": "string",
+                "description": "Human-readable; wording may change."
+              },
+              "request_id": {
+                "type": "string",
+                "description": "Correlate with server logs / support."
+              },
+              "details": {
+                "type": "array",
+                "items": {},
+                "description": "Optional structured context."
+              }
             }
           }
         }
