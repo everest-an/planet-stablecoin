@@ -38,3 +38,5 @@ relayer/_check.mjs
 .vercel
 .env.local
 mcp/.npmrc
+.vercel
+.env*
