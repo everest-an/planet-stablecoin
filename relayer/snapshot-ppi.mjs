@@ -21,8 +21,8 @@ const rec = {
   ppi,
   oracle: j.oracle ?? null,
   assets: assets.map((a) => ({
-    index: a.index, symbol: a.symbol ?? a.name ?? null, weight: a.weight,
-    price: a.price ?? a.currentPrice ?? null, riskState: a.riskState ?? a.risk ?? null,
+    index: a.index, symbol: a.symbol ?? a.name ?? null, weight: a.weightPpm ?? a.weight,
+    price: a.currentPrice ?? a.price ?? null, riskState: a.riskState ?? a.risk ?? null,
   })),
 };
 writeFileSync(`${dir}/${day}.json`, JSON.stringify(rec, null, 1));

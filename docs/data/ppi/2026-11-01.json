@@ -14,85 +14,99 @@
    "index": 0,
    "symbol": "CL=F",
    "price": 104120000,
-   "riskState": 1
+   "riskState": 1,
+   "weight": 140000
   },
   {
    "index": 1,
    "symbol": "BZ=F",
    "price": 113430000,
-   "riskState": 0
+   "riskState": 0,
+   "weight": 110000
   },
   {
    "index": 2,
    "symbol": "NG=F",
    "price": 2898000,
-   "riskState": 1
+   "riskState": 1,
+   "weight": 80000
   },
   {
    "index": 3,
    "symbol": "GC=F",
    "price": 3898900000,
-   "riskState": 0
+   "riskState": 0,
+   "weight": 120000
   },
   {
    "index": 4,
    "symbol": "SI=F",
    "price": 49276000,
-   "riskState": 0
+   "riskState": 0,
+   "weight": 70000
   },
   {
    "index": 5,
    "symbol": "HG=F",
    "price": 6482000,
-   "riskState": 0
+   "riskState": 0,
+   "weight": 60000
   },
   {
    "index": 6,
    "symbol": "ZW=F",
    "price": 603500000,
-   "riskState": 0
+   "riskState": 0,
+   "weight": 90000
   },
   {
    "index": 7,
    "symbol": "ZC=F",
    "price": 447750000,
-   "riskState": 0
+   "riskState": 0,
+   "weight": 70000
   },
   {
    "index": 8,
    "symbol": "ZS=F",
    "price": 1234250000,
-   "riskState": 0
+   "riskState": 0,
+   "weight": 60000
   },
   {
    "index": 9,
    "symbol": "KC=F",
    "price": 287150000,
-   "riskState": 0
+   "riskState": 0,
+   "weight": 40000
   },
   {
    "index": 10,
    "symbol": "WOOD",
    "price": 65259000,
-   "riskState": 0
+   "riskState": 0,
+   "weight": 40000
   },
   {
    "index": 11,
    "symbol": "LIT",
    "price": 59810000,
-   "riskState": 0
+   "riskState": 0,
+   "weight": 30000
   },
   {
    "index": 12,
    "symbol": "PHO",
    "price": 73760000,
-   "riskState": 0
+   "riskState": 0,
+   "weight": 50000
   },
   {
    "index": 13,
    "symbol": "KRBN",
    "price": 35001000,
-   "riskState": 0
+   "riskState": 0,
+   "weight": 40000
   }
  ]
 }

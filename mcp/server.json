@@ -1,0 +1,18 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "name": "io.github.everest-an/planet-ppi",
+  "description": "Planet PPI: a 14-commodity on-chain purchasing-power index on Arbitrum One where every asset carries a machine-readable risk state (normal/caution/frozen). Tools: get_index, get_asset, get_risk_level, get_perp_market. Read-only.",
+  "version": "0.1.1",
+  "repository": {
+    "url": "https://github.com/everest-an/planet-ppi-mcp",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "protocolbank-mcp",
+      "version": "0.1.1",
+      "transport": { "type": "stdio" }
+    }
+  ]
+}
