@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PPI history — daily snapshots of the commodity index · Planet</title>
+    <meta name="description" content="The daily record of the Planet PPI commodity index: every committed snapshot with the index value, the number of assets and their risk states. Public, timestamped, reproducible." />
+    <link rel="canonical" href="https://ppppp.space/history" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="wordmark" href="/">Planet</a>
+      <nav class="nav">
+        <a href="/ppi">index</a>
+        <a href="/history">history</a>
+        <a href="/methodology">methodology</a>
+        <a href="/perps">perps</a>
+      </nav>
+    </header>
+    <main class="wrap">
+      <p class="k">[ public record · one snapshot per day · source: docs/data/ppi ]</p>
+      <h1>PPI history</h1>
+      <p>
+        The index value at the daily capture. Every row is a committed JSON file in the repository and
+        is reproducible against <code>PlanetCore</code> on Arbitrum One. The record is short because the
+        index is young; it grows by one row per day, unattended.
+      </p>
+
+      <div id="chart" style="margin:18px 0;min-height:120px"></div>
+      <div id="table"></div>
+      <p class="k" id="foot">loading…</p>
+    </main>
+
+    <script type="module">
+      const $ = (id) => document.getElementById(id);
+      async function load() {
+        const r = await fetch("/data/ppi/index.json", { headers: { "cache-control": "no-cache" } });
+        if (!r.ok) throw new Error("history not available yet");
+        return r.json();
+      }
+      function chart(rows) {
+        if (rows.length < 2) return '<p class="k">a line appears when there are at least two daily snapshots.</p>';
+        const w = 640, h = 160, pad = 24;
+        const vals = rows.map((r) => Number(r.ppi));
+        const min = Math.min(...vals), max = Math.max(...vals);
+        const span = max - min || 0.001;
+        const pts = rows.map((r, i) => {
+          const x = pad + (i * (w - pad * 2)) / (rows.length - 1);
+          const y = h - pad - ((Number(r.ppi) - min) / span) * (h - pad * 2);
+          return `${x.toFixed(1)},${y.toFixed(1)}`;
+        }).join(" ");
+        return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="max-width:${w}px" role="img" aria-label="PPI history">
+          <polyline fill="none" stroke="#c2401c" stroke-width="2" points="${pts}" />
+          <text x="${pad}" y="14" font-size="11" fill="currentColor" opacity=".6">${max.toFixed(4)}</text>
+          <text x="${pad}" y="${h - 6}" font-size="11" fill="currentColor" opacity=".6">${min.toFixed(4)}</text>
+        </svg>`;
+      }
+      function table(rows) {
+        const body = rows.slice().reverse().map((r) =>
+          `<tr><td>${r.date}</td><td class="num">${Number(r.ppi).toFixed(6)}</td><td class="num">${r.assets ?? "—"}</td><td>${r.risk == null ? "—" : ["normal", "caution", "frozen"][Number(r.risk)] ?? r.risk}</td></tr>`
+        ).join("");
+        return `<table><thead><tr><th>date (UTC)</th><th class="num">PPI</th><th class="num">assets</th><th>risk</th></tr></thead><tbody>${body}</tbody></table>`;
+      }
+      try {
+        const rows = (await load()).slice().sort((a, b) => a.date.localeCompare(b.date));
+        $("chart").innerHTML = chart(rows);
+        $("table").innerHTML = table(rows);
+        $("foot").textContent = `${rows.length} snapshot${rows.length === 1 ? "" : "s"} · latest ${rows[rows.length - 1].date} · source json: /data/ppi/${rows[rows.length - 1].date}.json`;
+      } catch (e) {
+        $("foot").textContent = "history unavailable: " + e.message;
+      }
+    </script>
+  </body>
+</html>

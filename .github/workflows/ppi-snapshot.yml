@@ -26,10 +26,14 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Capture
         run: node snapshot-ppi.mjs
+      - name: Mirror to the served history
+        run: |
+          mkdir -p ../web/data/ppi
+          cp ../docs/data/ppi/*.json ../web/data/ppi/
       - name: Commit
         run: |
           git config user.name "planet-bot"
           git config user.email "bot@ppppp.space"
-          git add ../docs/data/ppi
+          git add ../docs/data/ppi ../web/data/ppi
           git diff --cached --quiet || git commit -m "data: PPI snapshot $(date -u +%F)"
           git push

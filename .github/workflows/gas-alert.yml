@@ -1,0 +1,31 @@
+name: Gas runway alert
+
+# The deployer pays for the timelock rounds and the 5h index refresh. A dry wallet freezes the market
+# silently; this alerts on Telegram a day before it becomes an incident.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 9 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: relayer
+    env:
+      RPC: https://arb1.arbitrum.io/rpc
+      MIN_ETH: "0.002"
+      TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+      TG_ALERT_CHAT_ID: ${{ secrets.TG_ALERT_CHAT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install --no-audit --no-fund
+      - run: node gas-alert.mjs

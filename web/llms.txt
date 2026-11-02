@@ -21,6 +21,8 @@
 
 - [OpenAPI spec](https://ppppp.space/openapi.json): machine-readable API description (OpenAPI 3.1) - any agent framework can import it.
 - [Live index API](https://ppppp.space/api/v1/ppi): JSON — currentPpi, assets[], oracle state, chain reads only.
+- [History](https://ppppp.space/history): the daily committed snapshot series with the index value and asset risk states.
+- [MCP server](https://www.npmjs.com/package/protocolbank-mcp): `npx -y protocolbank-mcp` - any MCP agent can call get_index, get_asset, get_risk_level, get_perp_market directly.
 - [Signed price feed](https://ppppp.space/api/v1/price-signed): 2-of-3 signed payloads for `PlanetCore.updatePriceSigned`; rate-limited (8/min).
 - [Perp market API](https://ppppp.space/api/v1/perp): JSON — pool, open interest, positions, risk, parameters.
 

@@ -77,3 +77,9 @@ CI：`.github/workflows/monad-build.yml`（build + 70 tests）、`evm-push.yml`�
 本协议未经第三方审计。PLT 是合成指数代币；主网没有商品储备，`mint/redeem` 已禁用。
 永续市场为 beta，池子可能为空。商品价格可能大幅下跌，任何代币化金属都存在发行方、托管、
 司法辖区、流动性与赎回风险。本仓库不构成投资建议、要约或招揽。
+## ??(agent / ??)
+
+- npm MCP server: `protocolbank-mcp` � `npx -y protocolbank-mcp`(get_index / get_asset / get_risk_level / get_perp_market)
+- ???: Hugging Face `EverestAn/planet-ppi`(? risk_state ?)
+- ????: https://ppppp.space/history
+- ????: /llms.txt � /openapi.json � /api/v1/ppi
