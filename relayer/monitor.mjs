@@ -11,14 +11,15 @@
 // Env: CORE, TOKEN, TIMELOCK, RPC (all defaulted to the live deployment)
 
 import { createPublicClient, http, parseAbi, formatUnits } from "viem";
-import { arbitrumSepolia } from "viem/chains";
+import { arbitrum } from "viem/chains";
 
-const CORE = process.env.CORE ?? "0xCEcad784A6cEB1aF12c69639a5027D935651F946";
-const TIMELOCK = process.env.TIMELOCK ?? "0xd71CD916A237aB294230D0056ef4BD240e232Cb5";
-const RPC = process.env.RPC ?? "https://sepolia-rollup.arbitrum.io/rpc";
+const CORE = process.env.CORE ?? "0x61de052af7cb7dc957a07b1e6298152bb851cbbb";
+const TIMELOCK = process.env.TIMELOCK ?? "0xa1fdb9f95210af1d968872f6fc86f623a3e3017c";
+const RPC = process.env.RPC ?? "https://arb1.arbitrum.io/rpc";
 const MAX_ORACLE_AGE = 21600;
+const ZERO = "0x" + "0".repeat(40);
 
-const client = createPublicClient({ chain: arbitrumSepolia, transport: http(RPC) });
+const client = createPublicClient({ chain: arbitrum, transport: http(RPC) });
 
 const coreAbi = parseAbi([
   "function owner() view returns (address)",
@@ -56,18 +57,29 @@ try {
     read(coreAbi, CORE, "redeemsPaused"),
   ]);
 
-  const balance = await read(tokenAbi, depositToken, "balanceOf", [CORE]);
+  // Index-only deployments have no collateral token: depositToken() is the zero address, and calling
+  // balanceOf on it returns "0x" — which used to fail the whole run every hour with read_failed.
+  // "No collateral configured" is only acceptable when the core also claims no reserve.
+  const collateralConfigured = !!depositToken && depositToken.toLowerCase() !== ZERO;
+  const balance = collateralConfigured ? await read(tokenAbi, depositToken, "balanceOf", [CORE]) : 0n;
   const now = Math.floor(Date.now() / 1000);
   const age = oldest > 0 ? now - Number(oldest) : null;
 
   console.log(`core       ${CORE}`);
   console.log(`ppi        ${(Number(ppi) / 1e6).toFixed(6)}   assets ${assetCount}`);
   console.log(`oracle age ${age === null ? "never pushed" : age + "s"} (limit ${MAX_ORACLE_AGE}s)`);
-  console.log(`reserve    counter ${formatUnits(BigInt(totalReserve), 6)}   balance ${formatUnits(balance, 6)}`);
+  console.log(
+    collateralConfigured
+      ? `reserve    counter ${formatUnits(BigInt(totalReserve), 6)}   balance ${formatUnits(balance, 6)}`
+      : `reserve    counter ${formatUnits(BigInt(totalReserve), 6)}   balance n/a (index-only: no deposit token)`,
+  );
 
   if (oldest === 0n) failures.push("oracle_never_pushed");
   else if (age > MAX_ORACLE_AGE) failures.push(`oracle_stale:${age}s`);
 
+  if (!collateralConfigured && BigInt(totalReserve) !== 0n) {
+    failures.push(`reserve_without_collateral_token: counter ${totalReserve} but depositToken is ${depositToken}`);
+  }
   if (balance < BigInt(totalReserve)) {
     failures.push(`reserve_undercollateralised: counter ${totalReserve} > balance ${balance}`);
   }

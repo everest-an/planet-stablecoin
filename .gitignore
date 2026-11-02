@@ -35,3 +35,5 @@ awareness-growth/
 relayer/assets.json
 relayer/.env
 relayer/_check.mjs
+.vercel
+.env.local
