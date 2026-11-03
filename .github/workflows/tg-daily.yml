@@ -1,0 +1,29 @@
+name: TG daily index post
+
+# One post per day in the Planet group, from Gavis. The post is the daily content cadence: index,
+# movers, and any asset flagged caution/frozen.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 8 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: relayer
+    env:
+      TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+      TG_GROUP_CHAT_ID: ${{ vars.TG_GROUP_CHAT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install --no-audit --no-fund
+      - run: node tg-daily.mjs
