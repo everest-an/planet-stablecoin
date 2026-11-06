@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Planet — 链上大宗商品指数 技术白皮书</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--paper:#fff;--ink:#0f0f0f;--muted:#6b6b6b;--hair:rgba(15,15,15,.14);--hair2:rgba(15,15,15,.34);--signal:#c2401c;--sans:'Space Grotesk',system-ui,'Segoe UI',sans-serif;--mono:'DM Mono',ui-monospace,Menlo,monospace}
+  @page{size:A4;margin:0}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#e9e9e9}
+  body{font-family:var(--sans);color:var(--ink);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .page{width:210mm;height:297mm;background:var(--paper);margin:0 auto 8mm;padding:18mm 16mm 18mm;position:relative;overflow:hidden;page-break-after:always}
+  .page:last-child{page-break-after:auto}
+  @media print{html,body{background:#fff}.page{margin:0}}
+  .foot{position:absolute;left:16mm;right:16mm;bottom:8mm;display:flex;justify-content:space-between;font-family:var(--mono);font-size:7.5pt;color:var(--muted);border-top:1px solid var(--hair);padding-top:2mm}
+  .kicker{font-family:var(--mono);font-size:8pt;letter-spacing:.12em;text-transform:uppercase;color:var(--signal);margin:0 0 4mm}
+  h1{font-size:26pt;line-height:1.15;margin:0 0 5mm;letter-spacing:-.01em}
+  h2{font-size:15pt;margin:0 0 3mm;letter-spacing:-.005em}
+  h3{font-size:10.5pt;margin:5mm 0 1.5mm}
+  p,li{font-size:9.3pt;line-height:1.62;margin:0 0 2.6mm}
+  ul{padding-left:5mm;margin:0 0 2.6mm}
+  .lead{font-size:11pt;line-height:1.55;color:#2a2a2a}
+  .muted{color:var(--muted)}
+  .mono{font-family:var(--mono);font-size:8.2pt}
+  table{width:100%;border-collapse:collapse;margin:2mm 0 4mm;font-size:8.6pt}
+  th,td{text-align:left;padding:2mm 2.4mm;border-bottom:1px solid var(--hair);vertical-align:top}
+  th{font-family:var(--mono);font-size:7.6pt;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:500}
+  td.num{text-align:right;font-family:var(--mono)}
+  .box{border:1px solid var(--hair2);padding:4mm 5mm;margin:3mm 0 4mm;background:#fafafa}
+  .box p:last-child{margin-bottom:0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:6mm}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4mm}
+  .stat{border-top:2px solid var(--ink);padding-top:2mm}
+  .stat b{display:block;font-size:16pt;font-family:var(--mono);line-height:1.1}
+  .stat span{font-size:8pt;color:var(--muted)}
+  .tag{display:inline-block;font-family:var(--mono);font-size:7pt;letter-spacing:.06em;border:1px solid var(--hair2);padding:.6mm 1.6mm;margin-right:1.5mm;text-transform:uppercase}
+  .tag.warn{border-color:var(--signal);color:var(--signal)}
+  .toc{font-family:var(--mono);font-size:9pt}
+  .toc div{display:flex;justify-content:space-between;border-bottom:1px dotted var(--hair2);padding:2.2mm 0}
+  .cover-sub{font-size:12pt;color:#333;margin:0 0 10mm;line-height:1.5}
+  .rule{border:0;border-top:1px solid var(--ink);margin:6mm 0}
+  svg{display:block;margin:2mm 0 3mm}
+  svg text{font-family:var(--sans)}
+  .small{font-size:8pt;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- 01 封面 -->
+<section class="page">
+  <p class="kicker">Technical whitepaper · v1.0 · 2026-11</p>
+  <h1>Planet<br>一个披露自身数据质量的链上大宗商品指数</h1>
+  <p class="cover-sub">14 种大宗商品，一个链上指数，外加一个以 LP 池为对手盘的永续市场。<br>面向场所方与风控：读完应能判断是否将该指数作为结算或保证金参考。</p>
+  <div class="grid3" style="margin-top:14mm">
+    <div class="stat"><b>14</b><span>商品资产（能源 / 金属 / 农产品 / 工业原料）</span></div>
+    <div class="stat"><b>2-of-3</b><span>签名预言机；主网单钥路径已禁用</span></div>
+    <div class="stat"><b>6h</b><span>数据存活门；超时即只减仓</span></div>
+  </div>
+  <hr class="rule">
+  <table>
+    <tr><th>合约</th><td class="mono">0x61de052af7cb7dc957a07b1e6298152bb851cbbb（PlanetCore · Arbitrum One）</td></tr>
+    <tr><th>版本</th><td>v1.0 · 2026-11 · 自审，未经外部审计</td></tr>
+    <tr><th>事实源</th><td class="small">本文件全部事实取自仓库 README、docs/ppi-methodology-v1.md、docs/self-audit-2026-10.md、docs/attack-matrix-2026-10-31.md、relayer/perp-mainnet.json。规划项均标注「规划」。</td></tr>
+  </table>
+  
+  <h3 style="margin-top:8mm">状态与适用范围</h3>
+  <table>
+    <tr><th>指数记录</th><td class="mono">2026-10-31 · 1.004455　｜　2026-11-01 · 0.999013</td></tr>
+    <tr><th>永续状态</th><td>v2 已部署；参数 3x / 10% 已执行；池子为 0，暂不可开仓</td></tr>
+    <tr><th>本文件不适用</th><td>不作为投资建议；不构成任何赎回承诺；不代表外部审计结论</td></tr>
+  </table>
+  <p class="small">读者应把本文件与链上状态对照阅读：合约地址见附录，数据快照见 /history。</p>
+<h3>本文件结构</h3><p class="small">第 01–02 章定义指数与数据质量；03–05 章说明预言机、永续与清算；06–07 章给出审计结果与已知限制；08–10 章是接入、路线图与附录。每章至少一张示意图，全部事实可回溯到附录列出的来源。阅读建议：风控先读 02 与 07；BD 先读 04 与 08；技术对接看 05 与 10。</p><div class="foot"><span>Planet · technical whitepaper</span><span>01 / 15</span></div>
+</section>
+
+<!-- 02 目录 + 执行摘要 -->
+<section class="page">
+  <p class="kicker">Contents · executive summary</p>
+  <h2>目录</h2>
+  <div class="toc">
+    <div><span>01 指数与篮子</span><span>03</span></div>
+    <div><span>02 数据质量与存活门</span><span>04</span></div>
+    <div><span>03 预言机：2-of-3 拉取式</span><span>05</span></div>
+    <div><span>04 永续市场与 LP 池</span><span>06</span></div>
+    <div><span>05 清算、TWAP 门与坏账路径</span><span>07</span></div>
+    <div><span>06 审计、测试与已知问题</span><span>08</span></div>
+    <div><span>07 已知限制</span><span>09</span></div>
+    <div><span>08 接入方式</span><span>10</span></div>
+    <div><span>09 路线图与待确认</span><span>11</span></div>
+    <div><span>10 附录：合约、术语、来源</span><span>12</span></div>
+  </div>
+  <h2 style="margin-top:9mm">执行摘要</h2>
+  <p class="lead">永续市场用价格清算仓位；当价格来自单一来源时，清算引擎无法区分「真实波动」与「坏数据」，两者都会被当成真实价格执行。Planet 的出发点不是再做一个价格源，而是让价格<b>附带自身的数据质量</b>。</p>
+  <p>指数由 14 种商品加权构成，1.0 为期初值。每个资产随价格一起发布风险状态：正常、警戒、冻结。冻结资产从指数中剔除并按活跃权重归一；冻结权重上限 40%。主网写路径为 2-of-3 签名的拉取式预言机，单钥 relayer 路径锁定为 <span class="mono">address(0)</span>。</p>
+  <p>在指数之上是一个永续市场：LP 池为对手盘，最高 3x 杠杆、10% 维持保证金、持仓上限为池子的 2 倍。清算要求仓位在现货价与 30 分钟快照均值两侧都击穿，单次坏价不足以触发强平。</p>
+  <div class="box">
+    <p><b>读者可据此做出的三个决定</b></p>
+    <ul style="margin-bottom:0">
+      <li>是否把该指数用于结算参考（需接受：自审、无外部审计）。</li>
+      <li>是否把风险状态接入自身保证金逻辑（接口见第 08 章）。</li>
+      <li>是否作为 LP 提供对手盘资金（风险见第 07 章）。</li>
+    </ul>
+  </div>
+  <div class="foot"><span>Contents</span><span>02 / 15</span></div>
+</section>
+
+<!-- 03 指数与篮子 -->
+<section class="page">
+  <p class="kicker">01 · index &amp; basket</p>
+  <h2>指数与篮子</h2>
+  <p>篮子包含 14 种商品，覆盖能源、贵金属与工业金属、农产品与工业原料。每个资产有四个关键字段：权重（ppm，单资产上限 15%）、期初基准价（锁定后不可改）、当前价、风险状态。权重总和必须等于 1,000,000 ppm，在每次价格更新时校验。</p>
+  <h3>指数公式</h3>
+  <p class="mono" style="border-left:2px solid var(--signal);padding-left:3mm">PPI = Σ wᵢ · (pᵢ / bᵢ) / Σ wᵢ　（仅对非冻结资产求和；bᵢ 为期初基准价）</p>
+  <p>冻结资产同时从分子与分母剔除，因此指数在资产退场时保持连续，而不是被一个不再更新的价格拖住。冻结权重上限（40%）防止篮子被逐步收缩到单一商品。</p>
+  <svg viewBox="0 0 560 150" width="100%" height="150" role="img" aria-label="篮子权重示意">
+    <g font-size="9" fill="#0f0f0f">
+      <text x="0" y="10" font-family="DM Mono" font-size="7" fill="#6b6b6b">WEIGHT BY ASSET (PPM · CAP 150,000)</text>
+      <g transform="translate(0,22)">
+        <rect x="0" y="0" width="140" height="14" fill="#0f0f0f"/><text x="4" y="11" fill="#fff" font-family="DM Mono" font-size="7">WTI 140k</text>
+        <rect x="0" y="18" width="120" height="14" fill="#0f0f0f"/><text x="4" y="29" fill="#fff" font-family="DM Mono" font-size="7">BRENT 120k</text>
+        <rect x="0" y="36" width="110" height="14" fill="#0f0f0f"/><text x="4" y="47" fill="#fff" font-family="DM Mono" font-size="7">COPPER 110k</text>
+        <rect x="0" y="54" width="100" height="14" fill="#0f0f0f"/><text x="4" y="65" fill="#fff" font-family="DM Mono" font-size="7">GOLD 100k</text>
+        <rect x="0" y="72" width="80" height="14" fill="#6b6b6b"/><text x="4" y="83" fill="#fff" font-family="DM Mono" font-size="7">SILVER 80k</text>
+        <rect x="0" y="90" width="150" height="14" fill="none" stroke="#c2401c"/><text x="154" y="101" font-family="DM Mono" font-size="7" fill="#c2401c">15% CAP</text>
+        <text x="0" y="122" font-family="DM Mono" font-size="7" fill="#6b6b6b">其余 9 项：55k–75k 各</text>
+      </g>
+    </g>
+  </svg>
+  <p class="small">图示为权重结构示意；真实权重以 PlanetCore 链上 <span class="mono">assets(i)</span> 读取为准。</p>
+  <h3>指数不是稳定币</h3>
+  <p>指数没有商品储备、没有赎回权。它是一个价格指数：1.0 是期初的相对值，1.01 表示篮子比期初贵 1%。PLT 代币在主网的铸造已禁用（<span class="mono">depositToken = 0</span>），因此本文件不把铸赎当作现有能力。</p>
+  
+  <h3>篮子构建规则</h3>
+  <ul>
+    <li>权重以 ppm 表示，总和必须在每次价格更新时等于 1,000,000；构建期允许逐步添加，但任何一次推价前必须补齐。</li>
+    <li>单资产权重上限 15%；期初基准价一旦锁定不可修改，当前价可更新。</li>
+    <li>指数只对非冻结资产求和并按活跃权重归一，因此单个资产退场不会让指数跳空。</li>
+  </ul>
+  <p class="mono">示例：资产 A 权重 30%、价格为期初 1.10；资产 B 权重 20%、价格 0.95；其余冻结 → PPI = (0.30×1.10 + 0.20×0.95) / 0.50 = 1.040</p>
+<div class="foot"><span>01 · index &amp; basket</span><span>03 / 15</span></div>
+</section>
+
+<!-- 04 数据质量 -->
+<section class="page">
+  <p class="kicker">02 · data quality</p>
+  <h2>数据质量与存活门</h2>
+  <p>数据质量不是注释，是合约字段。每个资产带 <span class="mono">riskState</span>，市场级判定由两个条件合成：全局最后更新时间与各资产状态。</p>
+  <table>
+    <tr><th>级别</th><th>触发</th><th>场所侧含义</th></tr>
+    <tr><td><b>正常</b></td><td>所有资产正常且最后更新 ≤ 30 分钟</td><td>可正常结算</td></tr>
+    <tr><td><b>警戒</b></td><td>最后更新 &gt; 30 分钟，或任一资产被标记警戒</td><td>可用；建议提高保证金（永续中杠杆减半）</td></tr>
+    <tr><td><b>冻结</b></td><td>最后更新 &gt; 6 小时，或任一资产被冻结</td><td>不开放新风险；结算使用最后已知价格</td></tr>
+  </table>
+  <h3>为什么用「最旧资产」而不是「最近更新」</h3>
+  <p>全局时间戳只能说明「有人刚推过价」，不能说明「每个输入都新鲜」。所以铸赎的门槛取活跃资产中<b>最旧</b>的更新时间；一个新鲜的资产不能让十三个过期的输入看起来有效。</p>
+  <h3>跳变与冻结的边界</h3>
+  <ul>
+    <li>单次更新价格跳变不超过 50%，否则拒绝；超过时只能由 owner 通过 timelock 使用强制价路径，且强制价自动标记为警戒。</li>
+    <li>冻结资产从指数剔除；冻结权重上限 40%，防止篮子被收缩为单一商品。</li>
+    <li>永续在冻结状态下只允许「深度水下」仓位被清算（权益低于维持保证金的一半），避免用最后已知价格清算临界仓位。</li>
+  </ul>
+  <svg viewBox="0 0 560 120" width="100%" height="120" role="img" aria-label="数据状态机">
+    <g font-size="9">
+      <rect x="10" y="38" width="120" height="40" fill="#0f0f0f"/><text x="34" y="63" fill="#fff">NORMAL</text>
+      <rect x="215" y="38" width="130" height="40" fill="#fff" stroke="#c2401c"/><text x="243" y="63" fill="#c2401c">CAUTION</text>
+      <rect x="430" y="38" width="120" height="40" fill="#c2401c"/><text x="462" y="63" fill="#fff">FROZEN</text>
+      <path d="M130 58 L215 58" stroke="#0f0f0f" marker-end="url(#a)"/><text x="140" y="51" font-family="DM Mono" font-size="6.5">&gt;30m / flag</text>
+      <path d="M345 58 L430 58" stroke="#0f0f0f" marker-end="url(#a)"/><text x="352" y="51" font-family="DM Mono" font-size="6.5">&gt;6h / frozen</text>
+      <path d="M430 72 L345 72" stroke="#6b6b6b" marker-end="url(#b)"/><text x="352" y="86" font-family="DM Mono" font-size="6.5" fill="#6b6b6b">fresh push</text>
+      <path d="M215 72 L130 72" stroke="#6b6b6b" marker-end="url(#b)"/><text x="140" y="86" font-family="DM Mono" font-size="6.5" fill="#6b6b6b">fresh push</text>
+      <defs>
+        <marker id="a" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="#0f0f0f"/></marker>
+        <marker id="b" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="#6b6b6b"/></marker>
+      </defs>
+    </g>
+  </svg>
+  
+  <h3>验证链条</h3>
+  <table>
+    <tr><th>步骤</th><th>检查</th><th>失败结果</th></tr>
+    <tr><td>1 · 签名</td><td>2-of-3 验签；域绑定 oracle 地址与 chainId</td><td>载荷被拒绝</td></tr>
+    <tr><td>2 · 链上</td><td>时间戳严格递增；跳变 ≤ 50%；权重和 = 1,000,000</td><td>交易 revert</td></tr>
+    <tr><td>3 · 消费</td><td>读取 oracleAgeSeconds 与各资产 riskState</td><td>场所应阻断新风险或提高保证金</td></tr>
+  </table>
+  <p class="small">三步都在链上可复核；API 只是这三步的只读封装。</p>
+<div class="foot"><span>02 · data quality</span><span>04 / 15</span></div>
+</section>
+
+<!-- 05 预言机 -->
+<section class="page">
+  <p class="kicker">03 · oracle</p>
+  <h2>预言机：2-of-3 拉取式</h2>
+  <p>主网只有一条价格写路径：任意人提交一份由 3 个注册签名者中至少 2 个签名的载荷，合约验证后写入。单个密钥不能移动价格；单钥 relayer 路径在部署时被禁用并每日复核。</p>
+  <h3>签名绑定了什么</h3>
+  <p class="mono" style="border-left:2px solid var(--signal);padding-left:3mm">digest = keccak256(DOMAIN, oracle地址, chainId, consumer, index, price, volatility, liquidity, riskState, timestamp)</p>
+  <p>因此签名不能跨链重放、不能跨合约重放、不能改字段重用。重放本身由 core 的严格递增时间戳挡住：任何时间戳不大于链上记录的载荷都会被拒绝。签名可锻性按 EIP-2 处理（s 超过曲线半阶即拒），同一签名者重复签名只计一次（位图）。</p>
+  <svg viewBox="0 0 560 150" width="100%" height="150" role="img" aria-label="签名与提交流程">
+    <g font-size="9">
+      <rect x="0" y="14" width="120" height="36" fill="none" stroke="#0f0f0f"/><text x="12" y="30">签名者 A</text><text x="12" y="43" font-family="DM Mono" font-size="7">key 1</text>
+      <rect x="0" y="60" width="120" height="36" fill="none" stroke="#0f0f0f"/><text x="12" y="76">签名者 B</text><text x="12" y="89" font-family="DM Mono" font-size="7">key 2</text>
+      <rect x="0" y="106" width="120" height="30" fill="none" stroke="#6b6b6b" stroke-dasharray="3 3"/><text x="12" y="125" fill="#6b6b6b">签名者 C（备用）</text>
+      <path d="M120 32 L205 55" stroke="#0f0f0f" marker-end="url(#c)"/>
+      <path d="M120 78 L205 68" stroke="#0f0f0f" marker-end="url(#c)"/>
+      <rect x="205" y="45" width="120" height="40" fill="#0f0f0f"/><text x="222" y="70" fill="#fff">2-of-3 verifier</text>
+      <path d="M325 65 L400 65" stroke="#0f0f0f" marker-end="url(#c)"/><text x="330" y="58" font-family="DM Mono" font-size="6.5">verify</text>
+      <rect x="400" y="45" width="150" height="40" fill="none" stroke="#c2401c"/><text x="415" y="62" fill="#c2401c">PlanetCore</text><text x="415" y="75" font-family="DM Mono" font-size="6.5" fill="#c2401c">ts strictly increasing</text>
+      <text x="205" y="105" font-family="DM Mono" font-size="7" fill="#6b6b6b">任何人可提交，提交者付 gas</text>
+      <defs><marker id="c" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="#0f0f0f"/></marker></defs>
+    </g>
+  </svg>
+  <h3>拉取式的代价：谁付钱</h3>
+  <p>签名是免费的，上链不是。当前由运维每 5 小时提交一批（一个批次约覆盖 14 个资产），交易者在下单前也会自行提交所交易资产的新价（见第 08 章）。这解决了「公开签名喂价先于链上落账」的抢跑窗口，但也意味着：<b>没有消费者时，运维就是消费者</b>。</p>
+  
+  <h3>威胁模型</h3>
+  <table>
+    <tr><th>攻击</th><th>防线</th></tr>
+    <tr><td>单钥改价</td><td>主网 relayer 锁定为 0；价格源构造时拒绝启用 relayer 的 core</td></tr>
+    <tr><td>签名重放</td><td>严格递增时间戳；载荷含 chainId 与 consumer</td></tr>
+    <tr><td>签名可锻性</td><td>s &gt; 曲线半阶即拒（EIP-2）；v 仅接受 27/28</td></tr>
+    <tr><td>同一签名者重复计数</td><td>位图去重，一人一票</td></tr>
+    <tr><td>未来时间戳阻塞</td><td>年龄按 0 处理，避免下溢卡死开仓</td></tr>
+  </table>
+<div class="foot"><span>03 · oracle</span><span>05 / 15</span></div>
+</section>
+
+<!-- 06 永续市场 -->
+<section class="page">
+  <p class="kicker">04 · perpetual market</p>
+  <h2>永续市场与 LP 池</h2>
+  <p>永续的对手盘是一个 USDC 池，而非订单簿。交易者的盈亏由池子承担与收取；平台只收开平仓费、协议分成与清算罚金的一半。合约中没有让 owner 随行情获利的路径。</p>
+  <table>
+    <tr><th>参数</th><th>值</th><th>约束</th></tr>
+    <tr><td>最高杠杆</td><td class="num">3x</td><td>警戒状态下减半</td></tr>
+    <tr><td>维持保证金</td><td class="num">10%</td><td>维持 × 杠杆 &lt; 100%²，杜绝开仓即爆</td></tr>
+    <tr><td>持仓上限</td><td class="num">2× 池子</td><td>防止池子无法兑付</td></tr>
+    <tr><td>开/平仓费</td><td class="num">10 bps</td><td>上限 100 bps</td></tr>
+    <tr><td>协议分成</td><td class="num">30%</td><td>上限 50%；treasury 未设时全部归池</td></tr>
+    <tr><td>资金费</td><td class="num">keeper 设定</td><td>合约上限 ±8%/天；运维规则按净敞口 ±50 bps/天</td></tr>
+  </table>
+  <h3>份额与提款</h3>
+  <p>LP 存入 USDC 换取份额，份额价格随池子盈亏变化。提款受一条硬约束：提款后净持仓不得超过池子的 2 倍，否则拒绝——不允许 LP 在仓位未平时抽走对手盘资金。</p>
+  <svg viewBox="0 0 560 150" width="100%" height="150" role="img" aria-label="池子与仓位关系">
+    <g font-size="9">
+      <rect x="10" y="20" width="180" height="100" fill="none" stroke="#0f0f0f"/>
+      <text x="22" y="38" font-family="DM Mono" font-size="7">LP POOL (USDC)</text>
+      <text x="22" y="58" font-size="14" font-family="DM Mono">$ pool</text>
+      <text x="22" y="108" font-family="DM Mono" font-size="7" fill="#6b6b6b">对手盘 · 承担净盈亏</text>
+      <path d="M190 55 L265 55" stroke="#0f0f0f" marker-end="url(#d)"/><text x="196" y="47" font-family="DM Mono" font-size="6.5">fees</text>
+      <path d="M265 85 L190 85" stroke="#c2401c" marker-end="url(#e)"/><text x="196" y="100" font-family="DM Mono" font-size="6.5" fill="#c2401c">trader pnl</text>
+      <rect x="265" y="20" width="150" height="100" fill="none" stroke="#0f0f0f"/>
+      <text x="277" y="38" font-family="DM Mono" font-size="7">TRADERS</text>
+      <text x="277" y="58" font-size="12" font-family="DM Mono">net OI ≤ 2× pool</text>
+      <text x="277" y="108" font-family="DM Mono" font-size="7" fill="#6b6b6b">单地址一个仓位</text>
+      <rect x="445" y="20" width="105" height="100" fill="none" stroke="#c2401c" stroke-dasharray="3 3"/>
+      <text x="456" y="38" font-family="DM Mono" font-size="7" fill="#c2401c">LIQUIDATION</text>
+      <text x="456" y="56" font-size="8" fill="#c2401c">keeper 权限</text>
+      <text x="456" y="70" font-size="8" fill="#c2401c">任何人可调用</text>
+      <text x="456" y="108" font-family="DM Mono" font-size="7" fill="#6b6b6b">赏金 ≤ 抵押</text>
+      <defs>
+        <marker id="d" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="#0f0f0f"/></marker>
+        <marker id="e" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="#c2401c"/></marker>
+      </defs>
+    </g>
+  </svg>
+  <p class="small">现状：池子在上线时为 0，持仓上限为 0，任何开仓都会被拒绝。这是设计使然，不是故障。</p>
+  
+  <h3>资金费与激励</h3>
+  <p>资金费按累计索引结算：开仓时记录索引，平仓时按差额乘名义值。费率由 keeper 在合约上限（±8%/天）内设定；运维规则按净敞口与池子比例推导，目标上限 ±50 bps/天。资金费不会回溯生效——每次设费率前先结算到当前时间。</p>
+  <p class="small">这意味着资金费是「有界规则」，不是订单簿永续那种由 mark-index 溢价驱动的自我均衡机制。读者应把它当作运营参数而非市场信号。</p>
+<div class="foot"><span>04 · perpetual market</span><span>06 / 15</span></div>
+</section>
+
+<!-- 07 清算 -->
+<section class="page">
+  <p class="kicker">05 · liquidation &amp; bad debt</p>
+  <h2>清算、TWAP 门与坏账路径</h2>
+  <p>清算是最容易把「坏数据」变成「真实损失」的地方。Planet 的清算有三道门：</p>
+  <h3>门一：双侧击穿（TWAP 门）</h3>
+  <p>仓位必须在现货价与 30 分钟快照均值两侧<b>都</b>低于维持保证金才可强平；判定取对交易者更有利的一侧。单次坏价只会让仓位「看起来」水下，不会触发清算。快照环每 30 分钟最多记录一次，防止一次坏价后瞬间灌满环。</p>
+  <h3>门二：冻结期只清算深度水下</h3>
+  <p>当数据冻结（&gt;6 小时或无消费者），只有权益低于维持保证金一半的仓位可被清算。临界仓位不会被最后已知价格清算。</p>
+  <h3>门三：赔付封顶</h3>
+  <p>当池子不足以支付赢家时，赔付按池子余额封顶并发出 <span class="mono">PoolShortfall</span> 事件——不 revert、不冻结所有交易者。代价由当次结算承担，而不是让系统整体卡死。</p>
+  <svg viewBox="0 0 560 140" width="100%" height="140" role="img" aria-label="清算判定流程">
+    <g font-size="9">
+      <rect x="0" y="50" width="120" height="40" fill="none" stroke="#0f0f0f"/><text x="18" y="75">清算请求</text>
+      <path d="M120 70 L160 70" stroke="#0f0f0f" marker-end="url(#f)"/>
+      <rect x="160" y="42" width="130" height="56" fill="none" stroke="#0f0f0f"/><text x="172" y="60">现货权益 &lt; 维持</text><text x="172" y="76">且 TWAP 侧权益</text><text x="172" y="92">&lt; 维持？</text>
+      <path d="M290 70 L330 70" stroke="#0f0f0f" marker-end="url(#f)"/><text x="296" y="62" font-family="DM Mono" font-size="6.5">yes</text>
+      <rect x="330" y="42" width="120" height="56" fill="none" stroke="#0f0f0f"/><text x="342" y="60">冻结状态？</text><text x="342" y="78" font-family="DM Mono" font-size="6.5">equity &lt; maint/2</text>
+      <path d="M450 70 L490 70" stroke="#0f0f0f" marker-end="url(#f)"/>
+      <rect x="490" y="50" width="70" height="40" fill="#c2401c"/><text x="505" y="74" fill="#fff">执行</text>
+      <path d="M225 42 L225 18 L330 18" stroke="#6b6b6b" stroke-dasharray="3 3"/><text x="238" y="14" font-family="DM Mono" font-size="6.5" fill="#6b6b6b">no → 拒绝</text>
+      <defs><marker id="f" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="#0f0f0f"/></marker></defs>
+    </g>
+  </svg>
+  <h3>赏金：让「该清的仓位」真的被清</h3>
+  <p>只有正权益的仓位才有清算动力，而坏账恰恰出现在权益为零或为负时。赏金取「抵押的 0.5%」与「剩余权益的一半」中的较大者，并封顶于抵押本身：水下仓位也有人愿意清。</p>
+  <p class="small">已知边界：TWAP 保护会延后清算，延后期间的额外亏损由池子承担。这是「防坏价」与「防坏账」之间的显式取舍。</p>
+  
+  <h3>算例：3x 多单</h3>
+  <p class="mono">名义 3,000；抵押 1,000；维持 10% → 维持额 300。<br>现货跌至 0.75 期初价：权益 = 1,000 − 750 = 250 &lt; 300（现货侧击穿）<br>若 30 分钟均值仍为 0.80：TWAP 侧权益 = 400 ≥ 300 → <b>拒绝清算</b><br>均值回落至 0.76：TWAP 侧权益 = 280 &lt; 300 → <b>执行清算</b>，按现货价结算</p>
+  <p class="small">该算例对应 twap-guardian 测试中的多空两侧用例，测试结果为 12/12 通过。</p>
+<h3>复现方式</h3><p class="mono" style="font-size:7.6pt">cd contracts &amp;&amp; node compile-perp.mjs<br>node guards-test.mjs · node fuzz-perp.mjs · node adversarial.mjs · node twap-guardian-test.mjs</p><p class="small">测试在本地 hardhat 节点运行，部署 mock USDC 与可设价格源，不依赖主网状态；四套脚本均在仓库内，可逐条对照本页结论。</p><div class="foot"><span>05 · liquidation &amp; bad debt</span><span>07 / 15</span></div>
+</section>
+
+<!-- 08 审计 -->
+<section class="page">
+  <p class="kicker">06 · audit &amp; tests</p>
+  <h2>审计、测试与已知问题</h2>
+  <p>本项目<b>未经第三方审计</b>。当前提供的是可复现的自审：攻击矩阵逐项溯源到代码，配合四套可重跑的测试。</p>
+  <table>
+    <tr><th>测试</th><th>内容</th><th>结果</th></tr>
+    <tr><td class="mono">guards-test</td><td>费率分成、OI 上限、提款约束、冻结期清算、价格源约束</td><td>12 / 12</td></tr>
+    <tr><td class="mono">fuzz-perp</td><td>随机 900 步；每一步验证 4 条不变量（余额 = 抵押 + 池子等）</td><td>全部保持</td></tr>
+    <tr><td class="mono">adversarial</td><td>捐赠不可膨胀份额、重放拒绝、健康仓位拒绝清算、单钥路径关闭</td><td>5 / 5</td></tr>
+    <tr><td class="mono">twap-guardian</td><td>guardian 单向暂停、TWAP 门多空两侧</td><td>12 / 12</td></tr>
+  </table>
+  <h3>自审中已修复的问题</h3>
+  <ul>
+    <li><b>公开喂价抢跑（高）</b>：签名喂价公开但每 5 小时才上链，读 API 者可锁定旧价开仓、新价平仓，从池子套利。修复：交易页面在下单前自行提交所交易资产的新价，entry 永远新鲜。</li>
+    <li><b>TWAP 快照无频率限制</b>：一次坏价后连发 8 次快照可洗掉清算门。修复：快照最短间隔 30 分钟。</li>
+    <li><b>预言机时间戳未来值</b>：签名时间戳常领先链上时钟，直接相减会下溢并卡住开仓。修复：未来时间戳按年龄 0 处理。</li>
+    <li><b>队列在宽限期后卡死</b>：提案超过可执行窗口后只能人工恢复。修复：自动取消并重新提案。</li>
+  </ul>
+  <h3>仍未关闭的问题</h3>
+  <ul>
+    <li><span class="tag warn">中</span>timelock 的管理函数（改延迟/改主人）不经延迟即可由 EOA 调用。修复方案：自持 timelock（execute 公开 + 所有权移交），已排入队列。</li>
+    <li><span class="tag warn">低</span>抵押代币与代币地址在铸币后仍可更换——主网值已固定，属治理纪律问题。</li>
+    <li><span class="tag">信息</span>全暂停同时停止推价，永续随之进入只减仓。已记录为设计取舍。</li>
+  </ul>
+  <h3>审计方法与范围</h3><p>本轮自审逐行阅读 PlanetCore、PlanetToken、PlanetTimelock、SignedPriceOracle、PPIPerp、PPIPriceSource 六份源码，按九类攻击面（重入、预言机操纵、MEV、闪电贷、精度、访问控制、DoS、资不抵债、治理）逐项溯源到代码；无密钥的第三方攻击面未发现可利用路径。</p><h3>未覆盖的部分</h3><ul><li>未做形式化验证（不变量来自随机测试而非证明）。</li><li>未做经济仿真（LP 亏损为算术推演，非历史回测）。</li><li>未做第三方复审；自审不能替代独立审计。</li></ul><div class="foot"><span>06 · audit &amp; tests</span><span>08 / 15</span></div>
+</section>
+
+<!-- 09 已知限制 -->
+<section class="page">
+  <p class="kicker">07 · known limits</p>
+  <h2>已知限制</h2>
+  <p>以下不是待办清单，是读者做决定前应当接受的结构性事实。</p>
+  <div class="box">
+    <p><b>1. LP 结构性做空指数。</b>交易者净多头时，池子净空头。10% 的指数上涨在 2 倍持仓上限下会使池子承受约 20% 的损失；33% 的单边行情会带走约三分之二的池子资本。资金费与手续费是对该风险的补偿，不是消除。</p>
+  </div>
+  <div class="box">
+    <p><b>2. 资金费是规则，不是市场机制。</b>没有 mark-index 溢价可供推导；费率由 keeper 按净敞口规则设定（±50 bps/天，合约上限 ±8%/天）。它不会像订单簿永续那样自动均衡。</p>
+  </div>
+  <div class="box">
+    <p><b>3. 没有外部审计。</b>自审可复现，但不等于独立审计。任何以本指数结算真钱的场所，应把外部审计列为接入前置条件。</p>
+  </div>
+  <div class="box">
+    <p><b>4. 指数是价格，不是资产。</b>没有商品储备、没有赎回权；PLT 主网铸造已禁用。不要把 PPI 当作可赎回的商品凭证。</p>
+  </div>
+  <div class="box">
+    <p><b>5. 数据存活依赖消费者。</b>没有消费者就没有更新；没有更新就没有新风险。运维的 5 小时批次是当前的兜底，成本约每天数美元，余额不足会先告警再停摆。</p>
+  </div>
+  
+  <h3>LP 亏损情景（1,000,000 池子 · 持仓上限 2× 池子）</h3>
+  <table>
+    <tr><th>指数单边变动</th><th>交易者净盈利</th><th>池子结果</th></tr>
+    <tr><td class="num">+10%</td><td class="num">200,000</td><td class="num">−20%</td></tr>
+    <tr><td class="num">+20%</td><td class="num">400,000</td><td class="num">−40%</td></tr>
+    <tr><td class="num">+33%</td><td class="num">660,000</td><td class="num">−66%</td></tr>
+  </table>
+  <p class="small">未计手续费与资金费；它们是对该敞口的补偿，量级远小于单边行情。清算会在仓位权益跌破维持保证金时截断进一步损失。</p>
+<h3>一次读取的完整示例</h3><p class="mono" style="font-size:7.6pt">curl -s https://ppppp.space/api/v1/ppi | jq '{ppi, age: .oracleAgeSeconds, flags: [.assets[] | select(.riskState&gt;0) | .symbol]}'</p><p class="small">限流：读取 30 次/分钟，签名喂价 8 次/分钟；超限返回 429 与 Retry-After。API 只读、不持有资金、不要求 API key。</p><div class="foot"><span>07 · known limits</span><span>09 / 15</span></div>
+</section>
+
+<!-- 10 接入 -->
+<section class="page">
+  <p class="kicker">08 · integration</p>
+  <h2>接入方式</h2>
+  <p>三种接入，按侵入性排序。全部只读，不要求托管或迁移。</p>
+  <table>
+    <tr><th>方式</th><th>端点 / 安装</th><th>适合</th></tr>
+    <tr><td>JSON API</td><td class="mono">GET /api/v1/ppi · /api/v1/perp</td><td>任何后端；字段含各资产 riskState</td></tr>
+    <tr><td>签名喂价</td><td class="mono">GET /api/v1/price-signed</td><td>自行上链结算；提交者付 gas</td></tr>
+    <tr><td>MCP server</td><td class="mono">npx -y protocolbank-mcp</td><td>AI agent / 内部工具</td></tr>
+  </table>
+  <h3>最小接入伪代码</h3>
+  <p class="mono" style="border-left:2px solid var(--signal);padding-left:3mm">j = GET /api/v1/ppi<br>if j.oracleAgeSeconds &gt; 6h or any(a.riskState == 2): block new risk<br>else if j.oracleAgeSeconds &gt; 30m or any(a.riskState == 1): raise margin<br>settle at j.ppi</p>
+  <svg viewBox="0 0 560 150" width="100%" height="150" role="img" aria-label="接入拓扑">
+    <g font-size="9">
+      <rect x="0" y="30" width="140" height="90" fill="none" stroke="#0f0f0f"/>
+      <text x="12" y="48" font-family="DM Mono" font-size="7">VENUE</text>
+      <text x="12" y="66">保证金 / 清算</text>
+      <text x="12" y="82">结算引擎</text>
+      <text x="12" y="108" font-family="DM Mono" font-size="6.5" fill="#6b6b6b">只读消费</text>
+      <path d="M140 75 L210 75" stroke="#0f0f0f" marker-end="url(#g)"/>
+      <rect x="210" y="30" width="170" height="90" fill="none" stroke="#c2401c"/>
+      <text x="222" y="48" font-family="DM Mono" font-size="7" fill="#c2401c">PLANET API</text>
+      <text x="222" y="66">/ppi · /perp</text>
+      <text x="222" y="82">/price-signed</text>
+      <text x="222" y="108" font-family="DM Mono" font-size="6.5" fill="#6b6b6b">限流 30/min · 8/min</text>
+      <path d="M380 55 L440 40" stroke="#0f0f0f" marker-end="url(#g)"/>
+      <path d="M380 85 L440 100" stroke="#0f0f0f" marker-end="url(#g)"/>
+      <rect x="440" y="20" width="120" height="36" fill="none" stroke="#0f0f0f"/><text x="452" y="42">Arbitrum One</text>
+      <rect x="440" y="86" width="120" height="36" fill="none" stroke="#0f0f0f"/><text x="452" y="108">MCP / CLI</text>
+      <defs><marker id="g" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="#0f0f0f"/></marker></defs>
+    </g>
+  </svg>
+  <p class="small">合约地址、字段说明与 OpenAPI（<span class="mono">/openapi.json</span>）见附录。所有读取为链上 <span class="mono">eth_call</span>，API 不持有资金。</p>
+  <h3>接入前应逐项确认</h3><table><tr><th>检查项</th><th>确认方式</th></tr><tr><td>数据是否新鲜</td><td class="mono">oracleAgeSeconds &lt; 21600，否则只减仓</td></tr><tr><td>是否有资产冻结</td><td class="mono">assets[].riskState == 2 任一 → 阻断新风险</td></tr><tr><td>指数是否可用</td><td class="mono">ppi &gt; 0（全冻结时为 0）</td></tr><tr><td>结算价来源</td><td class="mono">直接读 PlanetCore.currentPpi()</td></tr></table><p class="small">首次接入建议以只读监控运行一周，对比自身价格源与 PPI 的偏离，再决定是否用于结算。</p><div class="foot"><span>08 · integration</span><span>10 / 15</span></div>
+</section>
+
+<!-- 11 路线图 -->
+<section class="page">
+  <p class="kicker">09 · roadmap</p>
+  <h2>路线图与待确认</h2>
+  <p>标注「规划」的条目尚未上线，不应被读者当作现有能力。</p>
+  <table>
+    <tr><th>事项</th><th>状态</th><th>说明</th></tr>
+    <tr><td>永续 v2 部署（guardian + TWAP）</td><td><span class="tag">已部署</span></td><td>Arbitrum One，owner 为 timelock</td></tr>
+    <tr><td>参数/keeper/treasury/guardian 队列</td><td><span class="tag">进行中</span></td><td>每 6 小时一轮，由每日工作流推进</td></tr>
+    <tr><td>timelock 自持移交</td><td><span class="tag">规划</span></td><td>execute 公开版 + 所有权移交，已排入队列</td></tr>
+    <tr><td>外部第三方审计</td><td><span class="tag">规划</span></td><td>接入真钱前的前置条件</td></tr>
+    <tr><td>签名密钥跨厂商拆分</td><td><span class="tag">规划</span></td><td>需协同签名中继，见网络审计 N3</td></tr>
+    <tr><td>LP 冷启动与做市合作</td><td><span class="tag">规划</span></td><td>池子为 0 时市场无法开仓</td></tr>
+    <tr><td>Dune / DefiLlama 上架</td><td><span class="tag">规划</span></td><td>TVL &gt; 0 后才提交</td></tr>
+  </table>
+  <h3>待确认（不自行推断）</h3>
+  <ul>
+    <li>待确认：外部审计机构与档期。</li>
+    <li>待确认：资金费规则的目标区间是否需要随波动率调整。</li>
+    <li>待确认：LP 的 delta 对冲方案（当前无对冲场）。</li>
+    <li>待确认：跨链部署的目标链与桥接假设。</li>
+  </ul>
+  <p class="small">本页不含日期承诺；时间取决于审计与流动性合作，而不是工程进度。</p>
+  
+  <h3>接入前置清单</h3>
+  <ul>
+    <li>完成外部审计，或把接入上限控制在可承受损失内。</li>
+    <li>把 riskState 接入保证金逻辑：警戒加保证金、冻结阻断新风险。</li>
+    <li>确认数据存活责任：谁是消费者、断更时如何只减仓。</li>
+    <li>确认资金费规则与自身风控口径一致。</li>
+    <li>密钥分仓与自持 timelock 完成后再提高敞口上限。</li>
+  </ul>
+<div class="foot"><span>09 · roadmap</span><span>11 / 15</span></div>
+</section>
+
+<!-- 12 架构原理 -->
+<section class="page">
+  <p class="kicker">10 · architecture principles</p>
+  <h2>架构原理</h2>
+  <p>这套系统由四条边界组成：合约只做结算，API 只做只读封装，分发层不持有密钥，治理只有一条带延迟的路径。下面六条原则是设计时用来做取舍的，不是宣传语。</p>
+  <h3>1. 结算与数据质量同源</h3>
+  <p>风险状态与价格写在同一个合约的同一个结构里，而不是两个服务各自维护。消费方读一次 <span class="mono">assets(i)</span> 就同时拿到价格与状态，不存在「价格到了、状态没到」的时间差。</p>
+  <h3>2. 单钥不可移价</h3>
+  <p>主网只接受 2-of-3 签名载荷；单钥 relayer 路径被锁定为 <span class="mono">address(0)</span>，价格源在构造时拒绝启用 relayer 的 core。这把「信任一个运维」换成了「信任三个签名者中的两个」。</p>
+  <h3>3. 会计不变量优先于功能</h3>
+  <p>核心不变量是「合约余额 = 交易者抵押 + 池子资产」。每一次状态变更后都成立，并由 900 步随机测试逐步验证。任何新功能若破坏这条等式，直接否决。</p>
+  <h3>4. 失败必须显式</h3>
+  <p>池子付不出时发 <span class="mono">PoolShortfall</span> 而不是 revert；数据过期时进入只减仓而不是继续开仓；坏价来临前先降杠杆。系统的失败模式要能被监控和告警看见。</p>
+  <h3>5. 治理有一条延迟路径</h3>
+  <p>所有特权操作经 timelock：propose → 6h → execute。规划中的自持 timelock 会让管理函数本身也进入延迟，消除「持钥者可即时缩短延迟」的旁路。</p>
+  <h3>6. 分发只读、无密钥</h3>
+  <p>API、OpenAPI、MCP server 都是只读封装，不持有任何私钥，不在客户端存放签名能力。签名只发生在服务端的签名端点，且只能签价格，不能动资金。</p>
+  <svg viewBox="0 0 560 140" width="100%" height="140" role="img" aria-label="四层架构">
+    <g font-size="9">
+      <rect x="0" y="16" width="560" height="26" fill="none" stroke="#0f0f0f"/><text x="10" y="33" font-family="DM Mono" font-size="7">DISTRIBUTION · /ppi · /history · /openapi.json · /llms.txt · MCP server（只读）</text>
+      <rect x="0" y="50" width="560" height="26" fill="none" stroke="#0f0f0f"/><text x="10" y="67" font-family="DM Mono" font-size="7">API · 只读封装 · 限流 · 不持钥 · 无状态</text>
+      <rect x="0" y="84" width="560" height="26" fill="none" stroke="#c2401c"/><text x="10" y="101" font-family="DM Mono" font-size="7" fill="#c2401c">CONTRACTS · PlanetCore · PPIPerp · 价格源 · timelock（唯一写路径）</text>
+      <rect x="0" y="118" width="560" height="16" fill="none" stroke="#6b6b6b" stroke-dasharray="3 3"/><text x="10" y="130" font-family="DM Mono" font-size="7" fill="#6b6b6b">ORACLE · 2-of-3 签名（离线）→ 任意人提交上链</text>
+    </g>
+  </svg>
+  <p class="small">层次之间只有单向依赖：下层不知道上层存在；分发层可以整体替换而不影响结算。</p>
+  <div class="foot"><span>10 · architecture principles</span><span>12 / 15</span></div>
+</section>
+
+<!-- 13 目标产品形态 -->
+<section class="page">
+  <p class="kicker">12 · target product shape (planned)</p>
+  <h2>目标产品形态（规划）</h2>
+  <p>本章描述的是<b>目标</b>，不是现状。当前只有指数与永续上线；代币层与贵金属层是规划中的能力，标注为「规划」，实现顺序见下一章。</p>
+  <h3>三层结构</h3>
+  <table>
+    <tr><th>层</th><th>目标能力</th><th>状态</th></tr>
+    <tr><td><b>定价层</b></td><td>PPI 指数：14 商品、风险状态、2-of-3 拉取式预言机</td><td><span class="tag">已上线</span></td></tr>
+    <tr><td><b>代币层</b></td><td>PLT：以 USDC 储备为抵押、按 PPI 铸赎的购买力代币</td><td><span class="tag">规划</span></td></tr>
+    <tr><td><b>交易层</b></td><td>指数永续（已上线）；贵金属市场（规划）</td><td><span class="tag">部分上线</span></td></tr>
+  </table>
+  <h3>PLT：购买力代币，不是美元稳定币</h3>
+  <p>目标是让 PLT 成为「一篮子商品的购买力份额」：铸造时按当前 PPI 收取 USDC 并发行 PLT；赎回时销毁 PLT 并按 PPI 支付 USDC。费率随指数偏离期初的幅度连续上升（0.5% 起，15% 偏离处拒绝铸赎），偏离越大越贵，抑制套利。储备、风险基金与质押的比例在合约中固定，不由运营临时决定。</p>
+  <p class="small">重要限定：PLT 追踪的是商品购买力，不是美元。它没有 1:1 美元储备，也不承诺美元价格稳定。把它称作「稳定币」会误导用户，也会带来不必要的监管预期。</p>
+  <h3>贵金属：两条路径，二选一</h3>
+  <ul>
+    <li><b>路径 A（优先）</b>：与发行方合作，接入已存在的代币化金属（PAXG / XAUT / VNXAU / KAU）。协议不发行、不托管，只做定价、路由与市场。</li>
+    <li><b>路径 B（重资产）</b>：自建 1:1 托管代币——需要托管方、审计、储备证明与司法辖区合规。规划中，未启动。</li>
+  </ul>
+  <h3>为什么先指数、后代币</h3><p>代币层依赖指数先被独立验证：如果指数本身没有记录、没有消费者、没有审计，铸赎只是在给一个未经验证的数字加杠杆。因此顺序是：指数上线并被外部读取 → 永续被消费 → 代币层接线。贵金属市场同理，先有定价与风控，再谈发行或合作。</p><h3>PLT 费率带（取自合约常量）</h3><table><tr><th>指数偏离期初</th><th>铸赎费率</th></tr><tr><td>≤ 3%</td><td class="num">0.5%</td></tr><tr><td>3% → 15%</td><td class="num">连续上升至 3%</td></tr><tr><td>&gt; 15%</td><td>拒绝铸赎（band reject）</td></tr></table><p class="small">费率连续、无台阶：不存在「把指数推过某个边界就能改变所有人成本」的套利点。</p><div class="foot"><span>12 · target product shape</span><span>13 / 15</span></div>
+</section>
+
+<!-- 14 差距 -->
+<section class="page">
+  <p class="kicker">13 · from here to target</p>
+  <h2>从现状到目标：差距与前置</h2>
+  <p>目标不是靠再加一个市场实现的。下面每一行都是一个必须先关闭的缺口；「性质」列说明它卡在钱、合规还是工程。</p>
+  <table>
+    <tr><th>能力</th><th>现状</th><th>缺口</th><th>性质</th></tr>
+    <tr><td>PPI 指数</td><td>主网上线，2-of-3，风险状态</td><td>—</td><td>已完成</td></tr>
+    <tr><td>指数永续</td><td>v2 已部署；池子为 0</td><td>LP 深度、外部审计</td><td>资金 + 审计</td></tr>
+    <tr><td>PLT 铸赎</td><td>合约已部署；<span class="mono">depositToken = 0</span>，总量 0</td><td>接线 USDC、储备会计、费率带参数、timelock 排队</td><td>工程（可做）+ 审计</td></tr>
+    <tr><td>贵金属市场</td><td>仅第三方代币的只读路由</td><td>路径 A 合作方；或路径 B 托管与合规</td><td>商务 + 合规</td></tr>
+    <tr><td>治理</td><td>6h timelock，owner 为 EOA</td><td>自持 timelock、管理函数入延迟</td><td>工程（已排队）</td></tr>
+    <tr><td>密钥</td><td>运维钥在本地明文；签名钥双厂商</td><td>冷钥/多签、签名钥拆分</td><td>运维</td></tr>
+  </table>
+  <h3>明确不做的事</h3>
+  <ul>
+    <li>不自建 DEX 或 AMM；交易走外部场所或本协议的池子。</li>
+    <li>不在没有托管合作方的情况下发行金属代币。</li>
+    <li>不把 PLT 宣传为美元稳定币或保本产品。</li>
+    <li>不在没有外部审计的情况下扩大真钱敞口上限。</li>
+  </ul>
+  <p class="small">待确认：路径 A 的合作方与商务条款；PLT 费率带的最终参数；外部审计机构与档期；目标链。</p>
+  <h3>实现顺序</h3><ol><li><b>P0</b> 外部审计 + 第一笔 LP：没有这两项，永续仍然是空的。</li><li><b>P1</b> PLT 接线：setDepositToken(USDC)、储备会计、费率带参数、timelock 排队。</li><li><b>P2</b> 贵金属路径 A：与一家发行方达成合作，接入其代币与赎回条款。</li><li><b>P3</b> 自持 timelock 与密钥迁移完成后，再提高敞口上限。</li></ol><h3>止损条件</h3><p>若 90 天内没有外部审计且没有第一笔外部 LP，则不扩品、不上代币层——把资源放回指数被采用这件事上。</p><div class="foot"><span>13 · from here to target</span><span>14 / 15</span></div>
+</section>
+
+<!-- 15 附录 -->
+<section class="page">
+  <p class="kicker">11 · appendix</p>
+  <h2>附录：合约、术语、来源</h2>
+  <h3>Arbitrum One 合约（chainId 42161）</h3>
+  <table>
+    <tr><th>合约</th><th>地址</th></tr>
+    <tr><td>PlanetCore（指数）</td><td class="mono">0x61de052af7cb7dc957a07b1e6298152bb851cbbb</td></tr>
+    <tr><td>PPIPerp v2（永续）</td><td class="mono">0x99e6ba49d2dff95e69b671d6f0945daee544ac8c</td></tr>
+    <tr><td>PPIPriceSource v2（TWAP）</td><td class="mono">0xbf8651b58afd832e1b72edbf9df368c0516dea9e</td></tr>
+    <tr><td>SignedPriceOracle（2-of-3）</td><td class="mono">0x0daf541ef7e41402070bc549f91475ab368d1824</td></tr>
+    <tr><td>PlanetTimelock（6h）</td><td class="mono">0xa1fdb9f95210af1d968872f6fc86f623a3e3017c</td></tr>
+    <tr><td>抵押品（原生 USDC）</td><td class="mono">0xaf88d065e77c8cC2239327C5EDb3A432268e5831</td></tr>
+  </table>
+  <h3>术语</h3>
+  <table>
+    <tr><td><b>PPI</b></td><td>购买力指数；1.0 为期初值，1e6 定点</td></tr>
+    <tr><td><b>riskState</b></td><td>0 正常 / 1 警戒 / 2 冻结，随价格一同发布</td></tr>
+    <tr><td><b>TWAP 门</b></td><td>清算需在现货与 30 分钟快照均值两侧同时低于维持保证金</td></tr>
+    <tr><td><b>PoolShortfall</b></td><td>池子不足以支付时的封顶事件，不 revert</td></tr>
+    <tr><td><b>拉取式预言机</b></td><td>签名离线生成，任何人可提交上链并付 gas</td></tr>
+  </table>
+  <h3>事实源</h3>
+  <p class="small">README.md · docs/ppi-methodology-v1.md · docs/self-audit-2026-10.md · docs/attack-matrix-2026-10-31.md · docs/network-security-audit-2026-10-31.md · relayer/perp-mainnet.json · docs/data/ppi/（每日快照）。<br>指数记录示例：2026-10-31 PPI 1.004455；2026-11-01 PPI 0.999013。本文件不包含任何未在上述来源中出现的事实；强断言均已限定。</p>
+  
+  <h3>API 字段（节选）</h3>
+  <table>
+    <tr><th>字段</th><th>含义</th></tr>
+    <tr><td class="mono">ppi</td><td>指数值，1.0 为期初</td></tr>
+    <tr><td class="mono">lastOracleUpdate / oracleAgeSeconds</td><td>最后更新时间与年龄（秒）</td></tr>
+    <tr><td class="mono">assets[].weightPpm / weightPct</td><td>权重（ppm 与百分比）</td></tr>
+    <tr><td class="mono">assets[].currentPrice / changePct</td><td>当前价（1e6 定点）与涨跌幅</td></tr>
+    <tr><td class="mono">assets[].riskState</td><td>0 正常 / 1 警戒 / 2 冻结</td></tr>
+    <tr><td class="mono">oracle.threshold / signerCount</td><td>阈值与签名者数量（主网 2 / 3）</td></tr>
+  </table>
+<div class="foot"><span>11 · appendix</span><span>15 / 15</span></div>
+</section>
+
+</body>
+</html>
