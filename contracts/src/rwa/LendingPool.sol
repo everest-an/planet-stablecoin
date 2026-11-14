@@ -19,8 +19,10 @@ contract LendingPool {
     CollateralRegistry public immutable registry;
     address public owner;
 
-    /// @dev simple per-second rate, 1e18 scale; bounded by MAX_RATE
-    uint256 public ratePerSec;
+    /// @dev utilization-based rate: rate = base + slope * utilization, per second, 1e18 scale.
+    ///      utilization = totalDebt / totalSupplyAssets. Both terms are bounded by MAX_RATE.
+    uint256 public baseRatePerSec;
+    uint256 public slopeRatePerSec;
     uint256 public constant MAX_RATE = 1e10; // ~31.5%/yr
     uint256 public constant BPS = 10_000;
     uint256 public constant INDEX = 1e18;
@@ -83,10 +85,19 @@ contract LendingPool {
         owner = next;
     }
 
-    function setRate(uint256 ratePerSec_) external onlyOwner {
-        if (ratePerSec_ > MAX_RATE) revert BadInput();
+    function setRateModel(uint256 base_, uint256 slope_) external onlyOwner {
+        if (base_ > MAX_RATE || slope_ > MAX_RATE) revert BadInput();
         _accrue();
-        ratePerSec = ratePerSec_;
+        baseRatePerSec = base_;
+        slopeRatePerSec = slope_;
+    }
+
+    /// @notice Current per-second rate implied by utilization (0 when nothing is supplied).
+    function currentRatePerSec() public view returns (uint256) {
+        if (totalSupplyAssets == 0) return 0;
+        uint256 util = (totalDebt * INDEX) / totalSupplyAssets;
+        uint256 r = baseRatePerSec + (slopeRatePerSec * util) / INDEX;
+        return r > MAX_RATE ? MAX_RATE : r;
     }
 
     function setLiquidationBonus(uint16 bps) external onlyOwner {
@@ -214,8 +225,9 @@ contract LendingPool {
 
     function debtOf(address who) external view returns (uint256) {
         uint256 idx = borrowIndex;
-        if (totalDebt > 0 && ratePerSec > 0 && block.timestamp > lastAccrual) {
-            idx += (ratePerSec * (block.timestamp - lastAccrual) * idx) / INDEX;
+        uint256 r = currentRatePerSec();
+        if (totalDebt > 0 && r > 0 && block.timestamp > lastAccrual) {
+            idx += (r * (block.timestamp - lastAccrual) * idx) / INDEX;
         }
         return (debtShares[who] * idx) / INDEX;
     }
@@ -266,10 +278,12 @@ contract LendingPool {
         uint256 dt = block.timestamp - lastAccrual;
         if (dt == 0) return;
         lastAccrual = block.timestamp;
-        if (totalDebt == 0 || ratePerSec == 0) return;
-        uint256 interest = (totalDebt * ratePerSec * dt) / INDEX;
+        if (totalDebt == 0) return;
+        uint256 r = currentRatePerSec();
+        if (r == 0) return;
+        uint256 interest = (totalDebt * r * dt) / INDEX;
         totalDebt += interest;
         totalSupplyAssets += interest;
-        borrowIndex += (ratePerSec * dt * borrowIndex) / INDEX;
+        borrowIndex += (r * dt * borrowIndex) / INDEX;
     }
 }

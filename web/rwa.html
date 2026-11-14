@@ -24,6 +24,13 @@
 </ul>
 <h2>Scope of the first MVP</h2>
 <p>One collateral class (tokenized gold), one borrow asset (USDC), over-collateralised, whitelisted participants, liquidation through external venues. It is a lending product, not a stablecoin and not an exchange.</p>
+<h2>Development status</h2>
+<ul>
+<li><b>Contracts</b> — CollateralRegistry and LendingPool, compiled with solc 0.8.24. Allow-list and pause are owner-gated; frozen data maps to a zero LTV; the borrow rate follows utilization.</li>
+<li><b>Tests</b> — 17 assertions against a local EVM: normal / caution / frozen LTV, borrow limits, liquidation (debt cleared, collateral seized), allow-list, pause, interest accrual, rate bound. All pass.</li>
+<li><b>Deployment</b> — script ready (registry + pool + first collateral). No public deployment yet.</li>
+<li><b>Not done</b> — external audit, compliance review, front-end panel.</li>
+</ul>
 <h2>Status</h2>
 <p>Specification stage. The previous products — the PPI perpetual and the PLT token — are discontinued and delisted; nothing was deposited into the discontinued pool. The PPI index stays live as the valuation and risk layer. <b>Not externally audited; no deposit product is open.</b></p>
 <p><a class="btn solid" href="/ppi">See the live index</a> <a class="btn" href="/methodology">Methodology</a></p>

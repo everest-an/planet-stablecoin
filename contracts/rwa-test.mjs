@@ -98,5 +98,18 @@ await send(w0, pool, A.LendingPool.abi, "setPaused", [true]);
 check("paused blocks supply", !(await trySend(wL, pool, A.LendingPool.abi, "deposit", [usd(1)])));
 await send(w0, pool, A.LendingPool.abi, "setPaused", [false]);
 
+// interest rate model: base 0, slope 1e10 at 100% utilization
+await send(w0, pool, A.LendingPool.abi, "setRateModel", [0n, 10n ** 10n]);
+await send(w0, goldToken, A.MockToken18.abi, "mint", [borrowerA.address, gold(10)]);
+await send(wB, goldToken, A.MockToken18.abi, "approve", [pool, gold(10)]);
+await send(wB, pool, A.LendingPool.abi, "depositCollateral", [goldToken, gold(10)]);
+await send(wB, pool, A.LendingPool.abi, "borrow", [usd(1000)]);
+const d0 = await pub.readContract({ address: pool, abi: A.LendingPool.abi, functionName: "debtOf", args: [borrowerA.address] });
+await pub.request({ method: "evm_increaseTime", params: [86400 * 30] });
+await pub.request({ method: "evm_mine", params: [] });
+const d1 = await pub.readContract({ address: pool, abi: A.LendingPool.abi, functionName: "debtOf", args: [borrowerA.address] });
+check("interest accrues over 30 days", d1 > d0, formatUnits(d1 - d0, 6) + " USDC");
+check("rate bounded", (await pub.readContract({ address: pool, abi: A.LendingPool.abi, functionName: "currentRatePerSec" })) <= 10n ** 10n);
+
 console.log(fails === 0 ? "\nALL RWA TESTS PASSED" : `\n${fails} FAILURES`);
 process.exit(fails === 0 ? 0 : 1);
