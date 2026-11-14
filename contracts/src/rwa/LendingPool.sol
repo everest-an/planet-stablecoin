@@ -26,6 +26,11 @@ contract LendingPool {
     uint256 public constant INDEX = 1e18;
     uint16 public liquidationBonusBps = 500; // 5% of seized value for the liquidator
 
+    /// @notice MVP compliance gate: only allow-listed addresses may supply or borrow. Governance adds
+    ///         and removes them; the contract itself never does KYC, it only enforces a list.
+    mapping(address => bool) public allowed;
+    bool public paused;
+
     uint256 public totalSupplyAssets;
     uint256 public totalShares;
     uint256 public totalDebt;
@@ -43,12 +48,16 @@ contract LendingPool {
     event Borrowed(address indexed who, uint256 amount);
     event Repaid(address indexed who, uint256 amount);
     event Liquidated(address indexed who, address indexed by, uint256 debtRepaid);
+    event AllowedSet(address indexed who, bool ok);
+    event PausedSet(bool paused);
 
     error NotOwner();
     error BadInput();
     error Unhealthy();
     error InsufficientCash();
     error TooMuchDebt();
+    error NotAllowed();
+    error Paused();
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert NotOwner();
@@ -62,6 +71,7 @@ contract LendingPool {
         registry = CollateralRegistry(registry_);
         owner = owner_;
         lastAccrual = block.timestamp;
+        allowed[owner_] = true;
     }
 
     // ---------------------------------------------------------------- admin
@@ -82,9 +92,21 @@ contract LendingPool {
         liquidationBonusBps = bps;
     }
 
+    function setAllowed(address who, bool ok) external onlyOwner {
+        allowed[who] = ok;
+        emit AllowedSet(who, ok);
+    }
+
+    function setPaused(bool v) external onlyOwner {
+        paused = v;
+        emit PausedSet(v);
+    }
+
     // ---------------------------------------------------------------- supply side
 
     function deposit(uint256 amount) external returns (uint256 shares) {
+        if (paused) revert Paused();
+        if (!allowed[msg.sender]) revert NotAllowed();
         if (amount == 0) revert BadInput();
         _accrue();
         shares = totalShares == 0 || totalSupplyAssets == 0 ? amount : (amount * totalShares) / totalSupplyAssets;
@@ -111,6 +133,8 @@ contract LendingPool {
     // ---------------------------------------------------------------- borrow side
 
     function depositCollateral(address token, uint256 amount) external {
+        if (paused) revert Paused();
+        if (!allowed[msg.sender]) revert NotAllowed();
         if (amount == 0) revert BadInput();
         collateral[msg.sender][token] += amount;
         require(IERC20(token).transferFrom(msg.sender, address(this), amount), "pull");
@@ -126,6 +150,8 @@ contract LendingPool {
     }
 
     function borrow(uint256 amount) external {
+        if (paused) revert Paused();
+        if (!allowed[msg.sender]) revert NotAllowed();
         if (amount == 0) revert BadInput();
         _accrue();
         if (usdc.balanceOf(address(this)) < amount) revert InsufficientCash();

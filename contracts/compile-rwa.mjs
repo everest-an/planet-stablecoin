@@ -7,6 +7,7 @@ const input = {
   sources: {
     "rwa/CollateralRegistry.sol": { content: readFileSync(dir + "CollateralRegistry.sol", "utf8") },
     "rwa/LendingPool.sol": { content: readFileSync(dir + "LendingPool.sol", "utf8") },
+    "rwa/Mocks.sol": { content: readFileSync(dir + "Mocks.sol", "utf8") },
   },
   settings: {
     optimizer: { enabled: true, runs: 200 },
