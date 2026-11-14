@@ -1,0 +1,149 @@
+{
+ "oracle": "0x0daf541ef7e41402070bc549f91475ab368d1824",
+ "core": "0x61DE052aF7cb7Dc957A07b1e6298152bb851CBBB",
+ "chainId": 42161,
+ "signer": "0xBf0D7119F553eB5f85C9806f0849f9c86a9B768C",
+ "generatedAt": "2026-11-14T03:15:36.529Z",
+ "payloads": [
+  {
+   "index": 0,
+   "symbol": "CL=F",
+   "price": "88920000",
+   "volatility": "0",
+   "liquidity": "1000000",
+   "riskState": 0,
+   "timestamp": "1794626249",
+   "sig": "0xec57162bc92256e3be4f56161ffcc5dff18176e2c3cc64e575224ed745d052d6476623ad8de8e15b8c330a3a129de08bf25ff6da7d7925536df3efd0c8ffc03c1bbc5d191a7b77847e4e917eec893e99f98d9152ed16d3c05e5ccb8159d563ff72263295d220628a4de8ec9fdb0ebc067ae4969848047e8d2b43bca322536681911c"
+  },
+  {
+   "index": 1,
+   "symbol": "BZ=F",
+   "price": "96080000",
+   "volatility": "0",
+   "liquidity": "1000000",
+   "riskState": 0,
+   "timestamp": "1794626250",
+   "sig": "0x5a292c88306af3815d0852ccf58cea3d3b5a6fdc0586895ab0bc9313b736d5eb7e0338578feea91f4432c4d01292f7ae60a3057ae48893e640c211ba20b2c5101b23aae24e689b8e5d798b54f7d57dbb909c52eb59aa30cad1d1c6ae3bc9168f842d8b60a27ce90bc89508df7422ec2e40ad1f3b299a4694db9927041649802c991c"
+  },
+  {
+   "index": 2,
+   "symbol": "NG=F",
+   "price": "3242000",
+   "volatility": "0",
+   "liquidity": "1000000",
+   "riskState": 1,
+   "timestamp": "1794626251",
+   "sig": "0x36c53f33b6cbc7de99c62ed1d30dc107445352eefa0cc51a7dd1f71e9a2647284f055a9bb77a413a1bbf4745f26cefb8b47b19b745f11df8d663c19b1171d2251cfc02dbfa6a3cdb258f021dc58726035cfd373e5d6fafd13496e742f54cebf8d34a364b79332fae9d26760bf02c09404b563b0c1bf57fa6b1bc90deb673f344821c"
+  },
+  {
+   "index": 3,
+   "symbol": "GC=F",
+   "price": "3887600000",
+   "volatility": "0",
+   "liquidity": "1000000",
+   "riskState": 0,
+   "timestamp": "1794626252",
+   "sig": "0xcfdcd29824165d255abd204154b666d1812ae02171df714c9512e873c573a6912ae01bbd670c9316a5c8c92f064c2c1dd7ea7e366ddbf8818429647ad91320aa1bbf85a93881822d8d0e403fdf13c8e9ffedb6fdbdf20af1c54b8896b035c3840b597c521c050a9ef78da537c0d4350fbb3a9a165828570982234ba65f6622466b1b"
+  },
+  {
+   "index": 4,
+   "symbol": "SI=F",
+   "price": "48650000",
+   "volatility": "0",
+   "liquidity": "1000000",
+   "riskState": 0,
+   "timestamp": "1794626253",
+   "sig": "0x5c02db6e896013faa00d1ae3802759a784fdda6e032a9db776422f10f9703d9d647d0820f6c674d9bbdad9bcd084c6e848b2716180774617d84d33014fbd0eba1c427ed1f602f7d43348005ed027dcdc14d5e9e1894b495f5f590b52ef115cf111049f99da8465345f6f1f455327744bb20484a66527b404cefdffb20e6efc535c1c"
+  },
+  {
+   "index": 5,
+   "symbol": "HG=F",
+   "price": "6063000",
+   "volatility": "0",
+   "liquidity": "1000000",
+   "riskState": 0,
+   "timestamp": "1794626254",
+   "sig": "0x583ebe81191eae416c08261050b44bb51c309d772b8e4e61f602fd23089d34c27d0837d8a0e972d5379eafeccc0202799eee3db9b89f76069032cad630605a641cf791fedf2f2dd40d587af5b94d96e877d5592bd2c3cba8ff3e08f511de18c53e44dbeefdda56914b2c5ebc1037f7e0ea205606c94203bfca6cd5f7e32fc01c171b"
+  },
+  {
+   "index": 6,
+   "symbol": "ZW=F",
+   "price": "593500000",
+   "volatility": "0",
+   "liquidity": "1000000",
+   "riskState": 0,
+   "timestamp": "1794626255",
+   "sig": "0x38691f577ab7cecde52b9ca66970e3c1e0ba6fd75d3efada69cc18549d0b4cea3b099f93c4919071f48f83e80a02bd6e3420495d8195a3c5b7063b2df39529ac1c005056b411b6af7dbab7c563a2069b6ca5ab20e576a37a3ee361a1d7525d0b497219f89383dbc5c386fd7af0b50e9c95951883f4dbcc5c350a3245e2e3ce51341c"
+  },
+  {
+   "index": 7,
+   "symbol": "ZC=F",
+   "price": "446000000",
+   "volatility": "0",
+   "liquidity": "1000000",
+   "riskState": 1,
+   "timestamp": "1794626256",
+   "sig": "0x1aba3cb77925b5131f6cb9fbc206b86534c77c259ba7472f75cc06657026f77e20bbcec0e1d1f45b793473feee9d191d42dcbb72793de7337751111bfe8e8b3d1ca6d5996ac11034adf61cb9ed79362c19c12a4b4108fa0c8c8b514cf46a51003d6ec7df7416b68d5d9524073a311f4c7a0bd70441784578f2aba371cb85034a1c1c"
+  },
+  {
+   "index": 8,
+   "symbol": "ZS=F",
+   "price": "1232750000",
+   "volatility": "0",
+   "liquidity": "1000000",
+   "riskState": 0,
+   "timestamp": "1794626257",
+   "sig": "0x43859d80c0425c55d762c3e6b790b151261ef8d2af7c1117d15eb25a2f2da2b10872360fa84f2b6dbf47da22c05f1dc47f126908229101664ca53bb06b6f66c51c5b6a5304b9bfb4de7380eb030b9148b1ecdd498098febc626231873433c89a9658e462378cc91878cb8bd50a2622e92dd63629ff112f18429f159e27f55a46151c"
+  },
+  {
+   "index": 9,
+   "symbol": "KC=F",
+   "price": "274000000",
+   "volatility": "0",
+   "liquidity": "1000000",
+   "riskState": 0,
+   "timestamp": "1794626258",
+   "sig": "0x5c75b19654a36b405ed31e71d49c821e2b1ee07818a7ce5248446050e1ab12ba02ed55f00e6d6146a87011e2da9f37ed494c428ee892610a1b3f1f614113cbc21be4f6ade1ec8e028df4aa1204adf606050a326fc354a25fd311e413bed42371c973d2ab3c3b0d567cf80f5fcfeae9cebe0f92f47f9f44300adbf09a868c938b6c1c"
+  },
+  {
+   "index": 10,
+   "symbol": "WOOD",
+   "price": "65854000",
+   "volatility": "0",
+   "liquidity": "1000000",
+   "riskState": 0,
+   "timestamp": "1794626259",
+   "sig": "0x0e6b508b7b0568f01fad04812f4dd61cbcdf425de13aa9599fc0d64522ebd9784a98881d20f819ed34cfc26ef44d8c7da9eeafb6b358044df90ba642558c0c711cade6e8a880b26967e6c421be32a7e3eb9b0c357b9e901d71bd7a107749eb16a00fd08a85b1003fdf83523fe8d7b236429421605a8cfe4817d9eea623d488c38e1c"
+  },
+  {
+   "index": 11,
+   "symbol": "LIT",
+   "price": "58760000",
+   "volatility": "0",
+   "liquidity": "1000000",
+   "riskState": 0,
+   "timestamp": "1794626260",
+   "sig": "0x2812e2cbfb8b6d2f13cbf2a7f609927d0d201cbbd62aa5fa90ef95eb5b4088345a86b0e7eebf9bff956176477cae985fe869d9821344ccbbdfff51e045a19f131cdfb9c922ea1f7969950e57d7ed05962cbf871266f92c0c92b07e9ab5c687ed545f7587b7551345daa1be0e2799010bc9c8cfb1684b2acf7e505bc60d50ba86fc1b"
+  },
+  {
+   "index": 12,
+   "symbol": "PHO",
+   "price": "76590000",
+   "volatility": "0",
+   "liquidity": "1000000",
+   "riskState": 0,
+   "timestamp": "1794626261",
+   "sig": "0xf6d4e6e0e7f46d1f21d1918425da682dd06c6873d71bb60e5fcbcb8b06eb182378089d70c5c394e033a98087fe8b2913886fbbea81cc1180d28d2be16bf0e6291b7f821d572cde35d892467bed78856d4b9f7f28a4978299de6b7fcdd84b5ecd7c1ada732b449c16b9426aaba4b8a1bf52b861adff68f77cd6d625d29ab8b495b41b"
+  },
+  {
+   "index": 13,
+   "symbol": "KRBN",
+   "price": "34900000",
+   "volatility": "0",
+   "liquidity": "1000000",
+   "riskState": 0,
+   "timestamp": "1794626262",
+   "sig": "0x1547ea7cac44a83029554e956639716486caf7efb500a019fa29728214cbfa0802938436c85d7827fc92c03e03edda4b3179fb7c6227fe3476161e4dcf8a83a21b6d0373f239163ab97d533f6dc5aba1cb9e1b24dcdabc02b6cb1f07a08bc79be22379e8f27257d237d12561606f052ffa84cfcc228ec999208be529094d2ff1f41c"
+  }
+ ]
+}
