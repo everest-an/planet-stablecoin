@@ -39,6 +39,8 @@ const deploy = async (name, args, keyName) => {
 
 const registry = await deploy("CollateralRegistry", [account.address], "registry");
 const pool = await deploy("LendingPool", [USDC, registry, account.address], "pool");
+const CORE = process.env.PPI_CORE || "0x61de052af7cb7dc957a07b1e6298152bb851cbbb";
+await deploy("PPIFeedAdapter", [CORE, BigInt(process.env.USD_PER_INDEX || 1000)], "feedAdapter");
 console.log("usdc:", USDC, "| registry:", registry, "| pool:", pool);
 
 // wire the first collateral when addresses are provided (owner = this account for the bootstrap;
@@ -54,5 +56,8 @@ if (GOLD && FEED) {
   console.log("GOLD/FEED not provided - registry deployed without a collateral");
 }
 
+const ph = await wallet.writeContract({ address: pool, abi: A.LendingPool.abi, functionName: "setPaused", args: [true] });
+const prc = await pub.waitForTransactionReceipt({ hash: ph });
+console.log("pool paused:", prc.status === "success" ? "yes (nobody can deposit until governance unpauses)" : "FAILED");
 console.log("state file:", STATE);
 console.log("next: allowlist lenders/borrowers (setAllowed), setRate, then hand ownership to the timelock");
