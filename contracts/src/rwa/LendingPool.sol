@@ -25,6 +25,8 @@ contract LendingPool {
     uint256 public constant BPS = 10_000;
     uint256 public constant INDEX = 1e18;
     uint16 public liquidationBonusBps = 500; // 5% of seized value for the liquidator
+    /// @dev collateral value is 1e18 USD; the borrow asset is 1e6. Debt is scaled up for comparison.
+    uint256 public constant USD_SCALE = 1e12;
 
     /// @notice MVP compliance gate: only allow-listed addresses may supply or borrow. Governance adds
     ///         and removes them; the contract itself never does KYC, it only enforces a list.
@@ -156,7 +158,7 @@ contract LendingPool {
         _accrue();
         if (usdc.balanceOf(address(this)) < amount) revert InsufficientCash();
         uint256 debt = _debtOf(msg.sender);
-        if (debt + amount > borrowLimit(msg.sender)) revert TooMuchDebt();
+        if ((debt + amount) * USD_SCALE > borrowLimit(msg.sender)) revert TooMuchDebt();
         debtShares[msg.sender] += (amount * INDEX) / borrowIndex;
         totalDebt += amount;
         require(usdc.transfer(msg.sender, amount), "push");
@@ -182,10 +184,11 @@ contract LendingPool {
         if (_healthy(who)) revert Unhealthy();
         uint256 debt = _debtOf(who);
         if (debt == 0) revert BadInput();
+        uint256 debt18 = debt * USD_SCALE;
         uint256 supply = collateralValue(who);
-        require(supply >= debt, "bad debt");
+        require(supply >= debt18, "bad debt");
 
-        uint256 seizeValue = debt + (debt * liquidationBonusBps) / BPS;
+        uint256 seizeValue = debt18 + (debt18 * liquidationBonusBps) / BPS;
         if (seizeValue > supply) seizeValue = supply;
 
         debtShares[who] = 0;
@@ -252,7 +255,7 @@ contract LendingPool {
     }
 
     function _healthy(address who) internal view returns (bool) {
-        return _debtOf(who) <= liquidationLimit(who);
+        return _debtOf(who) * USD_SCALE <= liquidationLimit(who);
     }
 
     function _debtOf(address who) internal view returns (uint256) {

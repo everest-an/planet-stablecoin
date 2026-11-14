@@ -57,7 +57,7 @@ await send(w0, goldToken, A.MockToken18.abi, "mint", [borrowerA.address, gold(10
 await send(wB, goldToken, A.MockToken18.abi, "approve", [pool, gold(10)]);
 await send(wB, pool, A.LendingPool.abi, "depositCollateral", [goldToken, gold(10)]);
 const limit0 = await pub.readContract({ address: pool, abi: A.LendingPool.abi, functionName: "borrowLimit", args: [borrowerA.address] });
-check("normal LTV 70% -> 14,000", limit0 === usd(14000), formatUnits(limit0, 6));
+check("normal LTV 70% -> 14,000", limit0 === usd(14000) * 10n ** 12n, formatUnits(limit0 / 10n ** 12n, 6));
 
 check("borrow 14,000", await trySend(wB, pool, A.LendingPool.abi, "borrow", [usd(14000)]));
 check("borrow beyond limit rejected", !(await trySend(wB, pool, A.LendingPool.abi, "borrow", [usd(1)])));
@@ -65,7 +65,7 @@ check("borrow beyond limit rejected", !(await trySend(wB, pool, A.LendingPool.ab
 // caution lowers the limit to 60%
 await send(w0, feed, A.MockFeed.abi, "set", [parseUnits("2000", 18), 1]);
 const limit1 = await pub.readContract({ address: pool, abi: A.LendingPool.abi, functionName: "borrowLimit", args: [borrowerA.address] });
-check("caution LTV 60% -> 12,000", limit1 === usd(12000), formatUnits(limit1, 6));
+check("caution LTV 60% -> 12,000", limit1 === usd(12000) * 10n ** 12n, formatUnits(limit1 / 10n ** 12n, 6));
 check("caution blocks further borrowing", !(await trySend(wB, pool, A.LendingPool.abi, "borrow", [usd(1)])));
 
 // frozen blocks all new borrowing
@@ -77,9 +77,9 @@ check("frozen blocks borrowing", !(await trySend(wB, pool, A.LendingPool.abi, "b
 // price drop -> unhealthy -> liquidation
 await send(w0, feed, A.MockFeed.abi, "set", [parseUnits("1500", 18), 0]);
 const liqLimit = await pub.readContract({ address: pool, abi: A.LendingPool.abi, functionName: "liquidationLimit", args: [borrowerA.address] });
-check("liq limit 80% of 15,000 = 12,000", liqLimit === usd(12000), formatUnits(liqLimit, 6));
+check("liq limit 80% of 15,000 = 12,000", liqLimit === usd(12000) * 10n ** 12n, formatUnits(liqLimit / 10n ** 12n, 6));
 const debt = await pub.readContract({ address: pool, abi: A.LendingPool.abi, functionName: "debtOf", args: [borrowerA.address] });
-check("debt 14,000 > liq limit -> liquidatable", debt >= liqLimit);
+check("debt 14,000 > liq limit -> liquidatable", debt * 10n ** 12n >= liqLimit);
 
 await send(w0, usdc, A.MockUSDC6.abi, "mint", [liquidatorA.address, usd(20000)]);
 await send(wX, usdc, A.MockUSDC6.abi, "approve", [pool, usd(20000)]);
