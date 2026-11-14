@@ -86,16 +86,17 @@
 This page documents the <b>Sepolia proof of concept</b>. The live index is on <b>Arbitrum One</b> →
 <a href="/ppi" style="color:#2f9e44">/ppi</a> ·
 <a href="/methodology" style="color:#2f9e44">methodology</a> ·
-<a href="/lp" style="color:#2f9e44">for LPs</a>
+
 </div>
     <header class="topbar">
       <a class="wordmark" href="/">Planet</a>
       <nav class="nav">
+        <a href="/rwa">direction</a>
         <a href="/#how">how it works</a>
         <a href="/#protocol">protocol</a>
         <a href="/#status">status</a>
-        <a href="/app">mint / redeem</a>
-<a class="btn" href="/app">open app</a>
+        
+
       </nav>
     </header>
 
@@ -226,7 +227,7 @@ This page documents the <b>Sepolia proof of concept</b>. The live index is on <b
           <li><b>Now:</b> the index is live on <b>Arbitrum One</b> — PlanetCore + PLT (ERC-20) + a 6-hour Timelock +
             a 2-of-3 SignedPriceOracle, 14-asset basket, relayer path disabled (index-only). The site, the
             public API and the dashboard read that deployment. The mint/redeem build runs on
-            <b>Arbitrum Sepolia</b> against test USDC and is what <a href="/app">/app</a> writes to. The
+            <b>Arbitrum Sepolia</b> against test USDC and is what  writes to. The
             perpetual market (PPIPerp) is deployed on Arbitrum One. <b>70 Foundry tests</b> in CI.</li>
           <li><b>Next:</b> third-party audit; multisig owner; production oracle sources; perpetual-market expansion.</li>
           <li><b>Later:</b> 1:1 commodity reserve via an RWA custodian, proof-of-reserve and compliance; PLTG governance.</li>
@@ -903,7 +904,7 @@ admin     owner ──propose(dest, body)──▶ PlanetTimelock ──(wait de
         </table>
         <p class="eq-note">
           On-chain interactions (mint, redeem, transfers) are not REST calls: they are EVM transactions
-          signed in the user’s own wallet and constructed by <a href="/app">/app</a>. The API is read-only.
+          signed in the user’s own wallet and constructed by . The API is read-only.
         </p>
 
         <h2 id="c">Appendix C — code excerpts (Solidity)</h2>
@@ -1069,7 +1070,7 @@ admin     owner ──propose(dest, body)──▶ PlanetTimelock ──(wait de
       </div>
       <nav class="foot-nav">
         <a href="/">home</a>
-        <a href="/app">open app</a>
+        
         <a href="/#status">status</a>
       </nav>
     </footer>

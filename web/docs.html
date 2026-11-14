@@ -52,18 +52,19 @@
 This page documents the <b>Sepolia proof of concept</b>. The live index is on <b>Arbitrum One</b> →
 <a href="/ppi" style="color:#2f9e44">/ppi</a> ·
 <a href="/methodology" style="color:#2f9e44">methodology</a> ·
-<a href="/lp" style="color:#2f9e44">for LPs</a>
+
 </div>
     <header class="topbar">
       <a class="wordmark" href="/">Planet</a>
       <nav class="nav">
+        <a href="/rwa">direction</a>
         <a href="/">home</a>
-        <a href="/dashboard">dashboard</a>
+        
         <a href="/ppi">index</a>
         <a href="/methodology">methodology</a>
         <a href="/faq">faq</a>
-        <a href="/app">mint / redeem</a>
-<a class="btn" href="/app">open app</a>
+        
+
       </nav>
     </header>
 
@@ -74,7 +75,7 @@ This page documents the <b>Sepolia proof of concept</b>. The live index is on <b
       <div class="note" style="border-left:3px solid #c2401c;padding:10px 14px;margin:18px 0">
         <b>Two deployments.</b> The <b>live index</b> is on <b>Arbitrum One</b>: PlanetCore, PLT, a 6-hour
         timelock and the 2-of-3 SignedPriceOracle. The public API, the dashboard and the landing ticker read
-        <b>that</b> one. <a href="/app">/app</a> still writes to the <b>Arbitrum Sepolia</b> mint/redeem PoC,
+        <b>that</b> one.  still writes to the <b>Arbitrum Sepolia</b> mint/redeem PoC,
         which is kept for testing. PlanetBond, PlanetFund, PlanetGov and PLTG are <b>design</b> and are not
         deployed (§5–§6).
       </div>
@@ -199,7 +200,7 @@ This page documents the <b>Sepolia proof of concept</b>. The live index is on <b
           a number it never received, nor take a deposit it cannot tokenise.</li>
         <li><b>Burn/redeem:</b> <code>redeem(uint64 burnAmount)</code> burns the caller's PLT, pays back
           <code>burnAmount·index·(1−fee)</code> of the collateral, and decrements <code>totalReserve</code> by
-          exactly that payout — the fee stays in the reserve. Both calls are on <a href="/app">/app</a>,
+          exactly that payout — the fee stays in the reserve. Both calls are on ,
           which previews the contract's own arithmetic.</li>
       </ul>
       <p>

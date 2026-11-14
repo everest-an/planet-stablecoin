@@ -47,18 +47,19 @@
 This page documents the <b>Sepolia proof of concept</b>. The live index is on <b>Arbitrum One</b> →
 <a href="/ppi" style="color:#2f9e44">/ppi</a> ·
 <a href="/methodology" style="color:#2f9e44">methodology</a> ·
-<a href="/lp" style="color:#2f9e44">for LPs</a>
+
 </div>
     <header class="topbar">
       <a class="wordmark" href="/">Planet</a>
       <nav class="nav">
+        <a href="/rwa">direction</a>
         <a href="/">home</a>
-        <a href="/dashboard">dashboard</a>
+        
         <a href="/docs">docs</a>
         <a href="/methodology">methodology</a>
         <a href="/whitepaper.html">whitepaper</a>
-        <a href="/app">mint (EVM)</a>
-<a class="btn" href="/app">open app</a>
+        
+
       </nav>
     </header>
 
@@ -195,7 +196,7 @@ This page documents the <b>Sepolia proof of concept</b>. The live index is on <b
           The index is live on <b>Arbitrum One</b>: the 14-asset basket, the on-chain PPI and the PLT token are
           readable there, with minting <b>disabled</b> (index-only) until an independent audit. Minting and
           redemption run against the <b>Arbitrum Sepolia</b> proof of concept, which uses test USDC and is
-          what <a href="/app">/app</a> writes to. There is no public sale and no exchange listing.
+          what  writes to. There is no public sale and no exchange listing.
         </p>
       </article>
 
@@ -233,7 +234,7 @@ This page documents the <b>Sepolia proof of concept</b>. The live index is on <b
         <p>
           Read the contracts directly. The core exposes <code>ppi()</code>, <code>assetCount()</code>,
           <code>assetAt(i)</code> and <code>lastOracleUpdate()</code>; the live basket is rendered at
-          <a href="/dashboard">/dashboard</a>, and the same data is available as JSON from
+          , and the same data is available as JSON from
           <code>/api/v1/status</code>. Everything is public and reproducible — you do not have to
           trust this page.
         </p>
