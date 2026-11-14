@@ -34,4 +34,130 @@
 <h2>Status</h2>
 <p>Specification stage. The previous products — the PPI perpetual and the PLT token — are discontinued and delisted; nothing was deposited into the discontinued pool. The PPI index stays live as the valuation and risk layer. <b>Not externally audited; no deposit product is open.</b></p>
 <p><a class="btn solid" href="/ppi">See the live index</a> <a class="btn" href="/methodology">Methodology</a></p>
-</main></body></html>
+
+<h2 id="app">App <span class="k" style="font-weight:400">· beta · Arbitrum One</span></h2>
+<p class="k" id="pstate">reading chain…</p>
+<div class="box" style="max-width:640px">
+  <p style="margin:0 0 10px"><button id="connect">connect wallet</button> <span class="k" id="acct">not connected</span></p>
+  <p class="k" id="stats">—</p>
+  <p class="k" id="pos">—</p>
+  <div class="row" style="display:flex;gap:8px;margin:10px 0;flex-wrap:wrap">
+    <input id="amt" value="1000" inputmode="decimal" style="flex:1;min-width:100px" placeholder="USDC" />
+    <button id="sup">supply USDC</button>
+    <button id="wd" class="ghost">withdraw all</button>
+  </div>
+  <div class="row" style="display:flex;gap:8px;margin:10px 0;flex-wrap:wrap">
+    <input id="bamt" value="100" inputmode="decimal" style="flex:1;min-width:100px" placeholder="USDC" />
+    <button id="bor">borrow</button>
+    <button id="rep" class="ghost">repay all</button>
+  </div>
+  <p class="k" id="log">read-only until governance unpauses the pool and lists a collateral</p>
+</div>
+<p class="k">The pool is paused and no collateral is listed; every write is expected to revert until governance acts. This panel reads the live contracts.</p>
+</main>
+<script type="module">
+  import { createPublicClient, createWalletClient, custom, http, parseUnits, formatUnits, defineChain } from "https://esm.sh/viem@2.21.0";
+  const chain = defineChain({ id: 42161, name: "arbitrum", nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 }, rpcUrls: { default: { http: ["https://arb1.arbitrum.io/rpc"] } } });
+  const pub = createPublicClient({ chain, transport: http("https://arb1.arbitrum.io/rpc") });
+  const POOL = "0x619e8fc81444cb879d49f4072b055c8cb916661e";
+  const REGISTRY = "0x960b6c897e186e5e2d0cc66486fe36ea6d04580f";
+  const USDC = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
+  const POOL_ABI = [
+    { name: "paused", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "bool" }] },
+    { name: "allowed", type: "function", stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "bool" }] },
+    { name: "totalSupplyAssets", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+    { name: "totalDebt", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+    { name: "currentRatePerSec", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+    { name: "supplyShares", type: "function", stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }] },
+    { name: "totalShares", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+    { name: "debtOf", type: "function", stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }] },
+    { name: "borrowLimit", type: "function", stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }] },
+    { name: "deposit", type: "function", stateMutability: "nonpayable", inputs: [{ type: "uint256" }], outputs: [{ type: "uint256" }] },
+    { name: "withdraw", type: "function", stateMutability: "nonpayable", inputs: [{ type: "uint256" }], outputs: [{ type: "uint256" }] },
+    { name: "borrow", type: "function", stateMutability: "nonpayable", inputs: [{ type: "uint256" }], outputs: [] },
+    { name: "repay", type: "function", stateMutability: "nonpayable", inputs: [{ type: "uint256" }], outputs: [{ type: "uint256" }] },
+  ];
+  const ERC20 = [
+    { name: "balanceOf", type: "function", stateMutability: "view", inputs: [{ type: "address" }], outputs: [{ type: "uint256" }] },
+    { name: "allowance", type: "function", stateMutability: "view", inputs: [{ type: "address" }, { type: "address" }], outputs: [{ type: "uint256" }] },
+    { name: "approve", type: "function", stateMutability: "nonpayable", inputs: [{ type: "address" }, { type: "uint256" }], outputs: [{ type: "bool" }] },
+  ];
+  const REG_ABI = [{ name: "count", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] }];
+  const $ = (id) => document.getElementById(id);
+  const log = (t) => ($("log").textContent = t);
+  const fmt = (v, d = 2) => Number(formatUnits(v, 6)).toLocaleString(undefined, { maximumFractionDigits: d });
+  let account = null, wallet = null;
+
+  async function read() {
+    const [paused, total, debt, rate, count] = await Promise.all([
+      pub.readContract({ address: POOL, abi: POOL_ABI, functionName: "paused" }),
+      pub.readContract({ address: POOL, abi: POOL_ABI, functionName: "totalSupplyAssets" }),
+      pub.readContract({ address: POOL, abi: POOL_ABI, functionName: "totalDebt" }),
+      pub.readContract({ address: POOL, abi: POOL_ABI, functionName: "currentRatePerSec" }),
+      pub.readContract({ address: REGISTRY, abi: REG_ABI, functionName: "count" }),
+    ]);
+    const util = total === 0n ? 0 : Number(debt) / Number(total);
+    const apr = (Number(rate) * 31_536_000 * 100) / 1e18;
+    $("stats").textContent =
+      "supplied $" + fmt(total) + " · borrowed $" + fmt(debt) + " · utilization " + (util * 100).toFixed(1) + "%" +
+      " · borrow APR " + apr.toFixed(2) + "% · collateral assets listed: " + count.toString();
+    $("pstate").textContent = paused
+      ? "pool PAUSED — deposits and borrows are disabled by governance"
+      : count === 0n
+      ? "pool open but no collateral listed — borrowing is impossible"
+      : "pool open";
+    if (account) await readPos();
+  }
+
+  async function readPos() {
+    const [shares, debt, limit, bal, ok] = await Promise.all([
+      pub.readContract({ address: POOL, abi: POOL_ABI, functionName: "supplyShares", args: [account] }),
+      pub.readContract({ address: POOL, abi: POOL_ABI, functionName: "debtOf", args: [account] }),
+      pub.readContract({ address: POOL, abi: POOL_ABI, functionName: "borrowLimit", args: [account] }),
+      pub.readContract({ address: USDC, abi: ERC20, functionName: "balanceOf", args: [account] }),
+      pub.readContract({ address: POOL, abi: POOL_ABI, functionName: "allowed", args: [account] }),
+    ]);
+    $("pos").textContent =
+      "wallet " + fmt(bal) + " USDC · supplied shares " + shares.toString() +
+      " · debt $" + fmt(debt) + " · borrow limit $" + fmt(limit / 10n ** 12n) +
+      (ok ? "" : " · not allow-listed");
+  }
+
+  $("connect").onclick = async () => {
+    if (!window.ethereum) return log("no injected wallet");
+    try {
+      await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0xa4b1" }] }).catch(async () => {
+        await window.ethereum.request({ method: "wallet_addEthereumChain", params: [{ chainId: "0xa4b1", chainName: "Arbitrum One", nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 }, rpcUrls: ["https://arb1.arbitrum.io/rpc"] }] });
+      });
+      const [a] = await window.ethereum.request({ method: "eth_requestAccounts" });
+      account = a;
+      wallet = createWalletClient({ account, chain, transport: custom(window.ethereum) });
+      $("acct").textContent = a.slice(0, 10) + "…";
+      log("connected");
+      await read();
+    } catch (e) { log(e.message); }
+  };
+
+  const send = async (addr, abi, fn, args) => {
+    const h = await wallet.writeContract({ address: addr, abi, functionName: fn, args });
+    log(fn + " " + h.slice(0, 12) + "…");
+    const rc = await pub.waitForTransactionReceipt({ hash: h });
+    log(fn + (rc.status === "success" ? " confirmed" : " reverted"));
+    await read();
+  };
+  const need = () => (!wallet ? (log("connect first"), false) : true);
+
+  $("sup").onclick = async () => { try { if (!need()) return; const v = parseUnits($("amt").value, 6);
+    await send(USDC, ERC20, "approve", [POOL, v]); await send(POOL, POOL_ABI, "deposit", [v]); } catch (e) { log(e.shortMessage || e.message); } };
+  $("wd").onclick = async () => { try { if (!need()) return;
+    const sh = await pub.readContract({ address: POOL, abi: POOL_ABI, functionName: "supplyShares", args: [account] });
+    if (sh === 0n) return log("no shares"); await send(POOL, POOL_ABI, "withdraw", [sh]); } catch (e) { log(e.shortMessage || e.message); } };
+  $("bor").onclick = async () => { try { if (!need()) return; await send(POOL, POOL_ABI, "borrow", [parseUnits($("bamt").value, 6)]); } catch (e) { log(e.shortMessage || e.message); } };
+  $("rep").onclick = async () => { try { if (!need()) return;
+    const d = await pub.readContract({ address: POOL, abi: POOL_ABI, functionName: "debtOf", args: [account] });
+    if (d === 0n) return log("no debt"); await send(USDC, ERC20, "approve", [POOL, d]); await send(POOL, POOL_ABI, "repay", [d]); } catch (e) { log(e.shortMessage || e.message); } };
+
+  await read();
+  setInterval(read, 20000);
+</script>
+</body></html>
