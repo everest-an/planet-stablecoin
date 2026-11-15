@@ -161,6 +161,7 @@ contract LendingPool {
         if (paused) revert Paused();
         if (!allowed[msg.sender]) revert NotAllowed();
         if (amount == 0) revert BadInput();
+        if (!registry.enabled(token)) revert BadInput(); // never hold an unknown token as collateral
         collateral[msg.sender][token] += amount;
         require(IERC20(token).transferFrom(msg.sender, address(this), amount), "pull");
         emit CollateralDeposited(msg.sender, token, amount);
@@ -194,7 +195,7 @@ contract LendingPool {
         paid = amount > debt ? debt : amount;
         if (paid == 0) revert BadInput();
         uint256 shares = (paid * INDEX) / borrowIndex;
-        debtShares[msg.sender] = shares >= debtShares[msg.sender] ? 0 : debtShares[msg.sender] - shares;
+        debtShares[msg.sender] = paid == debt || shares >= debtShares[msg.sender] ? 0 : debtShares[msg.sender] - shares;
         totalDebt -= paid;
         require(usdc.transferFrom(msg.sender, address(this), paid), "pull");
         emit Repaid(msg.sender, paid);

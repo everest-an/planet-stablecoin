@@ -72,9 +72,9 @@ contract CollateralRegistry {
     /// @notice Value of `amount` of `token` in USD (1e18) plus the quality level of its feed.
     function valueOf(address token, uint256 amount) public view returns (uint256 value, uint8 quality) {
         Asset memory a = assets[token];
-        if (!a.enabled) revert NotEnabled();
+        if (!a.enabled) return (0, 2); // a delisted asset is worth nothing and is never "fresh"
         (uint256 p, uint8 q) = a.feed.price();
-        if (p == 0) revert BadPrice();
+        if (p == 0) return (0, 2); // broken feed: fail safe, not closed
         value = (amount * p) / 1e18;
         quality = q;
     }
@@ -82,12 +82,16 @@ contract CollateralRegistry {
     /// @notice Effective LTV: normal → ltvBps, caution → cautionLtvBps, frozen → 0 (no new borrowing).
     function ltvOf(address token) public view returns (uint16 ltv, uint8 quality) {
         Asset memory a = assets[token];
-        if (!a.enabled) revert NotEnabled();
+        if (!a.enabled) return (0, 2);
         (uint256 p, uint8 q) = a.feed.price();
-        if (p == 0) revert BadPrice();
+        if (p == 0) return (0, 2);
         quality = q;
         if (q >= 2) return (0, q);
         ltv = q == 1 ? a.cautionLtvBps : a.ltvBps;
+    }
+
+    function enabled(address token) external view returns (bool) {
+        return assets[token].enabled;
     }
 
     function liqThresholdOf(address token) external view returns (uint16) {

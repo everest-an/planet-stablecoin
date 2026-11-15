@@ -71,5 +71,43 @@ check("frozen feed blocks a borderline liquidation", !(await tryIt(() => send(wX
 await send(w0, feed, A.MockFeed.abi, "set", [parseUnits("1700", 18), 0]); // fresh again
 check("same position liquidatable once data is fresh", await tryIt(() => send(wX, pool, A.LendingPool.abi, "liquidate", [B2.address])));
 
+
+// ---------- B1: broken/disabled feed degrades instead of reverting ----------
+console.log("=== B1 fail-safe valuation ===");
+const junk = await dep("MockToken18", []);
+const vUnknown = await pub.readContract({ address: reg, abi: A.CollateralRegistry.abi, functionName: "valueOf", args: [junk, gold(1)] }).catch((e) => "revert");
+check("unregistered asset values at (0, frozen) instead of reverting", Array.isArray(vUnknown) && vUnknown[0] === 0n && vUnknown[1] === 2);
+const zeroFeed = await dep("MockFeed", [0n, 0]);
+await send(w0, reg, A.CollateralRegistry.abi, "setAsset", [junk, zeroFeed, 7000, 6000, 8000]);
+const vZero = await pub.readContract({ address: reg, abi: A.CollateralRegistry.abi, functionName: "valueOf", args: [junk, gold(1)] });
+check("zero-price feed values at (0, frozen)", vZero[0] === 0n && vZero[1] === 2);
+const ltvZero = await pub.readContract({ address: reg, abi: A.CollateralRegistry.abi, functionName: "ltvOf", args: [junk] });
+check("zero-price feed LTV is 0", ltvZero[0] === 0);
+
+// ---------- B2: unknown collateral rejected ----------
+console.log("=== B2 unknown collateral ===");
+const strangerToken = await dep("MockToken18", []);
+await send(w0, strangerToken, A.MockToken18.abi, "mint", [B2.address, gold(1)]);
+await send(wB2, strangerToken, A.MockToken18.abi, "approve", [pool, gold(1)]);
+check("unregistered collateral cannot be deposited", !(await tryIt(() => send(wB2, pool, A.LendingPool.abi, "depositCollateral", [strangerToken, gold(1)]))));
+
+// ---------- B3: exact repayment clears dust ----------
+console.log("=== B3 dust-free repayment ===");
+await send(w0, feed, A.MockFeed.abi, "set", [parseUnits("2000", 18), 0]);
+const B3 = mk(15);
+await fund(B3.address);
+const wB3 = createWalletClient({ account: B3, chain, transport: http(RPC) });
+await send(w0, pool, A.LendingPool.abi, "setAllowed", [B3.address, true]);
+await send(w0, goldT, A.MockToken18.abi, "mint", [B3.address, gold(5)]);
+await send(wB3, goldT, A.MockToken18.abi, "approve", [pool, gold(5)]);
+await send(wB3, pool, A.LendingPool.abi, "depositCollateral", [goldT, gold(5)]);
+await send(wB3, pool, A.LendingPool.abi, "borrow", [usd(3000)]);
+const dBefore = await pub.readContract({ address: pool, abi: A.LendingPool.abi, functionName: "debtOf", args: [B3.address] });
+await send(w0, usdc, A.MockUSDC6.abi, "mint", [B3.address, dBefore]);
+await send(wB3, usdc, A.MockUSDC6.abi, "approve", [pool, dBefore]);
+await send(wB3, pool, A.LendingPool.abi, "repay", [dBefore]);
+const dAfter = await pub.readContract({ address: pool, abi: A.LendingPool.abi, functionName: "debtOf", args: [B3.address] });
+check("exact repayment leaves zero debt (no dust)", dAfter === 0n, "debt " + dAfter.toString());
+
 console.log(fails === 0 ? "\nAUDIT FIXES VERIFIED" : `\n${fails} FAILURES`);
 process.exit(fails === 0 ? 0 : 1);
