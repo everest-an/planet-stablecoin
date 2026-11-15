@@ -54,6 +54,7 @@ contract LendingPool {
     event Liquidated(address indexed who, address indexed by, uint256 debtRepaid);
     event AllowedSet(address indexed who, bool ok);
     event PausedSet(bool paused);
+    event BadDebt(address indexed who, uint256 shortfall);
 
     error NotOwner();
     error BadInput();
@@ -62,6 +63,17 @@ contract LendingPool {
     error TooMuchDebt();
     error NotAllowed();
     error Paused();
+    error Frozen();
+    error Locked();
+
+    uint256 private _lock = 1;
+
+    modifier nonReentrant() {
+        if (_lock != 1) revert Locked();
+        _lock = 2;
+        _;
+        _lock = 1;
+    }
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert NotOwner();
@@ -117,7 +129,7 @@ contract LendingPool {
 
     // ---------------------------------------------------------------- supply side
 
-    function deposit(uint256 amount) external returns (uint256 shares) {
+    function deposit(uint256 amount) external nonReentrant returns (uint256 shares) {
         if (paused) revert Paused();
         if (!allowed[msg.sender]) revert NotAllowed();
         if (amount == 0) revert BadInput();
@@ -130,7 +142,7 @@ contract LendingPool {
         emit Deposit(msg.sender, amount, shares);
     }
 
-    function withdraw(uint256 shares) external returns (uint256 amount) {
+    function withdraw(uint256 shares) external nonReentrant returns (uint256 amount) {
         if (shares == 0 || shares > supplyShares[msg.sender]) revert BadInput();
         _accrue();
         amount = (shares * totalSupplyAssets) / totalShares;
@@ -145,7 +157,7 @@ contract LendingPool {
 
     // ---------------------------------------------------------------- borrow side
 
-    function depositCollateral(address token, uint256 amount) external {
+    function depositCollateral(address token, uint256 amount) external nonReentrant {
         if (paused) revert Paused();
         if (!allowed[msg.sender]) revert NotAllowed();
         if (amount == 0) revert BadInput();
@@ -154,7 +166,7 @@ contract LendingPool {
         emit CollateralDeposited(msg.sender, token, amount);
     }
 
-    function withdrawCollateral(address token, uint256 amount) external {
+    function withdrawCollateral(address token, uint256 amount) external nonReentrant {
         if (amount == 0 || amount > collateral[msg.sender][token]) revert BadInput();
         collateral[msg.sender][token] -= amount;
         if (!_healthy(msg.sender)) revert Unhealthy();
@@ -162,7 +174,7 @@ contract LendingPool {
         emit CollateralWithdrawn(msg.sender, token, amount);
     }
 
-    function borrow(uint256 amount) external {
+    function borrow(uint256 amount) external nonReentrant {
         if (paused) revert Paused();
         if (!allowed[msg.sender]) revert NotAllowed();
         if (amount == 0) revert BadInput();
@@ -176,7 +188,7 @@ contract LendingPool {
         emit Borrowed(msg.sender, amount);
     }
 
-    function repay(uint256 amount) external returns (uint256 paid) {
+    function repay(uint256 amount) external nonReentrant returns (uint256 paid) {
         _accrue();
         uint256 debt = _debtOf(msg.sender);
         paid = amount > debt ? debt : amount;
@@ -190,21 +202,41 @@ contract LendingPool {
 
     /// @notice Unhealthy position: the caller repays the debt and receives the collateral (seized
     ///         value = debt + bonus, capped at the collateral value). The liquidator sells elsewhere.
-    function liquidate(address who) external {
+    function liquidate(address who) external nonReentrant {
         _accrue();
         if (_healthy(who)) revert Unhealthy();
         uint256 debt = _debtOf(who);
         if (debt == 0) revert BadInput();
         uint256 debt18 = debt * USD_SCALE;
-        uint256 supply = collateralValue(who);
-        require(supply >= debt18, "bad debt");
 
-        uint256 seizeValue = debt18 + (debt18 * liquidationBonusBps) / BPS;
-        if (seizeValue > supply) seizeValue = supply;
+        // A2: while any collateral feed is frozen, only a deeply underwater position may be closed
+        // (same rule the perp used). A stale price must not liquidate a borderline borrower.
+        if (_worstQuality(who) >= 2 && debt18 * 2 < liquidationLimit(who) * 3) revert Frozen();
+
+        uint256 supply = collateralValue(who);
+
+        // A1: if the collateral cannot cover the debt, the liquidator pays only what is recoverable,
+        // takes all the collateral, and the remainder is written off explicitly (lenders share it).
+        uint256 repay;
+        uint256 seizeValue;
+        if (supply < debt18) {
+            repay = supply / USD_SCALE;
+            seizeValue = supply;
+        } else {
+            repay = debt;
+            seizeValue = debt18 + (debt18 * liquidationBonusBps) / BPS;
+            if (seizeValue > supply) seizeValue = supply;
+        }
 
         debtShares[who] = 0;
         totalDebt -= debt;
-        require(usdc.transferFrom(msg.sender, address(this), debt), "pull");
+        if (repay > 0) require(usdc.transferFrom(msg.sender, address(this), repay), "pull");
+        if (debt > repay) {
+            uint256 shortfall = debt - repay;
+            uint256 cut = shortfall > totalSupplyAssets ? totalSupplyAssets : shortfall;
+            totalSupplyAssets -= cut; // lenders absorb the loss
+            emit BadDebt(who, shortfall);
+        }
 
         uint256 n = registry.count();
         for (uint256 i; i < n; ++i) {
@@ -263,6 +295,17 @@ contract LendingPool {
             if (bal == 0) continue;
             (uint256 v, ) = registry.valueOf(token, bal);
             limit += (v * registry.liqThresholdOf(token)) / BPS;
+        }
+    }
+
+    /// @dev Worst quality level among the position's collateral feeds (0 normal, 1 caution, 2 frozen).
+    function _worstQuality(address who) internal view returns (uint8 worst) {
+        uint256 n = registry.count();
+        for (uint256 i; i < n; ++i) {
+            address token = registry.tokens(i);
+            if (collateral[who][token] == 0) continue;
+            (, uint8 q) = registry.valueOf(token, collateral[who][token]);
+            if (q > worst) worst = q;
         }
     }
 
