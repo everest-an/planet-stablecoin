@@ -90,6 +90,16 @@ contract CollateralRegistry {
         ltv = q == 1 ? a.cautionLtvBps : a.ltvBps;
     }
 
+    /// @notice Maximum collateral value (1e18 USD) this asset may contribute; 0 means uncapped.
+    mapping(address => uint256) public maxValue;
+
+    event AssetCapSet(address indexed token, uint256 maxValue1e18);
+
+    function setAssetCap(address token, uint256 maxValue1e18) external onlyOwner {
+        maxValue[token] = maxValue1e18;
+        emit AssetCapSet(token, maxValue1e18);
+    }
+
     function enabled(address token) external view returns (bool) {
         return assets[token].enabled;
     }

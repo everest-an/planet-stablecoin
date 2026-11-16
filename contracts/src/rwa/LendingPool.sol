@@ -34,6 +34,8 @@ contract LendingPool {
     ///         and removes them; the contract itself never does KYC, it only enforces a list.
     mapping(address => bool) public allowed;
     bool public paused;
+    /// @dev absolute ceiling on total outstanding debt (1e6 USDC); 0 means unlimited.
+    uint256 public debtCeiling;
 
     uint256 public totalSupplyAssets;
     uint256 public totalShares;
@@ -55,6 +57,7 @@ contract LendingPool {
     event AllowedSet(address indexed who, bool ok);
     event PausedSet(bool paused);
     event BadDebt(address indexed who, uint256 shortfall);
+    event DebtCeilingSet(uint256 amount);
 
     error NotOwner();
     error BadInput();
@@ -122,6 +125,11 @@ contract LendingPool {
         emit AllowedSet(who, ok);
     }
 
+    function setDebtCeiling(uint256 amount) external onlyOwner {
+        debtCeiling = amount;
+        emit DebtCeilingSet(amount);
+    }
+
     function setPaused(bool v) external onlyOwner {
         paused = v;
         emit PausedSet(v);
@@ -162,6 +170,11 @@ contract LendingPool {
         if (!allowed[msg.sender]) revert NotAllowed();
         if (amount == 0) revert BadInput();
         if (!registry.enabled(token)) revert BadInput(); // never hold an unknown token as collateral
+        uint256 cap = registry.maxValue(token);
+        if (cap != 0) {
+            (uint256 after_, ) = registry.valueOf(token, collateral[msg.sender][token] + amount);
+            if (after_ > cap) revert BadInput(); // per-asset cap: one asset cannot dominate the pool
+        }
         collateral[msg.sender][token] += amount;
         require(IERC20(token).transferFrom(msg.sender, address(this), amount), "pull");
         emit CollateralDeposited(msg.sender, token, amount);
@@ -182,6 +195,7 @@ contract LendingPool {
         _accrue();
         if (usdc.balanceOf(address(this)) < amount) revert InsufficientCash();
         uint256 debt = _debtOf(msg.sender);
+        if (debtCeiling != 0 && totalDebt + amount > debtCeiling) revert TooMuchDebt();
         if ((debt + amount) * USD_SCALE > borrowLimit(msg.sender)) revert TooMuchDebt();
         debtShares[msg.sender] += (amount * INDEX) / borrowIndex;
         totalDebt += amount;

@@ -109,5 +109,23 @@ await send(wB3, pool, A.LendingPool.abi, "repay", [dBefore]);
 const dAfter = await pub.readContract({ address: pool, abi: A.LendingPool.abi, functionName: "debtOf", args: [B3.address] });
 check("exact repayment leaves zero debt (no dust)", dAfter === 0n, "debt " + dAfter.toString());
 
+
+// ---------- B4: per-asset cap + global debt ceiling ----------
+console.log("=== B4 exposure caps ===");
+await send(w0, reg, A.CollateralRegistry.abi, "setAssetCap", [goldT, parseUnits("6000", 18)]);
+const B4 = mk(16);
+await fund(B4.address);
+const wB4 = createWalletClient({ account: B4, chain, transport: http(RPC) });
+await send(w0, pool, A.LendingPool.abi, "setAllowed", [B4.address, true]);
+await send(w0, goldT, A.MockToken18.abi, "mint", [B4.address, gold(8)]);
+await send(wB4, goldT, A.MockToken18.abi, "approve", [pool, gold(8)]);
+check("asset cap blocks a 8,000 deposit (cap 6,000)", !(await tryIt(() => send(wB4, pool, A.LendingPool.abi, "depositCollateral", [goldT, gold(4)]))));
+check("asset cap allows a 6,000 deposit", await tryIt(() => send(wB4, pool, A.LendingPool.abi, "depositCollateral", [goldT, gold(3)])));
+
+await send(w0, pool, A.LendingPool.abi, "setDebtCeiling", [usd(1000)]);
+check("debt ceiling allows a 1,000 borrow", await tryIt(() => send(wB4, pool, A.LendingPool.abi, "borrow", [usd(1000)])));
+check("debt ceiling blocks the next borrow", !(await tryIt(() => send(wB4, pool, A.LendingPool.abi, "borrow", [usd(1)]))));
+await send(w0, pool, A.LendingPool.abi, "setDebtCeiling", [0n]);
+
 console.log(fails === 0 ? "\nAUDIT FIXES VERIFIED" : `\n${fails} FAILURES`);
 process.exit(fails === 0 ? 0 : 1);
