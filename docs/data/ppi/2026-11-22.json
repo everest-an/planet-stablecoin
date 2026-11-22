@@ -1,0 +1,112 @@
+{
+ "date": "2026-11-22",
+ "capturedAt": "2026-11-22T06:29:37.520Z",
+ "ppi": 0.92532,
+ "oracle": {
+  "address": "0x0dAF541Ef7e41402070BC549f91475ab368D1824",
+  "threshold": 2,
+  "signerCount": 3,
+  "mode": "pull",
+  "feed": "/api/v1/price-signed"
+ },
+ "assets": [
+  {
+   "index": 0,
+   "symbol": "CL=F",
+   "weight": 140000,
+   "price": 83410000,
+   "riskState": 0
+  },
+  {
+   "index": 1,
+   "symbol": "BZ=F",
+   "weight": 110000,
+   "price": 89950000,
+   "riskState": 1
+  },
+  {
+   "index": 2,
+   "symbol": "NG=F",
+   "weight": 80000,
+   "price": 3748000,
+   "riskState": 1
+  },
+  {
+   "index": 3,
+   "symbol": "GC=F",
+   "weight": 120000,
+   "price": 3515400000,
+   "riskState": 1
+  },
+  {
+   "index": 4,
+   "symbol": "SI=F",
+   "weight": 70000,
+   "price": 41070000,
+   "riskState": 0
+  },
+  {
+   "index": 5,
+   "symbol": "HG=F",
+   "weight": 60000,
+   "price": 5485000,
+   "riskState": 0
+  },
+  {
+   "index": 6,
+   "symbol": "ZW=F",
+   "weight": 90000,
+   "price": 592000000,
+   "riskState": 0
+  },
+  {
+   "index": 7,
+   "symbol": "ZC=F",
+   "weight": 70000,
+   "price": 448750000,
+   "riskState": 0
+  },
+  {
+   "index": 8,
+   "symbol": "ZS=F",
+   "weight": 60000,
+   "price": 1220750000,
+   "riskState": 0
+  },
+  {
+   "index": 9,
+   "symbol": "KC=F",
+   "weight": 40000,
+   "price": 273350000,
+   "riskState": 1
+  },
+  {
+   "index": 10,
+   "symbol": "WOOD",
+   "weight": 40000,
+   "price": 61274000,
+   "riskState": 0
+  },
+  {
+   "index": 11,
+   "symbol": "LIT",
+   "weight": 30000,
+   "price": 51980000,
+   "riskState": 0
+  },
+  {
+   "index": 12,
+   "symbol": "PHO",
+   "weight": 50000,
+   "price": 73770000,
+   "riskState": 0
+  },
+  {
+   "index": 13,
+   "symbol": "KRBN",
+   "weight": 40000,
+   "price": 32650000,
+   "riskState": 0
+  }
+ ]
+}
